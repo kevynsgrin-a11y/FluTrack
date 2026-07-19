@@ -1,0 +1,219 @@
+/* ==========================================================================
+   FluTrack — Design tokens
+   The single source of visual truth: color, type scale, spacing, elevation,
+   motion. Everything else consumes these variables. Themed for light + dark.
+   ========================================================================== */
+
+:root {
+  /* ---- Brand ---------------------------------------------------------- */
+  --brand-50: #e6f4f7;
+  --brand-100: #c3e3ea;
+  --brand-200: #8fc9d6;
+  --brand-300: #56acbf;
+  --brand-400: #2b93a9;
+  --brand-500: #0b7285; /* primary */
+  --brand-600: #0a6474;
+  --brand-700: #08505d;
+  --brand-800: #073f4a;
+  --brand-900: #05303a;
+
+  /* ---- Severity scale (Very Low → Very High) --------------------------
+     Colorblind-considered: hue + lightness both shift monotonically, and the
+     UI never relies on color alone (labels + icons accompany every use). */
+  --sev-0: #2f9e63; /* Minimal / Very Low  */
+  --sev-1: #8bc34a; /* Low                 */
+  --sev-2: #f4b400; /* Moderate            */
+  --sev-3: #ef6c00; /* High                */
+  --sev-4: #c62828; /* Very High           */
+
+  --sev-0-soft: #e4f4ea;
+  --sev-1-soft: #eef6e2;
+  --sev-2-soft: #fdf3d6;
+  --sev-3-soft: #fbe6d4;
+  --sev-4-soft: #f7dcdc;
+
+  --sev-0-ink: #1c6b41;
+  --sev-1-ink: #4d7a1f;
+  --sev-2-ink: #8a6d00;
+  --sev-3-ink: #a04a00;
+  --sev-4-ink: #9b1c1c;
+
+  /* Trend direction accents */
+  --trend-up: #c62828;   /* rising activity = worse */
+  --trend-down: #2f9e63; /* falling activity = better */
+  --trend-flat: #6b7785;
+
+  /* ---- Neutral ramp --------------------------------------------------- */
+  --gray-0: #ffffff;
+  --gray-50: #f7f9fa;
+  --gray-100: #eef2f4;
+  --gray-200: #e0e6ea;
+  --gray-300: #cbd4da;
+  --gray-400: #9aa7b1;
+  --gray-500: #6b7785;
+  --gray-600: #4c5763;
+  --gray-700: #363f49;
+  --gray-800: #232a32;
+  --gray-900: #141a20;
+  --gray-950: #0c1116;
+
+  /* ---- Semantic surfaces (light default) ------------------------------ */
+  --bg: var(--gray-50);
+  --bg-elevated: var(--gray-0);
+  --bg-sunken: var(--gray-100);
+  --surface: var(--gray-0);
+  --surface-2: var(--gray-50);
+  --border: var(--gray-200);
+  --border-strong: var(--gray-300);
+  --text: var(--gray-900);
+  --text-secondary: var(--gray-600);
+  --text-muted: var(--gray-500);
+  --text-inverse: var(--gray-0);
+  --link: var(--brand-600);
+  --link-hover: var(--brand-700);
+  --focus-ring: var(--brand-400);
+  --accent: var(--brand-500);
+
+  /* ---- Typography ----------------------------------------------------- */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+    Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', Menlo,
+    Consolas, monospace;
+
+  /* Fluid modular scale (min 1.2, max 1.25) clamped for mobile-first sizing */
+  --step--1: clamp(0.8rem, 0.77rem + 0.15vw, 0.875rem);
+  --step-0: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
+  --step-1: clamp(1.2rem, 1.12rem + 0.4vw, 1.35rem);
+  --step-2: clamp(1.44rem, 1.3rem + 0.7vw, 1.75rem);
+  --step-3: clamp(1.73rem, 1.5rem + 1.15vw, 2.3rem);
+  --step-4: clamp(2.07rem, 1.7rem + 1.85vw, 3rem);
+  --step-5: clamp(2.49rem, 1.95rem + 2.7vw, 3.8rem);
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.3;
+  --leading-normal: 1.6;
+  --tracking-tight: -0.02em;
+  --tracking-wide: 0.04em;
+  --weight-normal: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ---- Spacing (4px base) --------------------------------------------- */
+  --space-2xs: 0.25rem;
+  --space-xs: 0.5rem;
+  --space-sm: 0.75rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2rem;
+  --space-2xl: 3rem;
+  --space-3xl: 4.5rem;
+  --space-4xl: 6rem;
+
+  /* ---- Radius --------------------------------------------------------- */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  /* ---- Elevation ------------------------------------------------------ */
+  --shadow-xs: 0 1px 2px rgba(20, 26, 32, 0.06);
+  --shadow-sm: 0 1px 3px rgba(20, 26, 32, 0.08), 0 1px 2px rgba(20, 26, 32, 0.04);
+  --shadow-md: 0 4px 12px rgba(20, 26, 32, 0.08), 0 2px 4px rgba(20, 26, 32, 0.04);
+  --shadow-lg: 0 12px 32px rgba(20, 26, 32, 0.12), 0 4px 8px rgba(20, 26, 32, 0.05);
+
+  /* ---- Layout --------------------------------------------------------- */
+  --container: 68rem;
+  --container-narrow: 46rem;
+  --container-wide: 78rem;
+  --header-height: 4rem;
+
+  /* ---- Motion --------------------------------------------------------- */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur-med: 220ms;
+  --dur-slow: 400ms;
+
+  --z-header: 100;
+  --z-overlay: 200;
+  --z-toast: 300;
+
+  color-scheme: light dark;
+}
+
+/* ---- Dark theme ------------------------------------------------------- */
+:root[data-theme='dark'] {
+  --bg: var(--gray-950);
+  --bg-elevated: var(--gray-900);
+  --bg-sunken: #0a0e12;
+  --surface: var(--gray-900);
+  --surface-2: var(--gray-800);
+  --border: #2a333c;
+  --border-strong: #3a444e;
+  --text: #eef2f4;
+  --text-secondary: #b4bec7;
+  --text-muted: #85929d;
+  --text-inverse: var(--gray-950);
+  --link: var(--brand-200);
+  --link-hover: var(--brand-100);
+  --focus-ring: var(--brand-300);
+  --accent: var(--brand-300);
+
+  --sev-0-soft: #113023;
+  --sev-1-soft: #1f2e12;
+  --sev-2-soft: #33280a;
+  --sev-3-soft: #331c0c;
+  --sev-4-soft: #331313;
+
+  --sev-0-ink: #6fd39b;
+  --sev-1-ink: #b6de84;
+  --sev-2-ink: #f6cf5c;
+  --sev-3-ink: #f39b5a;
+  --sev-4-ink: #f08a8a;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+}
+
+/* Honor OS preference when the user has not explicitly chosen a theme. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: var(--gray-950);
+    --bg-elevated: var(--gray-900);
+    --bg-sunken: #0a0e12;
+    --surface: var(--gray-900);
+    --surface-2: var(--gray-800);
+    --border: #2a333c;
+    --border-strong: #3a444e;
+    --text: #eef2f4;
+    --text-secondary: #b4bec7;
+    --text-muted: #85929d;
+    --text-inverse: var(--gray-950);
+    --link: var(--brand-200);
+    --link-hover: var(--brand-100);
+    --focus-ring: var(--brand-300);
+    --accent: var(--brand-300);
+
+    --sev-0-soft: #113023;
+    --sev-1-soft: #1f2e12;
+    --sev-2-soft: #33280a;
+    --sev-3-soft: #331c0c;
+    --sev-4-soft: #331313;
+
+    --sev-0-ink: #6fd39b;
+    --sev-1-ink: #b6de84;
+    --sev-2-ink: #f6cf5c;
+    --sev-3-ink: #f39b5a;
+    --sev-4-ink: #f08a8a;
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
+  }
+}

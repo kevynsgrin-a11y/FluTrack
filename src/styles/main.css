@@ -1,0 +1,331 @@
+/* ==========================================================================
+   Main — page-level composition (hero, home sections, state layout).
+   Loaded last so it can lean on tokens + components. The build step
+   concatenates tokens.css + base.css + components.css + main.css in order.
+   ========================================================================== */
+
+/* ---- Hero ------------------------------------------------------------- */
+.hero {
+  padding-block: var(--space-2xl) var(--space-xl);
+  background:
+    radial-gradient(
+      60rem 30rem at 85% -10%,
+      color-mix(in srgb, var(--brand-100) 55%, transparent),
+      transparent 60%
+    ),
+    var(--bg);
+}
+:root[data-theme='dark'] .hero {
+  background: radial-gradient(
+      60rem 30rem at 85% -10%,
+      color-mix(in srgb, var(--brand-800) 45%, transparent),
+      transparent 60%
+    ),
+    var(--bg);
+}
+.hero__grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: var(--space-2xl);
+  align-items: center;
+}
+@media (max-width: 56rem) {
+  .hero__grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-xl);
+  }
+}
+.hero h1 {
+  font-size: var(--step-5);
+  margin-top: var(--space-sm);
+}
+.hero__lede {
+  margin-top: var(--space-md);
+  max-width: 34rem;
+}
+.hero__cta {
+  margin-top: var(--space-lg);
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+/* ---- Home: how it works ----------------------------------------------- */
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--space-lg);
+  counter-reset: step;
+}
+.step {
+  position: relative;
+  padding-left: var(--space-xl);
+}
+.step::before {
+  counter-increment: step;
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--brand-500);
+  color: #fff;
+  font-size: var(--step--1);
+  font-weight: var(--weight-bold);
+}
+.step h3 {
+  font-size: var(--step-1);
+}
+
+/* ---- Home: data sources grid ------------------------------------------ */
+.source-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+}
+.source-card__badge {
+  align-self: flex-start;
+}
+
+/* ---- Section heading -------------------------------------------------- */
+.section-head {
+  max-width: 40rem;
+  margin-bottom: var(--space-xl);
+}
+.section-head--center {
+  margin-inline: auto;
+  text-align: center;
+}
+
+/* ---- State page ------------------------------------------------------- */
+.state-layout {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: var(--space-xl);
+  align-items: start;
+}
+@media (max-width: 56rem) {
+  .state-layout {
+    grid-template-columns: 1fr;
+  }
+}
+.breadcrumbs {
+  font-size: var(--step--1);
+  color: var(--text-muted);
+  display: flex;
+  gap: var(--space-2xs);
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
+.breadcrumbs a {
+  color: var(--text-secondary);
+}
+.breadcrumbs [aria-current='page'] {
+  color: var(--text);
+}
+
+.signal-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
+  border-bottom: 1px solid var(--border);
+}
+.signal-row:last-child {
+  border-bottom: none;
+}
+.signal-row__name {
+  font-weight: var(--weight-medium);
+}
+.signal-row__val {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--weight-semibold);
+  text-align: right;
+}
+
+/* State grid (all states index) */
+.state-index {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr));
+  gap: var(--space-sm);
+}
+.state-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+  transition: border-color var(--dur-fast), box-shadow var(--dur-fast),
+    transform var(--dur-fast);
+}
+.state-chip:hover {
+  text-decoration: none;
+  color: var(--text);
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+.state-chip__dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--sev, var(--gray-300));
+  flex: none;
+}
+
+/* ---- Alert signup band ------------------------------------------------ */
+.signup {
+  background: linear-gradient(
+    150deg,
+    var(--brand-600),
+    var(--brand-800)
+  );
+  color: #fff;
+  border-radius: var(--radius-xl);
+  padding: clamp(var(--space-xl), 5vw, var(--space-2xl));
+}
+.signup h2 {
+  color: #fff;
+}
+.signup .lede {
+  color: color-mix(in srgb, #fff 82%, transparent);
+}
+.signup__form {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-top: var(--space-lg);
+  max-width: 34rem;
+}
+.signup__form .input {
+  flex: 1 1 14rem;
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+.signup__form .input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+.signup__form .select {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+.signup__form .select option {
+  color: var(--gray-900);
+}
+.signup__fine {
+  margin-top: var(--space-md);
+  font-size: var(--step--1);
+  color: color-mix(in srgb, #fff 72%, transparent);
+  max-width: 34rem;
+}
+.signup__fine a {
+  color: #fff;
+  text-decoration: underline;
+}
+
+/* Form status messaging */
+.form-status {
+  margin-top: var(--space-sm);
+  font-weight: var(--weight-medium);
+}
+.form-status[data-state='error'] {
+  color: #ffd7d7;
+}
+.form-status[data-state='success'] {
+  color: #d7ffe8;
+}
+
+/* ---- FAQ -------------------------------------------------------------- */
+.faq-item {
+  border-bottom: 1px solid var(--border);
+  padding: var(--space-md) 0;
+}
+.faq-item summary {
+  cursor: pointer;
+  font-weight: var(--weight-semibold);
+  font-size: var(--step-1);
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+  align-items: center;
+}
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+.faq-item summary::after {
+  content: '+';
+  font-size: var(--step-2);
+  color: var(--text-muted);
+  transition: transform var(--dur-fast) var(--ease-out);
+  line-height: 1;
+}
+.faq-item[open] summary::after {
+  transform: rotate(45deg);
+}
+.faq-item__body {
+  margin-top: var(--space-sm);
+  color: var(--text-secondary);
+}
+
+/* ---- Error / empty states --------------------------------------------- */
+.notice {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-start;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: var(--step-0);
+}
+
+/* ---- Loading skeleton ------------------------------------------------- */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-sunken) 25%,
+    var(--surface-2) 37%,
+    var(--bg-sunken) 63%
+  );
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+  border-radius: var(--radius-sm);
+  color: transparent !important;
+}
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* ---- 404 -------------------------------------------------------------- */
+.centered-page {
+  text-align: center;
+  padding-block: var(--space-4xl);
+  max-width: 34rem;
+  margin-inline: auto;
+}
+.centered-page h1 {
+  font-size: var(--step-5);
+}
