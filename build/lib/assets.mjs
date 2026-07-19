@@ -64,14 +64,17 @@ export function ogSvg(site) {
 export function manifest(site) {
   return JSON.stringify(
     {
+      id: '/',
       name: `${site.name} — Respiratory Illness Tracker`,
       short_name: site.name,
       description: site.shortDescription,
       start_url: '/',
       scope: '/',
       display: 'standalone',
-      background_color: '#f7f9fa',
-      theme_color: '#0b7285',
+      background_color: '#ffffff',
+      // Match the light-mode <meta name="theme-color"> so the installed-PWA UI
+      // tint agrees with the in-browser tint.
+      theme_color: '#ffffff',
       categories: ['health', 'medical', 'utilities'],
       icons: [
         { src: '/assets/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
@@ -85,12 +88,37 @@ export function manifest(site) {
   );
 }
 
-/** Text assets written into dist/assets (and manifest at root by the build). */
+/**
+ * Wrap a single PNG (ideally 32×32) in a minimal .ico container so /favicon.ico
+ * resolves for legacy clients and bots that request it by convention. Modern
+ * ICO supports an embedded PNG payload.
+ * @param {Buffer} png raw PNG bytes
+ * @param {number} size pixel dimension (0 encodes 256)
+ * @returns {Buffer}
+ */
+export function icoFromPng(png, size = 32) {
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0); // reserved
+  header.writeUInt16LE(1, 2); // type: icon
+  header.writeUInt16LE(1, 4); // image count
+  const entry = Buffer.alloc(16);
+  entry.writeUInt8(size >= 256 ? 0 : size, 0); // width
+  entry.writeUInt8(size >= 256 ? 0 : size, 1); // height
+  entry.writeUInt8(0, 2); // palette
+  entry.writeUInt8(0, 3); // reserved
+  entry.writeUInt16LE(1, 4); // color planes
+  entry.writeUInt16LE(32, 6); // bits per pixel
+  entry.writeUInt32LE(png.length, 8); // size of image data
+  entry.writeUInt32LE(6 + 16, 12); // offset to image data
+  return Buffer.concat([header, entry, png]);
+}
+
+/** Text assets written into dist/assets. The manifest is emitted once at the
+ *  site root by the build (see writeRootFiles), not duplicated here. */
 export function assetFiles(site) {
   return {
     'favicon.svg': iconSvg({ size: 64 }),
     'icon-source.svg': iconSvg({ size: 512 }),
     'og-source.svg': ogSvg(site),
-    'manifest.webmanifest': manifest(site),
   };
 }

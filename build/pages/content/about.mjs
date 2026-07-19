@@ -42,7 +42,7 @@ export default function about(ctx) {
     </div>
 
     <h2>How FluTrack is funded</h2>
-    <p>FluTrack is free to use, and we intend to keep it that way. It is supported by advertising and by clearly-disclosed affiliate links — where we may earn a commission if you buy something through certain links, at no extra cost to you. That revenue never influences the threat levels we report or the way we describe the data: the index is computed the same way no matter who advertises, and it always reflects the CDC's figures alone. You can read exactly how these relationships work on our <a href="/affiliate-disclosure/">affiliate disclosure</a> page.</p>
+    <p>FluTrack is free to use, and we intend to keep it that way. It is supported by advertising and by clearly disclosed affiliate links — where we may earn a commission if you buy something through certain links, at no extra cost to you. That revenue never influences the threat levels we report or the way we describe the data: the index is computed the same way no matter who advertises, and it always reflects the CDC's figures alone. You can read exactly how these relationships work on our <a href="/affiliate-disclosure/">affiliate disclosure</a> page.</p>
 
     <div class="callout callout--warn" role="note">
       <p class="callout__title"><span aria-hidden="true">◷</span> Not medical advice</p>
@@ -50,7 +50,7 @@ export default function about(ctx) {
     </div>
 
     <h2>Get in touch</h2>
-    <p>Questions, corrections, press enquiries, and partnership ideas are all welcome. <a href="/contact/">Contact us</a> and a real person will read it.</p>
+    <p>Questions, corrections, press inquiries, and partnership ideas are all welcome. <a href="/contact/">Contact us</a> and a real person will read it.</p>
   `)}
 
   ${signupBand()}

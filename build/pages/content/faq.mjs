@@ -141,7 +141,7 @@ function faqGroups(disclaimers) {
         },
         {
           q: 'Why did you exclude some wastewater data?',
-          a: `<p>Some widely-cited wastewater networks — WastewaterSCAN, also referenced as SCAN or Verily — publish under a <strong>CC BY-NC 4.0</strong> licence, which permits non-commercial use only. FluTrack is supported by advertising and affiliate links, which makes it a commercial use, so incorporating that data would breach the licence terms. FluTrack therefore ingests only the CDC's own public-domain NWSS product and filters the non-commercial networks out in code. Our <a href="/data-sources/">data sources</a> page explains the exclusion in full.</p>`,
+          a: `<p>Some widely cited wastewater networks — WastewaterSCAN, also referenced as SCAN or Verily — publish under a <strong>CC BY-NC 4.0</strong> license, which permits non-commercial use only. FluTrack is supported by advertising and affiliate links, which makes it a commercial use, so incorporating that data would breach the license terms. FluTrack therefore ingests only the CDC's own public-domain NWSS product and filters the non-commercial networks out in code. Our <a href="/data-sources/">data sources</a> page explains the exclusion in full.</p>`,
         },
         {
           q: 'Can I use FluTrack data?',
@@ -168,7 +168,7 @@ function faqGroups(disclaimers) {
         },
         {
           q: 'How does FluTrack make money?',
-          a: `<p>FluTrack is free to use and is supported by advertising and clearly-disclosed affiliate links, where we may earn a commission on qualifying purchases at no extra cost to you. That revenue never influences the threat levels we report: the index is computed the same way regardless of who advertises, and it always reflects the CDC's figures alone. Our <a href="/affiliate-disclosure/">affiliate disclosure</a> explains the arrangement in full.</p>`,
+          a: `<p>FluTrack is free to use and is supported by advertising and clearly disclosed affiliate links, where we may earn a commission on qualifying purchases at no extra cost to you. That revenue never influences the threat levels we report: the index is computed the same way regardless of who advertises, and it always reflects the CDC's figures alone. Our <a href="/affiliate-disclosure/">affiliate disclosure</a> explains the arrangement in full.</p>`,
         },
         {
           q: 'Is my data private?',

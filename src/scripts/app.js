@@ -106,9 +106,18 @@ function render(store, abbr) {
   setRegion('glance-level', `<strong>${escapeText(model.label)}</strong>`);
   setRegion(
     'glance-trend',
-    `${escapeText(model.trend.label)} ${model.trend.direction !== 'flat' ? escapeText(formatChange(model.trend.changePct)) : ''}`
+    model.trend.direction !== 'flat'
+      ? `${escapeText(model.trend.label)} ${escapeText(formatChange(model.trend.changePct))}`
+      : escapeText(model.trend.label)
   );
   setText('glance-week', formatDate(store.weekEnding));
+  return { st, model };
+}
+
+// Announce a picker-driven change to assistive tech via the polite live region.
+function announceSelection(st, model) {
+  const region = document.getElementById('live-status');
+  if (region) region.textContent = `${st.isNational ? 'United States' : st.name}: ${model.label}, ${model.trend.label}.`;
 }
 
 function setRegion(name, html) {
@@ -157,7 +166,8 @@ function wirePicker(store, onChange) {
   const apply = (abbr) => {
     onChange(abbr);
     saveSelection(abbr);
-    render(store, abbr);
+    const r = render(store, abbr);
+    if (r) announceSelection(r.st, r.model);
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     document.getElementById('breakdown')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   };
@@ -169,7 +179,8 @@ function wirePicker(store, onChange) {
   select.addEventListener('change', () => {
     onChange(select.value);
     saveSelection(select.value);
-    render(store, select.value);
+    const r = render(store, select.value);
+    if (r) announceSelection(r.st, r.model);
   });
 
   if (geoBtn && 'geolocation' in navigator) {

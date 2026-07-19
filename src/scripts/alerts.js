@@ -31,18 +31,25 @@ function init(form) {
     const emailVal = (email?.value || '').trim();
     const stateVal = state?.value || '';
 
+    const errorId = status?.id || null;
     if (!EMAIL_RE.test(emailVal)) {
       email?.setAttribute('aria-invalid', 'true');
+      if (errorId) email?.setAttribute('aria-describedby', errorId);
       setStatus('Please enter a valid email address.', 'error');
       email?.focus();
       return;
     }
     email?.removeAttribute('aria-invalid');
+    email?.removeAttribute('aria-describedby');
     if (state && !stateVal) {
+      state.setAttribute('aria-invalid', 'true');
+      if (errorId) state.setAttribute('aria-describedby', errorId);
       setStatus('Please choose your state.', 'error');
       state.focus();
       return;
     }
+    state?.removeAttribute('aria-invalid');
+    state?.removeAttribute('aria-describedby');
 
     const btn = form.querySelector('button[type="submit"]');
     const label = btn?.textContent;
@@ -82,7 +89,14 @@ function init(form) {
     }
   });
 
-  email?.addEventListener('input', () => email.removeAttribute('aria-invalid'));
+  email?.addEventListener('input', () => {
+    email.removeAttribute('aria-invalid');
+    email.removeAttribute('aria-describedby');
+  });
+  state?.addEventListener('change', () => {
+    state.removeAttribute('aria-invalid');
+    state.removeAttribute('aria-describedby');
+  });
 }
 
 document.querySelectorAll('form#alert-form, form[data-alert-form]').forEach(init);

@@ -32,6 +32,8 @@ export const site = {
   },
   // The CDC data cadence, surfaced in the UI to set expectations honestly.
   dataCadence: 'Weekly (CDC surveillance systems publish on Fridays)',
+  // Content/legal-page revision date (for sitemap <lastmod>). Bump when copy changes.
+  contentUpdated: '2026-07-19',
   // Season framing — 2026–2027 respiratory season (MMWR Week 40 → Week 20).
   season: {
     label: '2026–2027 respiratory season',

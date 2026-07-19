@@ -14,12 +14,15 @@ export function organizationLd() {
     url: site.origin,
     logo: `${site.origin}/assets/icon-512.png`,
     description: site.shortDescription,
-    sameAs: [`https://twitter.com/${site.social.twitter.replace('@', '')}`],
   };
-  // Only advertise a contact email in structured data once a real, routable
-  // address is configured — never the RFC-2606 `.example` placeholder.
+  // Only advertise a contact email / social profile in structured data once a
+  // real one is configured — never a placeholder (RFC-2606 `.example`, or an
+  // unverified handle that nothing on the site actually links to).
   if (site.publisher.email && !/\.example$/.test(site.publisher.email)) {
     org.email = site.publisher.email;
+  }
+  if (site.social && site.social.url) {
+    org.sameAs = [site.social.url];
   }
   return org;
 }
@@ -51,11 +54,14 @@ export function datasetLd() {
       'COVID-19, derived from public-domain CDC surveillance systems (NSSP, ' +
       'NWSS, NREVSS).',
     creator: { '@type': 'Organization', name: site.name },
+    url: `${site.origin}/methodology/`,
     isBasedOn: 'https://data.cdc.gov/',
     license: 'https://www.usa.gov/government-works',
     isAccessibleForFree: true,
     keywords: ['influenza', 'RSV', 'COVID-19', 'respiratory illness', 'CDC', 'wastewater'],
-    temporalCoverage: `${site.season.startsISO}/${site.season.endsISO}`,
+    // temporalCoverage intentionally omitted: the dataset reflects whatever CDC
+    // has most recently published, so a fixed/forward-dated window would overstate
+    // what is actually available.
   };
 }
 

@@ -16,7 +16,7 @@ export default function home(ctx) {
     <div class="container">
       <div class="hero__grid">
         <div>
-          <p class="eyebrow"><span aria-hidden="true">◍</span> ${escapeHtml(site.season.label)}</p>
+          <p class="eyebrow"><span aria-hidden="true">◍</span> Flu · RSV · COVID-19 · United States</p>
           <h1>How bad is it near you, in plain English?</h1>
           <p class="lede hero__lede">FluTrack turns the CDC's own surveillance data into one simple answer for your state — a combined flu, RSV and COVID-19 threat level, and which way it's heading.</p>
           <form class="picker hero__cta" id="state-picker" role="search" aria-label="Choose your state">
@@ -31,9 +31,7 @@ export default function home(ctx) {
               Use my location
             </button>
           </form>
-          <p class="muted" style="margin-top: var(--space-sm); font-size: var(--step--1)">Updated ${escapeHtml(
-            site.dataCadence.toLowerCase()
-          )}. We show directional trends, not a live case count.</p>
+          <p class="muted" style="margin-top: var(--space-sm); font-size: var(--step--1)">Updated weekly (CDC surveillance systems publish on Fridays). We show directional trends, not a live case count.</p>
         </div>
         <div data-region="threat-card" data-week="${escapeHtml(weekEnding)}">
           ${threatCard(def.state, def.model, { weekEnding, provenance })}
@@ -118,7 +116,7 @@ export default function home(ctx) {
       </div>
       <div class="callout" style="margin-top: var(--space-lg)">
         <p class="callout__title"><span aria-hidden="true">✓</span> Licensing note</p>
-        <p class="text-secondary">FluTrack deliberately uses only public-domain CDC feeds. We exclude non-commercially-licensed datasets (such as WastewaterSCAN, CC BY-NC 4.0) so this free, ad-supported utility stays fully within its rights. <a href="/data-sources/">More on our sources →</a></p>
+        <p class="text-secondary">FluTrack deliberately uses only public-domain CDC feeds. We exclude non-commercially licensed datasets (such as WastewaterSCAN, CC BY-NC 4.0) so this free, ad-supported utility stays fully within its rights. <a href="/data-sources/">More on our sources →</a></p>
       </div>
     </div>
   </section>

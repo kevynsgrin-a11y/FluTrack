@@ -72,6 +72,7 @@ function head(page) {
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(desc)}">
+  <meta name="author" content="${escapeHtml(site.publisher.name)}">
   <link rel="canonical" href="${escapeHtml(canonical)}">
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0c1116" media="(prefers-color-scheme: dark)">
@@ -97,6 +98,7 @@ function head(page) {
 
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/assets/favicon-32.png" sizes="32x32">
+  <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/assets/${cssHref}">
@@ -193,7 +195,7 @@ export function layout(page) {
 <body${page.bodyClass ? ` class="${page.bodyClass}"` : ''}>
   <a class="skip-link" href="#main">Skip to content</a>
   ${header(page)}
-  <main id="main">
+  <main id="main" tabindex="-1">
 ${page.body}
   </main>
   ${footer()}

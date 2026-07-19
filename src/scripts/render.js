@@ -106,7 +106,7 @@ export function threatCard(state, model, opts = {}) {
     <div class="threat__gauge">${severityMeter(model.level)}</div>
     <div class="cluster" style="margin-top: var(--space-md)">
       ${trendChip(model.trend)}
-      <span class="badge">Flu · RSV · COVID combined</span>
+      <span class="badge">Flu · RSV · COVID-19 combined</span>
     </div>
   </article>`;
 }

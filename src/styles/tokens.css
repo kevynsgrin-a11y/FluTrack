@@ -40,7 +40,7 @@
 
   /* Trend direction accents (light). --trend-flat darkened to clear AA on the
      light severity-soft card backgrounds; dark overrides live in the dark block. */
-  --trend-up: #c62828;   /* rising activity = worse */
+  --trend-up: #b71c1c;   /* rising = worse (AA ≥4.5:1 on all light soft cards) */
   --trend-down: #1c6b41; /* falling activity = better (AA on light soft bg) */
   --trend-flat: #55606c;
 

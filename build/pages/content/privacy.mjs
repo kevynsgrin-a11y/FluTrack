@@ -39,7 +39,7 @@ export default function privacy(ctx) {
     </div>
 
     <h2>Who we are</h2>
-    <p>FluTrack is an independent publisher that turns public-domain CDC respiratory surveillance data into a plain-English, state-level threat level for flu, RSV and COVID-19. We are the data controller responsible for the information described in this policy. FluTrack is a small, independent project — ${escapeHtml(
+    <p>FluTrack is an independent publisher that turns public-domain CDC respiratory surveillance data into a plain-English, state-level threat level for flu, RSV and COVID-19. We are the data controller responsible for the information described in this policy. ${escapeHtml(
       disclaimers.notAffiliated
     )}</p>
     <p>You can reach us about anything in this policy, including a request to access or delete your information, at <a href="mailto:${email}">${email}</a>.</p>
@@ -51,7 +51,7 @@ export default function privacy(ctx) {
     <p>The only personal information you actively provide is what you submit to the <a href="/alerts/">surge-alert</a> form: your <strong>email address</strong> and the <strong>state</strong> you want alerts for. We use those two fields solely to send the weekly-at-most alert you asked for. We do not require a name, a password, or an account.</p>
 
     <h3>Information collected automatically</h3>
-    <p>Like almost every website, our hosting provider records standard <strong>server logs</strong> when a page is requested — typically your IP address, the time of the request, the page fetched, and your browser's user-agent string. These logs exist for security, abuse prevention, and understanding aggregate traffic. We also use <strong>privacy-respecting analytics</strong> to count which pages are useful; it is configured to measure visits in aggregate rather than to build a profile of you across sites, and we do not attempt to identify individual visitors from it.</p>
+    <p>Like almost every website, our hosting provider records standard <strong>server logs</strong> when a page is requested — typically your IP address, the time of the request, the page fetched, and your browser's user-agent string. These logs exist for security, abuse prevention, and understanding aggregate traffic. If we enable <strong>analytics</strong>, we use a privacy-respecting service configured to measure visits in aggregate rather than to build a profile of you across sites, and we do not attempt to identify individual visitors from it.</p>
 
     <h3>Approximate location — only when you ask for it</h3>
     <p>The home page offers a “Use my location” button. It does nothing unless you tap it and your browser then grants permission. If you do, your device provides approximate coordinates, which are sent once to the U.S. Federal Communications Commission's public <a href="https://geo.fcc.gov/">Area API geocoder</a> (<code>geo.fcc.gov</code>) purely to resolve which U.S. state you are in. That state is used to pre-select the picker for you and nothing more. <strong>We do not store your coordinates or your resolved location</strong> — the value is discarded as soon as the picker is set. If you never tap the button, no location is ever requested.</p>
@@ -82,7 +82,7 @@ export default function privacy(ctx) {
             <td>A short retention window, then deleted or anonymized</td>
           </tr>
           <tr>
-            <th scope="row">Aggregate analytics</th>
+            <th scope="row">Aggregate analytics (if enabled)</th>
             <td>To see which pages are useful</td>
             <td>Kept in aggregate; not tied to your identity</td>
           </tr>
@@ -104,7 +104,7 @@ export default function privacy(ctx) {
     <p>Both are conveniences, not trackers. You can clear them at any time through your browser's “clear site data” controls, and the site will simply fall back to its defaults.</p>
 
     <h2>Advertising</h2>
-    <p>FluTrack is free and is supported in part by advertising. Third-party advertising partners that serve ads on the site may set their own cookies or use similar technologies to measure and, in some cases, personalize the ads you see. Those partners operate under their own privacy policies, which we do not control. You can manage or opt out of interest-based advertising from participating companies through the industry choice tools at the <a href="https://optout.aboutads.info/">Digital Advertising Alliance</a>, the <a href="https://optout.networkadvertising.org/">Network Advertising Initiative</a>, and, in Europe, <a href="https://www.youronlinechoices.eu/">Your Online Choices</a>. Most browsers also let you block or delete third-party cookies directly.</p>
+    <p>FluTrack is free and is intended to be supported in part by advertising. When advertising is enabled, third-party advertising partners that serve ads on the site may set their own cookies or use similar technologies to measure and, in some cases, personalize the ads you see. Where required by law, non-essential advertising and analytics cookies will be gated behind a consent prompt. Those partners operate under their own privacy policies, which we do not control. You can manage or opt out of interest-based advertising from participating companies through the industry choice tools at the <a href="https://optout.aboutads.info/">Digital Advertising Alliance</a>, the <a href="https://optout.networkadvertising.org/">Network Advertising Initiative</a>, and, in Europe, <a href="https://www.youronlinechoices.eu/">Your Online Choices</a>. Most browsers also let you block or delete third-party cookies directly.</p>
 
     <h2>Affiliate links</h2>
     <p>Some pages may contain affiliate links, where we can earn a small commission if you buy something through them, at no extra cost to you. Following such a link may pass standard referral information to the destination merchant, governed by that merchant's own privacy policy. Affiliate revenue never influences the threat levels we report — the index always reflects the CDC's figures alone. We explain these relationships in full on our <a href="/affiliate-disclosure/">affiliate disclosure</a> page.</p>

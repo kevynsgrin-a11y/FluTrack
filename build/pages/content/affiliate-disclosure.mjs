@@ -27,7 +27,7 @@ export default function affiliateDisclosure(ctx) {
     eyebrow: 'Disclosure',
     title: 'Affiliate & Advertising Disclosure',
     lede:
-      'FluTrack is free to use. This page explains, plainly, how the site pays for itself — through display advertising and clearly-labeled affiliate links — and, just as importantly, the firewall that keeps that money from ever touching the threat level we report.',
+      'FluTrack is free to use. This page explains, plainly, how the site pays for itself — through display advertising and clearly labeled affiliate links — and, just as importantly, the firewall that keeps that money from ever touching the threat level we report.',
   })}
 
   ${prose(
@@ -73,7 +73,7 @@ export default function affiliateDisclosure(ctx) {
       <p class="callout__title"><span aria-hidden="true">◷</span> Not medical advice</p>
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
-    <p>Nothing on this page — and no product or service linked from it — should be read as guidance about testing, treatment, prevention, or your personal risk. Decisions about your health belong between you and a qualified health provider, not a link. FluTrack is an independent data-visualization utility; ${escapeHtml(
+    <p>Nothing on this page — and no product or service linked from it — should be read as guidance about testing, treatment, prevention, or your personal risk. Decisions about your health belong between you and a qualified health provider, not a link. ${escapeHtml(
       disclaimers.notAffiliated
     )}</p>
 
