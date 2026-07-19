@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # No dependencies to install — FluTrack has zero runtime/build deps.
+      - name: Build site
+        run: node build/build.mjs
+
+      - name: QA — links, assets, SEO tags
+        run: node build/check.mjs
+
+      - name: Unit + integration tests
+        run: node --test test/*.test.mjs
