@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
@@ -29,14 +30,14 @@ export default function medicalDisclaimer(ctx) {
   ${prose(
     `
     <div class="callout callout--warn" role="note">
-      <p class="callout__title"><span aria-hidden="true">⚠</span> This is not medical advice</p>
+      <p class="callout__title">${icon('alert')} This is not medical advice</p>
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
 
     <p>FluTrack combines the CDC's weekly respiratory surveillance signals — emergency-department visits, laboratory test positivity and wastewater viral activity — into a single 0–4 threat level and a rising-or-falling trend for each state. That number describes how much flu, RSV and COVID-19 activity the CDC's data indicates across a whole population. It is background context for everyday decisions, and nothing on this page, or anywhere on this site, is intended to diagnose, treat, cure, or prevent any illness.</p>
 
     <div class="callout callout--warn" role="note">
-      <p class="callout__title"><span aria-hidden="true">✚</span> In a medical emergency, call 911</p>
+      <p class="callout__title">${icon('plus')} In a medical emergency, call 911</p>
       <p>If you or someone else may be experiencing a medical emergency, call 911 or your local emergency number, or go to the nearest emergency department right away. Never use FluTrack — or any website — to judge whether a situation is an emergency, and never delay seeking care or disregard professional advice because of something you read here.</p>
     </div>
 
@@ -55,7 +56,7 @@ export default function medicalDisclaimer(ctx) {
     <h2>Independent — not affiliated with the CDC</h2>
     <p>FluTrack is built entirely on the CDC's open, public-domain data, but it is an independent project with no official standing.</p>
     <div class="callout" role="note">
-      <p class="callout__title"><span aria-hidden="true">✓</span> Independent, not official</p>
+      <p class="callout__title">${icon('check')} Independent, not official</p>
       <p class="text-secondary">${escapeHtml(disclaimers.notAffiliated)}</p>
     </div>
     <p>Nothing on FluTrack is an official public-health communication. For official guidance, recommendations, and health information, consult the CDC directly at <a href="https://www.cdc.gov/" rel="nofollow noopener">cdc.gov</a> or your state and local health department.</p>
@@ -70,7 +71,7 @@ export default function medicalDisclaimer(ctx) {
     <p>If anything on this page is unclear, or you would like to reach a real person about how FluTrack works, please <a href="/contact/">contact us</a>. For questions about your health, please contact your health provider.</p>
 
     <div class="callout callout--warn" role="note">
-      <p class="callout__title"><span aria-hidden="true">⚠</span> The bottom line</p>
+      <p class="callout__title">${icon('alert')} The bottom line</p>
       <p>FluTrack is general information about population-level respiratory-illness trends from public CDC surveillance data. ${escapeHtml(
         disclaimers.short
       )} In an emergency, call 911, and for guidance about your health, consult a qualified provider.</p>

@@ -130,6 +130,11 @@ ol {
   outline: none;
 }
 
+/* The skip-link target is programmatically focusable but shouldn't show a ring. */
+main:focus {
+  outline: none;
+}
+
 ::selection {
   background: var(--brand-200);
   color: var(--gray-900);

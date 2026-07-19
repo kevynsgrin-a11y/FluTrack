@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
@@ -33,7 +34,7 @@ export default function terms(ctx) {
     <p>These Terms of Use (“Terms”) govern your access to and use of ${domain} and its features (together, the “Service”), operated by FluTrack (“FluTrack”, “we”, “us”). Please read them carefully. They are written to be understood, not to trip you up — but they are a binding agreement, so the plain wording still counts.</p>
 
     <div class="callout">
-      <p class="callout__title"><span aria-hidden="true">✓</span> The short version</p>
+      <p class="callout__title">${icon('check')} The short version</p>
       <p class="text-secondary">FluTrack is a free tool that translates public-domain CDC surveillance data into a plain-English respiratory threat level. It is information, not medical advice, and it is a weekly trend rather than a live count. Use it for your own understanding, don't pass it off as official or hammer our servers, and understand that it comes with no warranty.</p>
     </div>
 
@@ -46,7 +47,7 @@ export default function terms(ctx) {
     <h2>3. Not medical advice</h2>
     <p>This is the most important term on the page. FluTrack presents general information about population-level respiratory activity. It is not a diagnostic tool, it is not tailored to your circumstances, and it must never be used as a substitute for professional judgment.</p>
     <div class="callout callout--warn" role="note">
-      <p class="callout__title"><span aria-hidden="true">◷</span> Not medical advice</p>
+      <p class="callout__title">${icon('clock')} Not medical advice</p>
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
     <p>Nothing on the Service should be read as a recommendation to seek, obtain, or forgo any test, vaccination, medication, or other course of action. Any decision you make after reading FluTrack is your own, made in consultation with a qualified professional where appropriate.</p>
@@ -54,7 +55,7 @@ export default function terms(ctx) {
     <h2>4. Independence from the CDC</h2>
     <p>FluTrack is built entirely on the CDC's open data, but it is a separate, independent project with no affiliation to or endorsement from any government agency.</p>
     <div class="callout">
-      <p class="callout__title"><span aria-hidden="true">✓</span> Independent, not official</p>
+      <p class="callout__title">${icon('check')} Independent, not official</p>
       <p class="text-secondary">${escapeHtml(disclaimers.notAffiliated)}</p>
     </div>
     <p>References to the CDC and to specific surveillance systems are made solely to credit and describe the underlying data sources. They do not imply any partnership, sponsorship, or review of the Service by those agencies.</p>
@@ -62,7 +63,7 @@ export default function terms(ctx) {
     <h2>5. Accuracy, timeliness and “as is” provision</h2>
     <p>The Service reflects surveillance data that is reported to the CDC on a delay and revised as later reports arrive. It is a directional indicator, not a real-time measurement.</p>
     <div class="callout callout--warn" role="note">
-      <p class="callout__title"><span aria-hidden="true">◷</span> Trends, not real-time counts</p>
+      <p class="callout__title">${icon('clock')} Trends, not real-time counts</p>
       <p>${escapeHtml(disclaimers.trendNotLive)}</p>
     </div>
     <p>The Service, and all information on it, is provided <strong>“as is” and “as available,” without warranties of any kind</strong>, whether express or implied. To the fullest extent permitted by law, we disclaim all warranties, including any implied warranties of merchantability, fitness for a particular purpose, non-infringement, and any warranty as to the <strong>accuracy, completeness, timeliness, or reliability</strong> of the data or the threat levels derived from it. We do not warrant that the Service will be uninterrupted, error-free, or free of harmful components. You rely on the Service at your own discretion and risk.</p>

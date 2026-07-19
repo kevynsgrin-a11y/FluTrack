@@ -7,6 +7,7 @@
 import { site, disclaimers } from './site.mjs';
 import { states } from './states.mjs';
 import { escapeHtml } from '../../src/scripts/util.js';
+import { icon } from '../../src/scripts/icons.js';
 
 /** A standard page header block for content/legal pages. */
 export function pageHeader({ eyebrow, title, lede }) {
@@ -70,7 +71,7 @@ export function signupBand({ compact = false } = {}) {
 /** A compact "not medical advice / trend not live" callout. */
 export function trendDisclaimer() {
   return `<div class="callout callout--warn" role="note">
-    <p class="callout__title"><span aria-hidden="true">◷</span> Trends, not real-time counts</p>
+    <p class="callout__title">${icon('clock')} Trends, not real-time counts</p>
     <p>${escapeHtml(disclaimers.trendNotLive)} ${escapeHtml(disclaimers.short)}</p>
   </div>`;
 }

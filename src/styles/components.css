@@ -42,6 +42,16 @@ main {
   color: var(--accent);
 }
 
+/* Inline icon system (matches the logo's stroke weight). */
+.icon {
+  display: inline-block;
+  vertical-align: -0.15em;
+  flex: none;
+}
+.callout__title .icon {
+  vertical-align: -0.2em;
+}
+
 .lede {
   font-size: var(--step-1);
   color: var(--text-secondary);
@@ -315,18 +325,35 @@ main {
   --sev-ink: var(--sev-4-ink);
 }
 
-/* ---- Threat gauge card (hero of the state view) ----------------------- */
+/* ---- Threat readout card (hero of the state view) --------------------- */
 .threat {
   border-radius: var(--radius-xl);
   padding: clamp(var(--space-lg), 4vw, var(--space-2xl));
   background: linear-gradient(
-    160deg,
-    var(--sev-soft),
-    color-mix(in srgb, var(--sev-soft) 55%, var(--surface))
+    155deg,
+    color-mix(in srgb, var(--sev-soft) 92%, var(--surface)),
+    color-mix(in srgb, var(--sev-soft) 45%, var(--surface))
   );
-  border: 1px solid color-mix(in srgb, var(--sev) 30%, var(--border));
+  border: 1px solid color-mix(in srgb, var(--sev) 32%, var(--border));
+  box-shadow: var(--shadow-sm), 0 24px 60px -34px color-mix(in srgb, var(--sev) 60%, transparent);
   position: relative;
   overflow: hidden;
+}
+.threat::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto auto;
+  width: 22rem;
+  height: 22rem;
+  background: radial-gradient(circle at top right, color-mix(in srgb, var(--sev) 22%, transparent), transparent 62%);
+  pointer-events: none;
+}
+.threat__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  position: relative;
 }
 .threat__label {
   display: flex;
@@ -338,20 +365,144 @@ main {
   text-transform: uppercase;
   color: var(--sev-ink);
 }
+.threat__pip {
+  width: 0.6em;
+  height: 0.6em;
+  border-radius: 50%;
+  background: var(--sev);
+  box-shadow: 0 0 0 0.28em color-mix(in srgb, var(--sev) 28%, transparent);
+}
+.threat__body {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-lg);
+  align-items: center;
+  margin-top: var(--space-md);
+  position: relative;
+}
+@media (max-width: 34rem) {
+  .threat__body {
+    grid-template-columns: 1fr;
+  }
+}
 .threat__level {
   font-size: var(--step-5);
   font-weight: var(--weight-bold);
-  line-height: 1;
-  letter-spacing: var(--tracking-tight);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
   color: var(--sev-ink);
-  margin-top: var(--space-xs);
 }
 .threat__meta {
   color: var(--text-secondary);
   margin-top: var(--space-sm);
+  max-width: 34ch;
 }
 .threat__gauge {
+  width: min(15rem, 46vw);
+  justify-self: center;
+}
+.threat__meter {
   margin-top: var(--space-lg);
+  position: relative;
+}
+
+/* ---- Arc gauge -------------------------------------------------------- */
+.gauge {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+.gauge__track {
+  fill: none;
+  stroke: color-mix(in srgb, var(--sev) 16%, var(--surface));
+  stroke-width: 15;
+  stroke-linecap: round;
+}
+.gauge__value {
+  fill: none;
+  stroke: var(--sev);
+  stroke-width: 15;
+  stroke-linecap: round;
+  transition: stroke-dasharray var(--dur-slow) var(--ease-out), stroke var(--dur-med) var(--ease-out);
+}
+.gauge__score {
+  font-size: 42px;
+  font-weight: var(--weight-bold);
+  fill: var(--sev-ink);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+.gauge__unit {
+  font-size: 11px;
+  fill: var(--text-muted);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .gauge__value {
+    animation: gauge-in 0.9s var(--ease-out) both;
+  }
+}
+@keyframes gauge-in {
+  from {
+    stroke-dashoffset: 260;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* ---- Provenance strip ------------------------------------------------- */
+.prov {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-sm);
+  font-size: var(--step--1);
+  color: var(--text-secondary);
+}
+.prov__src {
+  font-weight: var(--weight-semibold);
+  color: var(--text);
+}
+.prov__tags {
+  display: inline-flex;
+  gap: 4px;
+}
+.prov__tags span {
+  font-size: 0.68rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.03em;
+  padding: 0.15em 0.45em;
+  border-radius: var(--radius-xs);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+}
+.prov__sep {
+  color: var(--text-muted);
+}
+.prov__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-weight: var(--weight-semibold);
+  color: var(--sev-0-ink);
+}
+.prov__live--sample {
+  color: var(--sev-2-ink);
+}
+.prov__dot {
+  width: 0.5em;
+  height: 0.5em;
+  border-radius: 50%;
+  background: currentColor;
+  animation: pulse 2s var(--ease-in-out) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .prov__dot {
+    animation: none;
+  }
 }
 
 /* Segmented severity meter */
@@ -430,6 +581,115 @@ main {
   color: var(--text-muted);
 }
 
+/* ---- US tile-grid map (signature visual) ------------------------------ */
+.us-map {
+  width: 100%;
+}
+.us-map__svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  overflow: visible;
+}
+.us-tile {
+  cursor: pointer;
+}
+.us-tile rect {
+  fill: var(--map-empty);
+  stroke: var(--bg-elevated);
+  stroke-width: 1.5;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: filter var(--dur-fast) var(--ease-out), stroke var(--dur-fast) var(--ease-out);
+}
+.us-tile[data-sev='0'] rect { fill: var(--map-0); }
+.us-tile[data-sev='1'] rect { fill: var(--map-1); }
+.us-tile[data-sev='2'] rect { fill: var(--map-2); }
+.us-tile[data-sev='3'] rect { fill: var(--map-3); }
+.us-tile[data-sev='4'] rect { fill: var(--map-4); }
+.us-tile text {
+  fill: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  letter-spacing: 0.01em;
+  pointer-events: none;
+}
+.us-tile:not([data-sev]) text {
+  fill: var(--text-muted);
+}
+.us-tile:hover rect {
+  filter: brightness(1.12) saturate(1.05);
+  stroke: var(--text);
+  stroke-width: 2.5;
+}
+.us-tile:focus-visible {
+  outline: none;
+}
+.us-tile:focus-visible rect {
+  stroke: var(--focus-ring);
+  stroke-width: 3;
+  filter: brightness(1.08);
+}
+.us-tile.is-selected rect {
+  stroke: var(--text);
+  stroke-width: 3;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .us-tile rect {
+    animation: tile-in 0.5s var(--ease-out) both;
+  }
+}
+@keyframes tile-in {
+  from {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.us-map__hint {
+  font-size: var(--step--1);
+  margin-top: var(--space-sm);
+  text-align: center;
+}
+
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2xs) var(--space-md);
+  font-size: var(--step--1);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-md);
+}
+.map-legend__title {
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+.map-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+}
+.map-legend__swatch {
+  width: 0.85rem;
+  height: 0.85rem;
+  border-radius: 3px;
+  background: var(--map-empty);
+  flex: none;
+}
+.map-legend__swatch[data-sev='0'] { background: var(--map-0); }
+.map-legend__swatch[data-sev='1'] { background: var(--map-1); }
+.map-legend__swatch[data-sev='2'] { background: var(--map-2); }
+.map-legend__swatch[data-sev='3'] { background: var(--map-3); }
+.map-legend__swatch[data-sev='4'] { background: var(--map-4); }
+
 /* ---- State picker ----------------------------------------------------- */
 .picker {
   display: flex;
@@ -447,6 +707,15 @@ main {
   padding: 0.65em 2.5em 0.65em 0.9em;
   font-weight: var(--weight-medium);
   min-width: 12rem;
+}
+/* Lighter chevron in dark mode so the non-text indicator clears 3:1. */
+:root[data-theme='dark'] .select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%239aa7b1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%239aa7b1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  }
 }
 
 /* ---- Forms ------------------------------------------------------------ */

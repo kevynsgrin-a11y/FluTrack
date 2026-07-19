@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
@@ -27,13 +28,13 @@ export default function affiliateDisclosure(ctx) {
     eyebrow: 'Disclosure',
     title: 'Affiliate & Advertising Disclosure',
     lede:
-      'FluTrack is free to use. This page explains, plainly, how the site pays for itself — through display advertising and clearly-labeled affiliate links — and, just as importantly, the firewall that keeps that money from ever touching the threat level we report.',
+      'FluTrack is free to use. This page explains, plainly, how the site pays for itself — through display advertising and clearly labeled affiliate links — and, just as importantly, the firewall that keeps that money from ever touching the threat level we report.',
   })}
 
   ${prose(
     `
     <div class="callout">
-      <p class="callout__title"><span aria-hidden="true">✓</span> The short version</p>
+      <p class="callout__title">${icon('check')} The short version</p>
       <p class="text-secondary">FluTrack is supported by display advertising and by affiliate links. If you click certain links and buy something, we may earn a commission — at no extra cost to you. None of that changes the threat level. The index is computed from public-domain CDC data alone, and it is never for sale, sponsorship, or promotion.</p>
     </div>
 
@@ -54,7 +55,7 @@ export default function affiliateDisclosure(ctx) {
     <h2>Advertising and affiliate revenue never influence the data</h2>
     <p>This is the part that matters most, so we will be unambiguous about it. <strong>No advertiser and no affiliate partner can influence the threat level, the trend, or anything else FluTrack reports about respiratory activity.</strong> The index is computed purely from public-domain CDC surveillance signals — emergency-department visits, laboratory test positivity and wastewater viral activity — using the same published method for every state, regardless of who advertises or which links a page carries.</p>
     <div class="callout callout--warn" role="note">
-      <p class="callout__title"><span aria-hidden="true">⚠</span> The threat level is not for sale</p>
+      <p class="callout__title">${icon('alert')} The threat level is not for sale</p>
       <p>A state's reading is never sold, sponsored, promoted, or adjusted for any commercial reason. No payment can raise or lower a threat level, feature a state, or change how the data is described. If it could, the number would be worthless — so it cannot.</p>
     </div>
 
@@ -70,10 +71,10 @@ export default function affiliateDisclosure(ctx) {
     <h2>Not an endorsement, and not medical advice</h2>
     <p>An affiliate link is a funding mechanism, not a seal of approval. FluTrack does not test, certify, or vouch for the products and services these links point to, and their inclusion is not an endorsement of any brand, seller, test, device, treatment, or vaccine. Merchants set their own prices, availability, terms, and privacy practices, and we do not control them.</p>
     <div class="callout callout--warn" role="note">
-      <p class="callout__title"><span aria-hidden="true">◷</span> Not medical advice</p>
+      <p class="callout__title">${icon('clock')} Not medical advice</p>
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
-    <p>Nothing on this page — and no product or service linked from it — should be read as guidance about testing, treatment, prevention, or your personal risk. Decisions about your health belong between you and a qualified health provider, not a link. FluTrack is an independent data-visualization utility; ${escapeHtml(
+    <p>Nothing on this page — and no product or service linked from it — should be read as guidance about testing, treatment, prevention, or your personal risk. Decisions about your health belong between you and a qualified health provider, not a link. ${escapeHtml(
       disclaimers.notAffiliated
     )}</p>
 
@@ -81,7 +82,7 @@ export default function affiliateDisclosure(ctx) {
     <p>If anything about how FluTrack is funded is unclear, or you spot a link that should be labeled and is not, please <a href="/contact/">tell us</a> and we will fix it. You can also read how affiliate and advertising data is handled in our <a href="/privacy/">Privacy Policy</a>, and the governing terms on our <a href="/terms/">Terms of Use</a> page.</p>
 
     <div class="callout">
-      <p class="callout__title"><span aria-hidden="true">✓</span> The bottom line</p>
+      <p class="callout__title">${icon('check')} The bottom line</p>
       <p class="text-secondary">FluTrack earns from advertising and from disclosed affiliate links, at no extra cost to you. That revenue keeps the site free — and it never touches the CDC-derived threat level, which is computed the same way for every state and is never for sale. ${escapeHtml(
         disclaimers.short
       )}</p>

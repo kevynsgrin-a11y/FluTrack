@@ -36,7 +36,7 @@ import { threatCard, pathogenTiles, stateChip, signalRows } from '../src/scripts
 import * as seo from './lib/seo.mjs';
 import * as partials from './lib/partials.mjs';
 import { generateSnapshot } from './lib/snapshot.mjs';
-import { assetFiles } from './lib/assets.mjs';
+import { assetFiles, manifest, icoFromPng } from './lib/assets.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
@@ -128,8 +128,17 @@ function copyScripts() {
   const outDir = join(dist, 'assets', 'js');
   mkdirSync(outDir, { recursive: true });
   for (const f of readdirSync(srcScripts)) {
+    if (f === 'sw.js') continue; // service worker is emitted at the root scope
     if (f.endsWith('.js')) cpSync(join(srcScripts, f), join(outDir, f));
   }
+}
+
+// Emit the service worker at the site root (root scope), versioned by the CSS
+// content hash so a new deploy activates a fresh cache.
+function writeServiceWorker() {
+  const version = (site.assets?.css || 'styles').replace(/[^a-z0-9]/gi, '') || 'v1';
+  const sw = readFileSync(join(srcScripts, 'sw.js'), 'utf8').replace('__BUILD__', version);
+  writeFileSync(join(dist, 'sw.js'), sw);
 }
 
 function writeAssets() {
@@ -156,9 +165,41 @@ function writeAssets() {
 function writeRootFiles(sitemapEntries) {
   writeFileSync(join(dist, 'sitemap.xml'), seo.sitemapXml(sitemapEntries));
   writeFileSync(join(dist, 'robots.txt'), seo.robotsTxt());
-  writeFileSync(join(dist, 'manifest.webmanifest'), assetFiles(site)['manifest.webmanifest'] || '{}');
+  writeFileSync(join(dist, 'manifest.webmanifest'), manifest(site));
   writeFileSync(join(dist, '_headers'), headers());
   writeFileSync(join(dist, '_redirects'), redirects());
+
+  // favicon.ico at the root for legacy clients / bots that request it directly.
+  const png32 = resolve(root, 'src/assets/favicon-32.png');
+  if (existsSync(png32)) writeFileSync(join(dist, 'favicon.ico'), icoFromPng(readFileSync(png32), 32));
+
+  // RFC 9116 security contact + humans.txt (transparency / firm-grade polish).
+  mkdirSync(join(dist, '.well-known'), { recursive: true });
+  writeFileSync(join(dist, '.well-known', 'security.txt'), securityTxt());
+  writeFileSync(join(dist, 'humans.txt'), humansTxt());
+}
+
+function securityTxt() {
+  // Expires ~1 year out from the season anchor (stable, avoids build-time Date).
+  return `# ${site.name} security contact
+Contact: mailto:${site.publisher.email}
+Expires: ${site.season.endsISO}T00:00:00Z
+Preferred-Languages: en
+Canonical: ${site.origin}/.well-known/security.txt
+`;
+}
+
+function humansTxt() {
+  return `/* TEAM */
+  Site: ${site.name}
+  Contact: ${site.publisher.email}
+
+/* SITE */
+  An independent, plain-English respiratory illness tracker built on
+  public-domain CDC surveillance data. Not affiliated with the CDC.
+  Standards: HTML5, CSS3, ES modules, JSON-LD
+  Components: Zero runtime dependencies. Static build. Cloudflare Pages.
+`;
 }
 
 function headers() {
@@ -199,6 +240,9 @@ function headers() {
 
 /data/*
   Cache-Control: public, max-age=3600
+
+/sw.js
+  Cache-Control: no-cache
 `;
 }
 
@@ -239,8 +283,9 @@ async function main() {
   // Assets & code
   bundleCss();
   copyScripts();
+  writeServiceWorker();
   writeAssets();
-  log('assets, styles and scripts written');
+  log('assets, styles, scripts and service worker written');
 
   const written = [];
   const sitemap = [];
@@ -263,7 +308,12 @@ async function main() {
   for (const page of contentPages) {
     written.push(writePage(page));
     if (!page.noindex) {
-      sitemap.push({ path: page.path, changefreq: page.changefreq || 'monthly', priority: page.priority ?? 0.5 });
+      sitemap.push({
+        path: page.path,
+        changefreq: page.changefreq || 'monthly',
+        priority: page.priority ?? 0.5,
+        lastmod: page.lastmod || (page.path === '/states/' ? snapshot.weekEnding : site.contentUpdated),
+      });
     }
   }
   log(`${contentPages.length} content pages written`);

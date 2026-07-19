@@ -1,3 +1,5 @@
+import { icon } from '../../../src/scripts/icons.js';
+
 /**
  * 404 — served at the literal path /404.html (not a trailing-slash directory) so
  * static hosts can use it as the not-found fallback. Deliberately minimal: a
@@ -9,9 +11,10 @@ export default function notFound(ctx) {
   <section class="section">
     <div class="container">
       <div class="centered-page">
-        <p class="eyebrow"><span aria-hidden="true">◍</span> Error 404</p>
+        <p class="eyebrow">${icon('pulse')} Error 404</p>
         <h1>This page went off the chart</h1>
         <p class="lede" style="margin-top: var(--space-md)">The address you followed doesn't match anything on FluTrack. The page may have moved, or the link may be incomplete — but the data is still just a click away.</p>
+        <h2 class="visually-hidden">Where to go next</h2>
         <div class="cluster" style="justify-content: center; margin-top: var(--space-xl)">
           <a class="btn btn--primary" href="/">Back to home</a>
           <a class="btn btn--secondary" href="/states/">All states</a>

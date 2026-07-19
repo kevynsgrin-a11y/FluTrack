@@ -38,9 +38,18 @@
   --sev-3-ink: #a04a00;
   --sev-4-ink: #9b1c1c;
 
+  /* Map heatmap fills — theme-independent, saturated-dark so WHITE tile labels
+     clear AA (≥4.5:1) in both light and dark. A muted, professional heatmap. */
+  --map-0: #1c6b41;
+  --map-1: #467019;
+  --map-2: #795e00;
+  --map-3: #a04a00;
+  --map-4: #9b1c1c;
+  --map-empty: #c2ccd4;
+
   /* Trend direction accents (light). --trend-flat darkened to clear AA on the
      light severity-soft card backgrounds; dark overrides live in the dark block. */
-  --trend-up: #c62828;   /* rising activity = worse */
+  --trend-up: #b71c1c;   /* rising = worse (AA ≥4.5:1 on all light soft cards) */
   --trend-down: #1c6b41; /* falling activity = better (AA on light soft bg) */
   --trend-flat: #55606c;
 
@@ -179,6 +188,7 @@
   --trend-up: #f08a8a;
   --trend-down: #6fd39b;
   --trend-flat: #9aa7b1;
+  --map-empty: #39434d;
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);

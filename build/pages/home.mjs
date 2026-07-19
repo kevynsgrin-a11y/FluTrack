@@ -1,5 +1,7 @@
 import { escapeHtml } from '../../src/scripts/util.js';
-import { threatCard, pathogenTiles, signalRows } from '../../src/scripts/render.js';
+import { threatCard, pathogenTiles, signalRows, provenanceStrip } from '../../src/scripts/render.js';
+import { usMap } from '../../src/scripts/map-render.js';
+import { icon } from '../../src/scripts/icons.js';
 import { signupBand, trendDisclaimer } from '../lib/partials.mjs';
 import { websiteLd, organizationLd, datasetLd } from '../lib/seo.mjs';
 
@@ -11,13 +13,20 @@ export default function home(ctx) {
     .map((s) => `<option value="${s.abbr}">${escapeHtml(s.name)}</option>`)
     .join('');
 
+  // Data for the signature US tile-grid map, pre-colored from the snapshot.
+  const mapEntries = states.map((s) => {
+    const m = ctx.models.get(s.abbr).model;
+    return { abbr: s.abbr, name: s.name, slug: s.slug, level: m.level, label: m.label };
+  });
+
   const body = `
   <section class="hero">
+    <div class="hero__bg" aria-hidden="true" data-sev="${def.model.level ?? 0}"></div>
     <div class="container">
       <div class="hero__grid">
-        <div>
-          <p class="eyebrow"><span aria-hidden="true">◍</span> ${escapeHtml(site.season.label)}</p>
-          <h1>How bad is it near you, in plain English?</h1>
+        <div class="hero__lead">
+          <p class="eyebrow">${icon('pulse', { size: 15 })} Flu · RSV · COVID-19 · United States</p>
+          <h1>How bad is it near you, <em>in plain English?</em></h1>
           <p class="lede hero__lede">FluTrack turns the CDC's own surveillance data into one simple answer for your state — a combined flu, RSV and COVID-19 threat level, and which way it's heading.</p>
           <form class="picker hero__cta" id="state-picker" role="search" aria-label="Choose your state">
             <label class="visually-hidden" for="state-select">Choose your state</label>
@@ -31,22 +40,25 @@ export default function home(ctx) {
               Use my location
             </button>
           </form>
-          <p class="muted" style="margin-top: var(--space-sm); font-size: var(--step--1)">Updated ${escapeHtml(
-            site.dataCadence.toLowerCase()
-          )}. We show directional trends, not a live case count.</p>
+          <div style="margin-top: var(--space-lg)">${provenanceStrip(provenance)}</div>
         </div>
-        <div data-region="threat-card" data-week="${escapeHtml(weekEnding)}">
-          ${threatCard(def.state, def.model, { weekEnding, provenance })}
+        <div class="hero__map">
+          <div data-region="us-map">${usMap(mapEntries, { selected: '' })}</div>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="section--tight">
-    <div class="container">${trendDisclaimer()}</div>
+  <section class="section--tight" id="breakdown" style="scroll-margin-top: 5rem">
+    <div class="container">
+      <div class="readout" data-region="threat-card" data-week="${escapeHtml(weekEnding)}">
+        ${threatCard(def.state, def.model, { weekEnding, provenance })}
+      </div>
+      <div style="margin-top: var(--space-lg)">${trendDisclaimer()}</div>
+    </div>
   </section>
 
-  <section class="section" id="breakdown">
+  <section class="section">
     <div class="container">
       <div class="between section-head">
         <div>
@@ -117,8 +129,8 @@ export default function home(ctx) {
         )}
       </div>
       <div class="callout" style="margin-top: var(--space-lg)">
-        <p class="callout__title"><span aria-hidden="true">✓</span> Licensing note</p>
-        <p class="text-secondary">FluTrack deliberately uses only public-domain CDC feeds. We exclude non-commercially-licensed datasets (such as WastewaterSCAN, CC BY-NC 4.0) so this free, ad-supported utility stays fully within its rights. <a href="/data-sources/">More on our sources →</a></p>
+        <p class="callout__title">${icon('shield-check')} Licensing note</p>
+        <p class="text-secondary">FluTrack deliberately uses only public-domain CDC feeds. We exclude non-commercially licensed datasets (such as WastewaterSCAN, CC BY-NC 4.0) so this free, ad-supported utility stays fully within its rights. <a href="/data-sources/">More on our sources →</a></p>
       </div>
     </div>
   </section>

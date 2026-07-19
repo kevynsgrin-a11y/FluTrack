@@ -55,6 +55,34 @@ export async function onRequestPost({ request, env }) {
   // Silently accept-and-drop obvious bot submissions.
   if (honeypot) return json({ ok: true, message: 'Thanks!' });
 
+  const hasKv = env && env.SUBSCRIBERS && typeof env.SUBSCRIBERS.put === 'function';
+  const hasWebhook = env && env.ALERTS_WEBHOOK_URL;
+
+  if (!hasKv && !hasWebhook) {
+    // Not configured in this deployment — the client treats 501 gracefully.
+    return json(
+      { ok: false, message: 'Subscription delivery is not configured in this deployment.' },
+      501
+    );
+  }
+
+  // Best-effort per-IP rate limiting (requires KV), BEFORE validation so that a
+  // flood of malformed submissions is also counted. Eventually-consistent, so
+  // it is friction, not a hard guarantee.
+  if (hasKv) {
+    const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+    const rlKey = `rl:${ip}`;
+    try {
+      const count = parseInt((await env.SUBSCRIBERS.get(rlKey)) || '0', 10);
+      if (count >= 10) {
+        return json({ ok: false, message: 'Too many requests. Please try again later.' }, 429);
+      }
+      await env.SUBSCRIBERS.put(rlKey, String(count + 1), { expirationTtl: 3600 });
+    } catch (e) {
+      /* rate-limit store hiccup should not block a legitimate signup */
+    }
+  }
+
   if (!EMAIL_RE.test(email) || email.length > 254) {
     return json({ ok: false, message: 'Please enter a valid email address.' }, 422);
   }
@@ -70,33 +98,6 @@ export async function onRequestPost({ request, env }) {
     ua: request.headers.get('user-agent') || '',
     country: request.headers.get('cf-ipcountry') || '',
   };
-
-  const hasKv = env && env.SUBSCRIBERS && typeof env.SUBSCRIBERS.put === 'function';
-  const hasWebhook = env && env.ALERTS_WEBHOOK_URL;
-
-  if (!hasKv && !hasWebhook) {
-    // Not configured in this deployment — the client treats 501 gracefully.
-    return json(
-      { ok: false, message: 'Subscription delivery is not configured in this deployment.' },
-      501
-    );
-  }
-
-  // Best-effort per-IP rate limiting (requires KV). Caps abuse of the public
-  // endpoint; eventually-consistent, so it is friction, not a hard guarantee.
-  if (hasKv) {
-    const ip = request.headers.get('cf-connecting-ip') || 'unknown';
-    const rlKey = `rl:${ip}`;
-    try {
-      const count = parseInt((await env.SUBSCRIBERS.get(rlKey)) || '0', 10);
-      if (count >= 10) {
-        return json({ ok: false, message: 'Too many requests. Please try again later.' }, 429);
-      }
-      await env.SUBSCRIBERS.put(rlKey, String(count + 1), { expirationTtl: 3600 });
-    } catch (e) {
-      /* rate-limit store hiccup should not block a legitimate signup */
-    }
-  }
 
   // Run the durable write and the optional webhook independently. Success is
   // gated on the DURABLE store (KV) when present; a webhook-only failure is

@@ -21,7 +21,7 @@ export function statePage(ctx, state) {
   ];
 
   // Non-prescriptive, data-only "what this means" copy.
-  const faqs = stateFaqs(state, model, weekEnding);
+  const faqs = stateFaqs(state);
 
   const others = neighborsFor(ctx, state);
 
@@ -68,9 +68,11 @@ export function statePage(ctx, state) {
               <div class="between"><dt class="text-secondary">Threat level</dt><dd data-region="glance-level"><strong>${escapeHtml(
                 model.label
               )}</strong></dd></div>
-              <div class="between"><dt class="text-secondary">Trend</dt><dd data-region="glance-trend">${escapeHtml(
-                model.trend.label
-              )} ${model.trend.direction !== 'flat' ? escapeHtml(formatChange(model.trend.changePct)) : ''}</dd></div>
+              <div class="between"><dt class="text-secondary">Trend</dt><dd data-region="glance-trend">${
+                model.trend.direction !== 'flat'
+                  ? `${escapeHtml(model.trend.label)} ${escapeHtml(formatChange(model.trend.changePct))}`
+                  : escapeHtml(model.trend.label)
+              }</dd></div>
               <div class="between"><dt class="text-secondary">Data as of</dt><dd data-region="glance-week">${escapeHtml(
                 formatDate(weekEnding)
               )}</dd></div>
@@ -149,8 +151,7 @@ function neighborsFor(ctx, state) {
     .slice(0, 6);
 }
 
-function stateFaqs(state, model, weekEnding) {
-  const lvl = model.label.toLowerCase();
+function stateFaqs(state) {
   return [
     {
       q: `How much respiratory illness is going around in ${state.name} right now?`,

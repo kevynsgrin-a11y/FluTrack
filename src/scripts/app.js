@@ -106,9 +106,42 @@ function render(store, abbr) {
   setRegion('glance-level', `<strong>${escapeText(model.label)}</strong>`);
   setRegion(
     'glance-trend',
-    `${escapeText(model.trend.label)} ${model.trend.direction !== 'flat' ? escapeText(formatChange(model.trend.changePct)) : ''}`
+    model.trend.direction !== 'flat'
+      ? `${escapeText(model.trend.label)} ${escapeText(formatChange(model.trend.changePct))}`
+      : escapeText(model.trend.label)
   );
   setText('glance-week', formatDate(store.weekEnding));
+  const heroBg = document.querySelector('.hero__bg');
+  if (heroBg && Number.isFinite(model.level)) heroBg.setAttribute('data-sev', String(model.level));
+  repaintMap(store, st.abbr);
+  return { st, model };
+}
+
+// Recolor the US tile-grid map from the store (live data upgrade) and highlight
+// the current selection. No-op on pages without a map.
+function repaintMap(store, selectedAbbr) {
+  const tiles = document.querySelectorAll('.us-tile');
+  if (!tiles.length) return;
+  tiles.forEach((tile) => {
+    const abbr = tile.getAttribute('data-abbr');
+    const signals = store.signals.get(abbr);
+    if (signals) {
+      const m = computeModel(signals);
+      if (Number.isFinite(m.level)) tile.setAttribute('data-sev', String(m.level));
+      else tile.removeAttribute('data-sev');
+      const title = tile.querySelector('title');
+      if (title) title.textContent = `${stateByAbbr(abbr)?.name || abbr} — ${m.label}`;
+      const st = stateByAbbr(abbr);
+      if (st) tile.setAttribute('aria-label', `${st.name}: ${m.label}. View ${st.name} report.`);
+    }
+    tile.classList.toggle('is-selected', abbr === selectedAbbr);
+  });
+}
+
+// Announce a picker-driven change to assistive tech via the polite live region.
+function announceSelection(st, model) {
+  const region = document.getElementById('live-status');
+  if (region) region.textContent = `${st.isNational ? 'United States' : st.name}: ${model.label}, ${model.trend.label}.`;
 }
 
 function setRegion(name, html) {
@@ -157,7 +190,8 @@ function wirePicker(store, onChange) {
   const apply = (abbr) => {
     onChange(abbr);
     saveSelection(abbr);
-    render(store, abbr);
+    const r = render(store, abbr);
+    if (r) announceSelection(r.st, r.model);
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     document.getElementById('breakdown')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   };
@@ -169,7 +203,8 @@ function wirePicker(store, onChange) {
   select.addEventListener('change', () => {
     onChange(select.value);
     saveSelection(select.value);
-    render(store, select.value);
+    const r = render(store, select.value);
+    if (r) announceSelection(r.st, r.model);
   });
 
   if (geoBtn && 'geolocation' in navigator) {

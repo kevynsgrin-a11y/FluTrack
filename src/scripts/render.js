@@ -52,6 +52,44 @@ export function sparkline(series, { width = 120, height = 32, direction = 'flat'
 </svg>`;
 }
 
+/**
+ * Semicircular "dashboard" gauge for the 0–100 composite score, stroked in the
+ * current severity color. The big number is the editorial headline figure.
+ */
+export function arcGauge(model) {
+  const score = Number.isFinite(model.composite) ? model.composite : 0;
+  const level = Number.isFinite(model.level) ? model.level : 0;
+  const R = 80;
+  const circ = Math.PI * R; // semicircle arc length ≈ 251.3
+  const dash = (score / 100) * circ;
+  const noData = !Number.isFinite(model.composite);
+  return `<svg class="gauge" data-sev="${level}" viewBox="0 0 200 126" role="img" aria-label="Composite activity score ${
+    noData ? 'unavailable' : `${score} of 100`
+  }, ${escapeHtml(model.label)}">
+    <path class="gauge__track" d="M18 100 A82 82 0 0 1 182 100"></path>
+    <path class="gauge__value" d="M18 100 A82 82 0 0 1 182 100" stroke-dasharray="${dash.toFixed(1)} ${(
+    circ * 1.02
+  ).toFixed(1)}"></path>
+    <text class="gauge__score" x="100" y="90" text-anchor="middle">${noData ? '—' : score}</text>
+    <text class="gauge__unit" x="100" y="112" text-anchor="middle">activity index / 100</text>
+  </svg>`;
+}
+
+/** Trust-forward provenance strip: source wordmarks + cadence + live/sample dot. */
+export function provenanceStrip(provenance = {}) {
+  const badge = provenance.live
+    ? `<span class="prov__live"><span class="prov__dot"></span>Live CDC data</span>`
+    : `<span class="prov__live prov__live--sample">Sample data</span>`;
+  return `<div class="prov" role="note">
+    <span class="prov__src">CDC surveillance</span>
+    <span class="prov__tags"><span>NSSP</span><span>NWSS</span><span>NREVSS</span></span>
+    <span class="prov__sep" aria-hidden="true">·</span>
+    <span>Updated weekly</span>
+    <span class="prov__sep" aria-hidden="true">·</span>
+    ${badge}
+  </div>`;
+}
+
 /** Segmented 5-step severity meter. */
 export function severityMeter(level) {
   const on = Number.isFinite(level) ? level : -1;
@@ -93,21 +131,26 @@ export function threatCard(state, model, opts = {}) {
   const noData = !Number.isFinite(model.level);
   const asOf = opts.weekEnding ? formatDate(opts.weekEnding) : '';
   return `<article class="threat" data-sev="${level}" aria-labelledby="threat-level">
-    <div class="between">
-      <p class="threat__label"><span aria-hidden="true">◍</span> Respiratory threat level · ${escapeHtml(
+    <div class="threat__head">
+      <p class="threat__label"><span class="threat__pip" aria-hidden="true"></span> Respiratory threat level · ${escapeHtml(
         state.name
       )}</p>
       ${provenanceBadge(opts.provenance)}
     </div>
-    <p class="threat__level" id="threat-level">${noData ? 'No data' : escapeHtml(model.label)}</p>
-    <p class="threat__meta">${escapeHtml(threatSentence(state, model))} ${
-    asOf ? `<span class="muted">· Trend as of ${escapeHtml(asOf)}</span>` : ''
+    <div class="threat__body">
+      <div class="threat__readout">
+        <p class="threat__level" id="threat-level">${noData ? 'No data' : escapeHtml(model.label)}</p>
+        <p class="threat__meta">${escapeHtml(threatSentence(state, model))}${
+    asOf ? ` <span class="muted">· as of ${escapeHtml(asOf)}</span>` : ''
   }</p>
-    <div class="threat__gauge">${severityMeter(model.level)}</div>
-    <div class="cluster" style="margin-top: var(--space-md)">
-      ${trendChip(model.trend)}
-      <span class="badge">Flu · RSV · COVID combined</span>
+        <div class="cluster" style="margin-top: var(--space-md)">
+          ${trendChip(model.trend)}
+          <span class="badge">Flu · RSV · COVID-19 combined</span>
+        </div>
+      </div>
+      <div class="threat__gauge" aria-hidden="${noData}">${arcGauge(model)}</div>
     </div>
+    <div class="threat__meter">${severityMeter(model.level)}</div>
   </article>`;
 }
 

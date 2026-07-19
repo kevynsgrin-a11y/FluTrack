@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand, breadcrumbs } from '../../lib/partials.mjs';
 import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
 
@@ -24,7 +25,7 @@ export default function methodology(ctx) {
   const content = `
     ${breadcrumbs(crumbs)}
 
-    <p>The <strong>Respiratory Threat Level</strong> is a single, plain-English answer to one
+    <p>The <strong>respiratory threat level</strong> is a single, plain-English answer to one
     question: how much flu, RSV and COVID-19 activity is the CDC's own surveillance data showing in
     a given state right now, and which way is it moving? Underneath that one word sits a small,
     deliberately boring pipeline. This page documents every constant in it, so you can check our
@@ -38,7 +39,7 @@ export default function methodology(ctx) {
     government agency sets, reviews, or endorses them.</p>
 
     <div class="callout" role="note">
-      <p class="callout__title"><span aria-hidden="true">◍</span> The short version</p>
+      <p class="callout__title">${icon('pulse')} The short version</p>
       <p>Four CDC signals are each scored 0&ndash;100, blended by a fixed weighting into one composite
       score, and that score is mapped to one of five levels &mdash; <strong>Minimal, Low, Moderate,
       High, Very High</strong>. A separate rule compares the most recent week against the prior few to
@@ -225,7 +226,7 @@ export default function methodology(ctx) {
     each signal.</p>
 
     <h2>Limitations</h2>
-    <p>An honest index states plainly what it cannot do. The Respiratory Threat Level:</p>
+    <p>An honest index states plainly what it cannot do. The respiratory threat level:</p>
     <ul>
       <li><strong>Is not real-time.</strong> It reflects reported surveillance with an inherent one-to-two-week lag, not today's conditions.</li>
       <li><strong>Uses editorial thresholds.</strong> The breakpoints and weights on this page are FluTrack's own, informed by typical seasonal ranges &mdash; not official CDC classifications. Reasonable analysts could choose different cut points.</li>
@@ -245,10 +246,10 @@ export default function methodology(ctx) {
   const body = `
   ${pageHeader({
     eyebrow: 'Methodology',
-    title: 'How the Respiratory Threat Level is computed',
+    title: 'How the respiratory threat level is computed',
     lede:
       'A full, transparent account of how FluTrack turns four public-domain CDC surveillance ' +
-      'signals into one Respiratory Threat Level for your state — every weight, threshold and ' +
+      'signals into one respiratory threat level for your state — every weight, threshold and ' +
       'trend rule, exactly as the code applies them.',
   })}
 
@@ -272,9 +273,9 @@ export default function methodology(ctx) {
   `;
 
   return {
-    title: 'Methodology: how the Threat Level is computed',
+    title: 'Methodology: how the threat level is computed',
     description:
-      'How FluTrack turns four CDC surveillance signals into one 0–100 Respiratory Threat Level — its weights, thresholds and trend logic. Not medical advice.',
+      'How FluTrack turns four CDC surveillance signals into one respiratory threat level — a 0–4 scale from a 0–100 composite score — with transparent weights and thresholds.',
     path: '/methodology/',
     body,
     ogType: 'article',
@@ -293,9 +294,9 @@ function techArticleLd(site) {
   return {
     '@context': 'https://schema.org',
     '@type': 'TechArticle',
-    headline: 'How the FluTrack Respiratory Threat Level is computed',
+    headline: 'How the FluTrack respiratory threat level is computed',
     description:
-      'The complete methodology behind FluTrack\'s unified Respiratory Threat Level: the four ' +
+      'The complete methodology behind FluTrack\'s unified respiratory threat level: the four ' +
       'CDC surveillance signals, their weights, the per-signal breakpoints, the 0–100 composite ' +
       'score, and the trend rule.',
     url: `${site.origin}/methodology/`,
@@ -347,7 +348,7 @@ function methodologyFaqs(disclaimers) {
       )} Surveillance updates weekly, and each week's figures generally reflect illness from one to two weeks earlier. That is why FluTrack leads with the trend rather than a single day's count. See our <a href="/data-sources/">data sources</a> for the specific CDC systems.</p>`,
     },
     {
-      q: 'Is the Respiratory Threat Level a prediction or medical advice?',
+      q: 'Is the respiratory threat level a prediction or medical advice?',
       a: `<p>Neither. It is a descriptive summary of recent, reported surveillance data — not a forecast and not clinical guidance. ${escapeHtml(
         disclaimers.notMedical
       )}</p>`,
