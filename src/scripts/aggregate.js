@@ -3,6 +3,10 @@
 // bundle. Shared by the build (static default hero) and the app (live refresh).
 // ===========================================================================
 
+// Averages several series element-wise, tail-aligned (newest values line up at
+// the end). This is exact for the uniform 12-week snapshot; on a live refresh
+// where states can differ in series length by a week, the aligned tail (the
+// latest weeks that drive the headline) still averages correctly.
 function meanSeries(listOfSeries) {
   const arrays = listOfSeries.filter((a) => Array.isArray(a) && a.length);
   if (!arrays.length) return [];
@@ -46,7 +50,9 @@ export function nationalSignals(signalsList) {
     edCombinedSeries: meanSeries(list.map((s) => s.edCombinedSeries)),
     wastewaterSeries: meanSeries(list.map((s) => s.wastewaterSeries)),
     positivityCombined: round(mean(list.map((s) => s.positivityCombined)) ?? NaN),
-    weekEnding: list[0]?.weekEnding,
+    // Most recent week across all states (not just the first), so the national
+    // "as of" date never shows a lagging state's week.
+    weekEnding: list.map((s) => s.weekEnding).filter(Boolean).sort().at(-1) || list[0]?.weekEnding,
     pathogens,
   };
 }

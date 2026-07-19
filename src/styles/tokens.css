@@ -33,15 +33,16 @@
   --sev-4-soft: #f7dcdc;
 
   --sev-0-ink: #1c6b41;
-  --sev-1-ink: #4d7a1f;
-  --sev-2-ink: #8a6d00;
+  --sev-1-ink: #467019; /* darkened for AA contrast on --sev-1-soft */
+  --sev-2-ink: #795e00; /* darkened so small text clears 4.5:1 on --sev-2-soft */
   --sev-3-ink: #a04a00;
   --sev-4-ink: #9b1c1c;
 
-  /* Trend direction accents */
+  /* Trend direction accents (light). --trend-flat darkened to clear AA on the
+     light severity-soft card backgrounds; dark overrides live in the dark block. */
   --trend-up: #c62828;   /* rising activity = worse */
-  --trend-down: #2f9e63; /* falling activity = better */
-  --trend-flat: #6b7785;
+  --trend-down: #1c6b41; /* falling activity = better (AA on light soft bg) */
+  --trend-flat: #55606c;
 
   /* ---- Neutral ramp --------------------------------------------------- */
   --gray-0: #ffffff;
@@ -67,7 +68,7 @@
   --border-strong: var(--gray-300);
   --text: var(--gray-900);
   --text-secondary: var(--gray-600);
-  --text-muted: var(--gray-500);
+  --text-muted: #5b6773; /* AA (≥4.5:1) on the off-white --bg/--surface-2 */
   --text-inverse: var(--gray-0);
   --link: var(--brand-600);
   --link-hover: var(--brand-700);
@@ -173,6 +174,11 @@
   --sev-2-ink: #f6cf5c;
   --sev-3-ink: #f39b5a;
   --sev-4-ink: #f08a8a;
+
+  /* Trend accents re-themed for AA contrast on the dark severity-soft cards. */
+  --trend-up: #f08a8a;
+  --trend-down: #6fd39b;
+  --trend-flat: #9aa7b1;
 
   --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);

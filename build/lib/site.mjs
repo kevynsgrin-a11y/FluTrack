@@ -11,16 +11,18 @@ export const site = {
   locale: 'en_US',
   themeColor: '#0b7285',
   // Descriptions used across meta tags / structured data.
+  // Kept ≤155 chars so it is not truncated as the home-page meta / OG description.
   description:
-    'FluTrack turns public-domain CDC surveillance data into a simple, ' +
-    'plain-English respiratory threat level for your state — tracking flu, ' +
-    'RSV and COVID-19 trends so you can make everyday decisions with confidence.',
+    'A plain-English respiratory threat level for your state — tracking flu, ' +
+    'RSV and COVID-19 trends from public-domain CDC surveillance data.',
   shortDescription:
     'A simple, local respiratory threat level for flu, RSV and COVID-19, ' +
     'built on public CDC surveillance data.',
   // Publisher / contact — E-E-A-T transparency signals.
   publisher: {
     name: 'FluTrack',
+    // Placeholder — set a real, monitored mailbox before launch. While it ends
+    // in `.example`, it is shown as a visible contact but omitted from JSON-LD.
     email: 'hello@flutrack.example',
     // Editorial responsibility statement shown in the footer / about page.
     role: 'Independent data-visualization utility',

@@ -272,7 +272,7 @@ export default function methodology(ctx) {
   `;
 
   return {
-    title: 'Methodology: how the Respiratory Threat Level is computed',
+    title: 'Methodology: how the Threat Level is computed',
     description:
       'How FluTrack turns four CDC surveillance signals into one 0–100 Respiratory Threat Level — its weights, thresholds and trend logic. Not medical advice.',
     path: '/methodology/',

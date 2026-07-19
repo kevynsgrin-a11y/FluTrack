@@ -48,15 +48,3 @@ export function clamp(n, min, max) {
 export function trendGlyph(direction) {
   return { up: '▲', down: '▼', flat: '▬' }[direction] || '▬';
 }
-
-/**
- * A single, human-readable sentence describing overall activity WITHOUT giving
- * medical advice. Kept here so the sterile-data-visualizer tone is consistent.
- */
-export function describeLevel(label, trend, stateName) {
-  if (!label || label === 'No data') {
-    return `Surveillance data for ${stateName} is not currently available.`;
-  }
-  const dir = { up: 'and rising', down: 'and easing', flat: 'and holding steady' }[trend?.direction] || '';
-  return `Respiratory illness activity in ${stateName} is ${label.toLowerCase()} ${dir}`.trim() + '.';
-}

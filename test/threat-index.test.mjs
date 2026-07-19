@@ -69,6 +69,19 @@ test('computeTrend detects rising, falling, and flat', () => {
   assert.equal(computeTrend([1]).direction, 'flat'); // insufficient data
 });
 
+test('computeTrend clamps absurd percentages from a tiny base', () => {
+  // 0.05 -> 0.30 is numerically +500%, but off-season it must not read alarmingly.
+  const t = computeTrend([0.05, 0.05, 0.05, 0.3]);
+  assert.equal(t.direction, 'up');
+  assert.ok(t.changePct <= 200, `changePct clamped, got ${t.changePct}`);
+});
+
+test('computeTrend handles an exactly-zero prior base', () => {
+  const t = computeTrend([0, 0, 0, 1]);
+  assert.equal(t.direction, 'up');
+  assert.ok(Number.isFinite(t.changePct));
+});
+
 test('scorePathogen blends signals and yields a level', () => {
   const p = scorePathogen('covid', {
     edPercentSeries: [1.0, 1.4, 1.8, 2.2],

@@ -158,7 +158,8 @@ function wirePicker(store, onChange) {
     onChange(abbr);
     saveSelection(abbr);
     render(store, abbr);
-    document.getElementById('breakdown')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document.getElementById('breakdown')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   };
 
   form.addEventListener('submit', (e) => {

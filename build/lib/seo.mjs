@@ -7,16 +7,21 @@
 import { site } from './site.mjs';
 
 export function organizationLd() {
-  return {
+  const org = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
     name: site.name,
     url: site.origin,
     logo: `${site.origin}/assets/icon-512.png`,
     description: site.shortDescription,
-    email: site.publisher.email,
     sameAs: [`https://twitter.com/${site.social.twitter.replace('@', '')}`],
   };
+  // Only advertise a contact email in structured data once a real, routable
+  // address is configured — never the RFC-2606 `.example` placeholder.
+  if (site.publisher.email && !/\.example$/.test(site.publisher.email)) {
+    org.email = site.publisher.email;
+  }
+  return org;
 }
 
 export function websiteLd() {
@@ -98,7 +103,7 @@ export function sitemapXml(entries) {
   const urls = entries
     .map(
       (e) => `  <url>
-    <loc>${site.origin}${e.path}</loc>
+    <loc>${site.origin}${e.path}</loc>${e.lastmod ? `\n    <lastmod>${e.lastmod}</lastmod>` : ''}
     <changefreq>${e.changefreq || 'weekly'}</changefreq>
     <priority>${e.priority ?? 0.6}</priority>
   </url>`

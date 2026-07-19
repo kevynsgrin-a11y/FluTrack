@@ -40,6 +40,24 @@ test('national rollup is well-formed and in range', () => {
   assert.equal(nat.edCombinedSeries.length, snap.weeks.length);
 });
 
+test('national rollup takes the most recent week across states', () => {
+  const nat = nationalSignals([
+    { edCombinedSeries: [1, 2], wastewaterSeries: [1, 2], positivityCombined: 10, weekEnding: '2026-07-04', pathogens: {} },
+    { edCombinedSeries: [3, 4], wastewaterSeries: [3, 4], positivityCombined: 12, weekEnding: '2026-07-11', pathogens: {} },
+  ]);
+  assert.equal(nat.weekEnding, '2026-07-11', 'uses max week, not the first entry');
+});
+
+test('national rollup tolerates series of differing lengths', () => {
+  const nat = nationalSignals([
+    { edCombinedSeries: [2, 4], weekEnding: '2026-07-11', pathogens: {} },
+    { edCombinedSeries: [1, 2, 3, 4], weekEnding: '2026-07-11', pathogens: {} },
+  ]);
+  // Length is the max; the aligned tail averages (4 and 4) -> 4.
+  assert.equal(nat.edCombinedSeries.length, 4);
+  assert.equal(nat.edCombinedSeries.at(-1), 4);
+});
+
 test('snapshot is deterministic (reproducible builds)', () => {
   const a = generateSnapshot();
   const b = generateSnapshot();

@@ -99,13 +99,29 @@ function writePage(page) {
   return page.path;
 }
 
+// Conservative, safe CSS minifier: strips comments, collapses whitespace, and
+// tightens only around { } ; — it never touches ':' or ',' so property values,
+// selectors, and the data-URI in .select stay intact.
+function minifyCss(css) {
+  return css
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/\s*([{};])\s*/g, '$1')
+    .replace(/;}/g, '}')
+    .trim();
+}
+
 function bundleCss() {
   const order = ['tokens.css', 'base.css', 'components.css', 'main.css'];
-  const banner = `/* FluTrack — bundled stylesheet. Source: src/styles/. */\n`;
   const css = order.map((f) => readFileSync(join(srcStyles, f), 'utf8')).join('\n');
-  const out = join(dist, 'assets', 'styles.css');
+  const min = minifyCss(css);
+  // Content-hash the filename so the immutable cache header is always safe.
+  const hash = createHash('sha256').update(min).digest('hex').slice(0, 10);
+  const name = `styles.${hash}.css`;
+  const out = join(dist, 'assets', name);
   mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(out, banner + css);
+  writeFileSync(out, `/* FluTrack — bundled stylesheet */\n${min}`);
+  site.assets = { ...(site.assets || {}), css: name };
 }
 
 function copyScripts() {
@@ -129,10 +145,12 @@ function writeAssets() {
       if (/\.(png|ico|webp|jpg|jpeg)$/i.test(f)) cpSync(join(srcAssets, f), join(outDir, f));
     }
   }
-  // Copy the bundled snapshot into the served tree.
+  // Copy the bundled snapshot into the served tree, minified (the source copy
+  // stays pretty-printed for readable diffs).
   const dataOut = join(dist, 'data');
   mkdirSync(dataOut, { recursive: true });
-  cpSync(resolve(root, 'src/data/snapshot.json'), join(dataOut, 'snapshot.json'));
+  const snap = JSON.parse(readFileSync(resolve(root, 'src/data/snapshot.json'), 'utf8'));
+  writeFileSync(join(dataOut, 'snapshot.json'), JSON.stringify(snap));
 }
 
 function writeRootFiles(sitemapEntries) {
@@ -170,9 +188,13 @@ function headers() {
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=()
+  Strict-Transport-Security: max-age=63072000; includeSubDomains
   Content-Security-Policy: ${csp}
 
 /assets/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/assets/styles.*.css
   Cache-Control: public, max-age=31536000, immutable
 
 /data/*
@@ -226,13 +248,13 @@ async function main() {
   // Home
   const { default: home } = await import('./pages/home.mjs');
   written.push(writePage(home(ctx)));
-  sitemap.push({ path: '/', changefreq: 'daily', priority: 1.0 });
+  sitemap.push({ path: '/', changefreq: 'daily', priority: 1.0, lastmod: snapshot.weekEnding });
 
   // Per-state pages
   const { statePage } = await import('./pages/state.mjs');
   for (const st of states) {
     written.push(writePage(statePage(ctx, st)));
-    sitemap.push({ path: `/state/${st.slug}/`, changefreq: 'weekly', priority: 0.8 });
+    sitemap.push({ path: `/state/${st.slug}/`, changefreq: 'weekly', priority: 0.8, lastmod: snapshot.weekEnding });
   }
   log(`${states.length} state pages written`);
 

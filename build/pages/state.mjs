@@ -34,6 +34,9 @@ export function statePage(ctx, state) {
       <p class="lede" style="margin-top: var(--space-sm); max-width: 44rem">A plain-English respiratory threat level for ${escapeHtml(
         state.name
       )}, built from public-domain CDC surveillance data and refreshed weekly.</p>
+      <p class="text-secondary" style="margin-top: var(--space-md); max-width: 48rem">${escapeHtml(
+        stateIntro(state, others)
+      )}</p>
     </div>
   </section>
 
@@ -116,6 +119,29 @@ export function statePage(ctx, state) {
   };
 }
 
+/**
+ * A stable, genuinely state-specific intro (data sources + regional neighbors).
+ * Deliberately avoids embedding volatile data values so the static text never
+ * goes stale or contradicts the live-refreshed card above.
+ */
+function stateIntro(state, neighbors) {
+  const names = neighbors.slice(0, 4).map((s) => s.name);
+  const neighborText = names.length
+    ? ` You can also compare nearby states such as ${listJoin(names)}.`
+    : '';
+  return (
+    `FluTrack blends four public CDC surveillance signals for ${state.name} — ` +
+    `emergency-department visits, wastewater viral activity, laboratory test positivity, ` +
+    `and the Acute Respiratory Illness (ARI) activity level — into the single, ` +
+    `plain-English threat level shown here, refreshed every week.${neighborText}`
+  );
+}
+
+function listJoin(items) {
+  if (items.length <= 1) return items[0] || '';
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
+}
+
 function neighborsFor(ctx, state) {
   // Simple "same HHS region" grouping keeps this dependency-free and relevant.
   return ctx.states
@@ -128,13 +154,9 @@ function stateFaqs(state, model, weekEnding) {
   return [
     {
       q: `How much respiratory illness is going around in ${state.name} right now?`,
-      a: `<p>As of ${escapeHtml(
-        formatDate(weekEnding)
-      )}, FluTrack rates combined flu, RSV and COVID-19 activity in ${escapeHtml(
+      a: `<p>The current combined flu, RSV and COVID-19 threat level for ${escapeHtml(
         state.name
-      )} as <strong>${escapeHtml(model.label)}</strong>, ${escapeHtml(
-        model.trend.label.toLowerCase()
-      )}. This reflects CDC surveillance data and is a directional trend, not a real-time case count.</p>`,
+      )} — and whether it is rising, falling or holding steady — is shown at the top of this page. It reflects the CDC's latest public surveillance data and is a directional weekly trend, not a real-time case count.</p>`,
     },
     {
       q: `Where does this ${escapeHtml(state.name)} data come from?`,

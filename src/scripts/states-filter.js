@@ -30,4 +30,16 @@ if (form && input && grid) {
   };
 
   input.addEventListener('input', apply);
+
+  // Honor a ?q= query param on load so the WebSite SearchAction target
+  // (/states/?q={term}) actually performs the search it advertises.
+  try {
+    const q = new URLSearchParams(window.location.search).get('q');
+    if (q) {
+      input.value = q;
+      apply();
+    }
+  } catch (e) {
+    /* ignore */
+  }
 }

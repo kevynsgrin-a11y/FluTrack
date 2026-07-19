@@ -96,10 +96,10 @@ export function bucketize(value, breakpoints) {
 
 /**
  * Convert a numeric value to a continuous 0–100 score using its breakpoints as
- * piecewise-linear anchors: 0 → 0, each breakpoint maps to 12.5/37.5/62.5/87.5
- * (the mid-points of levels 0–4 boundaries), and values above the top
- * breakpoint approach 100. This produces a smooth composite while staying
- * consistent with the discrete level buckets.
+ * piecewise-linear anchors: 0 → 0, and the four breakpoints map to 20/40/60/80
+ * (the lower edges of levels 1–4, matching scoreToLevel's cut points). Values
+ * above the top breakpoint ramp toward 100. This produces a smooth composite
+ * while staying consistent with the discrete level buckets.
  */
 export function scoreFromBreakpoints(value, breakpoints) {
   if (!Number.isFinite(value)) return null;
@@ -156,7 +156,10 @@ export function computeTrend(series) {
     const dir = latest > 0 ? 'up' : 'flat';
     return { direction: dir, changePct: latest > 0 ? 100 : 0, label: trendLabel(dir) };
   }
-  const changePct = Math.round(((latest - base) / base) * 100);
+  // Clamp the reported change: a tiny off-season base (e.g. 0.05% → 0.3%) would
+  // otherwise yield an absurd, alarming figure. Direction is still detected; the
+  // headline number stays within a believable band.
+  const changePct = clamp(Math.round(((latest - base) / base) * 100), -200, 200);
   let direction = 'flat';
   if (changePct >= 8) direction = 'up';
   else if (changePct <= -8) direction = 'down';

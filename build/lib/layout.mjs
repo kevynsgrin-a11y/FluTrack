@@ -55,6 +55,8 @@ function brandMark() {
 }
 
 function head(page) {
+  // Content-hashed stylesheet name set by the build (falls back for safety).
+  const cssHref = site.assets?.css || 'styles.css';
   const title = page.title
     ? `${page.title} · ${site.name}`
     : `${site.name} — ${site.tagline}`;
@@ -82,7 +84,11 @@ function head(page) {
   <meta property="og:title" content="${escapeHtml(page.title || site.name)}">
   <meta property="og:description" content="${escapeHtml(desc)}">
   <meta property="og:url" content="${escapeHtml(canonical)}">
+  <meta property="og:locale" content="${escapeHtml(site.locale)}">
   <meta property="og:image" content="${escapeHtml(ogImage)}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="${escapeHtml(site.name)} — a local respiratory threat level for flu, RSV and COVID-19">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="${escapeHtml(site.social.twitter)}">
   <meta name="twitter:title" content="${escapeHtml(page.title || site.name)}">
@@ -93,8 +99,7 @@ function head(page) {
   <link rel="icon" href="/assets/favicon-32.png" sizes="32x32">
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="preload" href="/assets/styles.css" as="style">
-  <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="/assets/${cssHref}">
   ${jsonld ? '\n  ' + jsonld : ''}
   <script>${BOOT_SCRIPT}</script>`;
 }

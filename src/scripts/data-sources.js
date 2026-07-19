@@ -233,8 +233,9 @@ export async function fetchLiveSignals({ timeoutMs = 12000 } = {}) {
     const wwRows = sortByWeek(ww.get(st.abbr) || []);
 
     const edCombinedSeries = edRows.map((r) => r.combined).filter(Number.isFinite);
-    const wwCombined = wwRows.filter((r) => r.pathogen === 'combined' || Number.isFinite(r.wval));
-    const wastewaterSeries = collapseWeeklyMax(wwCombined);
+    // State wastewater signal = the weekly PEAK viral activity across pathogens
+    // (collapseWeeklyMax already keeps only finite WVAL rows and takes the max).
+    const wastewaterSeries = collapseWeeklyMax(wwRows);
 
     const week = edRows.at(-1)?.week || ariRows.at(-1)?.week || wwRows.at(-1)?.week || '';
     if (week > latestWeek) latestWeek = week;

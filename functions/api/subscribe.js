@@ -82,20 +82,42 @@ export async function onRequestPost({ request, env }) {
     );
   }
 
-  try {
-    if (hasKv) {
+  // Best-effort per-IP rate limiting (requires KV). Caps abuse of the public
+  // endpoint; eventually-consistent, so it is friction, not a hard guarantee.
+  if (hasKv) {
+    const ip = request.headers.get('cf-connecting-ip') || 'unknown';
+    const rlKey = `rl:${ip}`;
+    try {
+      const count = parseInt((await env.SUBSCRIBERS.get(rlKey)) || '0', 10);
+      if (count >= 10) {
+        return json({ ok: false, message: 'Too many requests. Please try again later.' }, 429);
+      }
+      await env.SUBSCRIBERS.put(rlKey, String(count + 1), { expirationTtl: 3600 });
+    } catch (e) {
+      /* rate-limit store hiccup should not block a legitimate signup */
+    }
+  }
+
+  // Run the durable write and the optional webhook independently. Success is
+  // gated on the DURABLE store (KV) when present; a webhook-only failure is
+  // logged but does not fail the request.
+  let durableOk = !hasKv; // if no KV, success rides on the webhook
+  if (hasKv) {
+    try {
       await env.SUBSCRIBERS.put(`sub:${email}`, JSON.stringify(record), {
         metadata: { state, ts: record.ts },
       });
+      durableOk = true;
+    } catch (e) {
+      durableOk = false;
     }
-    if (hasWebhook) {
-      await fetch(env.ALERTS_WEBHOOK_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(record),
-      });
-    }
-  } catch (e) {
+  }
+  if (hasWebhook) {
+    const webhookOk = await postWebhook(env.ALERTS_WEBHOOK_URL, record);
+    if (!hasKv) durableOk = webhookOk;
+  }
+
+  if (!durableOk) {
     return json({ ok: false, message: 'Could not save your subscription. Please try again shortly.' }, 502);
   }
 
@@ -103,6 +125,25 @@ export async function onRequestPost({ request, env }) {
     ok: true,
     message: "You're on the list. We'll email you when activity climbs in your state.",
   });
+}
+
+/** POST the record to an external webhook with a hard timeout. Returns bool. */
+async function postWebhook(url, record) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(record),
+      signal: controller.signal,
+    });
+    return res.ok;
+  } catch (e) {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 // Only POST is handled; Pages returns 405 automatically for other methods.
