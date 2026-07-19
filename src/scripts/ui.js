@@ -60,5 +60,17 @@ function initNav() {
   });
 }
 
+// Register the service worker (offline shell + faster repeat visits).
+function initServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {
+        /* SW is a progressive enhancement; ignore failures */
+      });
+    });
+  }
+}
+
 initTheme();
 initNav();
+initServiceWorker();

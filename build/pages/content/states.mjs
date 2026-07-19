@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { usMap } from '../../../src/scripts/map-render.js';
 import { signupBand, breadcrumbs } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
@@ -16,6 +17,11 @@ export default function states(ctx) {
     { name: 'All states', path: '/states/' },
   ];
 
+  const mapEntries = ctx.states.map((s) => {
+    const m = ctx.models.get(s.abbr).model;
+    return { abbr: s.abbr, name: s.name, slug: s.slug, level: m.level, label: m.label };
+  });
+
   const chips = ctx.states
     .map((s) => ctx.render.stateChip(s, ctx.models.get(s.abbr).model))
     .join('\n        ');
@@ -32,7 +38,14 @@ export default function states(ctx) {
 
   <section class="section" style="padding-top: 0">
     <div class="container">
-      <form class="picker" role="search" aria-label="Filter states" id="state-filter-form">
+      <div class="card card--pad-lg" data-region="us-map">${usMap(mapEntries, {})}</div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top: 0">
+    <div class="container">
+      <h2 style="font-size: var(--step-2)">Browse the full list</h2>
+      <form class="picker" role="search" aria-label="Filter states" id="state-filter-form" style="margin-top: var(--space-md)">
         <label class="visually-hidden" for="state-filter">Filter states by name</label>
         <input class="input" id="state-filter" type="search" inputmode="search" autocomplete="off"
           placeholder="Filter states…" style="max-width: 22rem" aria-controls="state-grid">

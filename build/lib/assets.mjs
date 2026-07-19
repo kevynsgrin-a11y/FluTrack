@@ -4,6 +4,8 @@
 // consumed by build/lib/rasterize.mjs to produce committed PNG fallbacks.
 // ===========================================================================
 
+import { TILE } from '../../src/scripts/us-tilegrid.js';
+
 const BRAND = '#0b7285';
 const BRAND_DEEP = '#073f4a';
 const SEV = ['#2f9e63', '#8bc34a', '#f4b400', '#ef6c00', '#c62828'];
@@ -37,27 +39,55 @@ export function iconSvg({ size = 512, bg = true } = {}) {
 </svg>`;
 }
 
-/** 1200×630 Open Graph card. */
+const MAP_FILLS = ['#1c6b41', '#467019', '#795e00', '#a04a00', '#9b1c1c'];
+
+/** Deterministic plausible severity per state for static art (summer-ish skew). */
+function ogLevel(abbr) {
+  let h = 0;
+  for (let i = 0; i < abbr.length; i += 1) h = (h * 31 + abbr.charCodeAt(i)) >>> 0;
+  const r = h % 100;
+  return r < 42 ? 0 : r < 72 ? 1 : r < 92 ? 2 : r < 98 ? 3 : 4;
+}
+
+/** 1200×630 Open Graph card — features the signature tile-grid map. */
 export function ogSvg(site) {
-  const strip = SEV.map(
-    (c, i) => `<rect x="${72 + i * 40}" y="470" width="34" height="14" rx="7" fill="${c}"/>`
+  const FONT = "-apple-system, Segoe UI, Roboto, sans-serif";
+  const tile = 40;
+  const pitch = 46;
+  const ox = 686;
+  const oy = 150;
+  const tiles = Object.entries(TILE)
+    .map(([abbr, [row, col]]) => {
+      const x = ox + col * pitch;
+      const y = oy + row * pitch;
+      return `<g><rect x="${x}" y="${y}" width="${tile}" height="${tile}" rx="9" fill="${
+        MAP_FILLS[ogLevel(abbr)]
+      }"/><text x="${x + tile / 2}" y="${y + tile / 2 + 4}" text-anchor="middle" font-family="${FONT}" font-size="13" font-weight="700" fill="#fff">${abbr}</text></g>`;
+    })
+    .join('');
+  const legend = MAP_FILLS.map(
+    (c, i) => `<rect x="${72 + i * 30}" y="486" width="24" height="12" rx="6" fill="${c}"/>`
   ).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#f7f9fa"/><stop offset="1" stop-color="#e6f4f7"/>
     </linearGradient>
+    <radialGradient id="aura" cx="80%" cy="0%" r="80%">
+      <stop offset="0" stop-color="#8fc9d6" stop-opacity="0.55"/><stop offset="1" stop-color="#8fc9d6" stop-opacity="0"/>
+    </radialGradient>
   </defs>
   <rect width="1200" height="630" fill="url(#bg)"/>
-  <g transform="translate(72,64)">
-    ${iconSvg({ size: 96 }).replace('<svg', '<svg x="0" y="0"')}
-  </g>
-  <text x="184" y="132" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="40" font-weight="700" fill="#0b7285">FluTrack</text>
-  <text x="72" y="300" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="72" font-weight="800" fill="#141a20">Flu, RSV &amp; COVID —</text>
-  <text x="72" y="386" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="72" font-weight="800" fill="#141a20">for your state, in plain English.</text>
-  <text x="72" y="452" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="30" font-weight="500" fill="#4c5763">One local respiratory threat level, built on public CDC data.</text>
-  ${strip}
-  <text x="300" y="482" font-family="-apple-system, Segoe UI, Roboto, sans-serif" font-size="22" font-weight="600" fill="#6b7785">Minimal → Very High</text>
+  <rect width="1200" height="630" fill="url(#aura)"/>
+  <g transform="translate(72,58)">${iconSvg({ size: 84 }).replace('<svg', '<svg x="0" y="0"')}</g>
+  <text x="172" y="112" font-family="${FONT}" font-size="38" font-weight="700" fill="#0b7285">FluTrack</text>
+  <text x="72" y="250" font-family="${FONT}" font-size="60" font-weight="800" fill="#141a20">Flu, RSV &amp; COVID-19,</text>
+  <text x="72" y="322" font-family="${FONT}" font-size="60" font-weight="800" fill="#141a20">for your state —</text>
+  <text x="72" y="394" font-family="${FONT}" font-size="60" font-weight="800" fill="#0b7285">in plain English.</text>
+  <text x="72" y="456" font-family="${FONT}" font-size="27" font-weight="500" fill="#4c5763">One local respiratory threat level, built on public CDC data.</text>
+  ${legend}
+  <text x="${72 + 5 * 30 + 12}" y="496" font-family="${FONT}" font-size="20" font-weight="600" fill="#5b6773">Minimal → Very High</text>
+  ${tiles}
 </svg>`;
 }
 

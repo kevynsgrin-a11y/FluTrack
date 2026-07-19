@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand, breadcrumbs } from '../../lib/partials.mjs';
 import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
 
@@ -38,7 +39,7 @@ export default function methodology(ctx) {
     government agency sets, reviews, or endorses them.</p>
 
     <div class="callout" role="note">
-      <p class="callout__title"><span aria-hidden="true">◍</span> The short version</p>
+      <p class="callout__title">${icon('pulse')} The short version</p>
       <p>Four CDC signals are each scored 0&ndash;100, blended by a fixed weighting into one composite
       score, and that score is mapped to one of five levels &mdash; <strong>Minimal, Low, Moderate,
       High, Very High</strong>. A separate rule compares the most recent week against the prior few to

@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
 
@@ -77,7 +78,7 @@ export default function alerts(ctx) {
     <p>A surge alert is a directional signal, not a real-time warning. It reflects the same public CDC surveillance FluTrack shows on every state page, so it tells you which way respiratory activity is <em>trending</em> in your state — not that anything is happening at this precise moment. It is not an emergency notification, and it is not a medical alert.</p>
     <p class="text-secondary">${escapeHtml(disclaimers.trendNotLive)}</p>
     <div class="callout callout--warn" role="note">
-      <p class="callout__title"><span aria-hidden="true">◷</span> Not medical advice</p>
+      <p class="callout__title">${icon('clock')} Not medical advice</p>
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
 
@@ -87,7 +88,7 @@ export default function alerts(ctx) {
     <h2>Independent, not official</h2>
     <p>Surge alerts are built entirely on the CDC's open, public-domain data, but FluTrack is an independent project with no affiliation, funding relationship, or special access.</p>
     <div class="callout">
-      <p class="callout__title"><span aria-hidden="true">✓</span> No CDC affiliation</p>
+      <p class="callout__title">${icon('check')} No CDC affiliation</p>
       <p class="text-secondary">${escapeHtml(disclaimers.notAffiliated)}</p>
     </div>
   `)}

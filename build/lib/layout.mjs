@@ -5,6 +5,7 @@
 
 import { site, disclaimers } from './site.mjs';
 import { escapeHtml } from '../../src/scripts/util.js';
+import { icon } from '../../src/scripts/icons.js';
 
 // The single inline script on the site: a FOUC-free theme boot that runs before
 // first paint. Kept as one exact string so the build can hash it for the CSP
@@ -42,6 +43,7 @@ const FOOTER = {
     ['/privacy/', 'Privacy policy'],
     ['/terms/', 'Terms of use'],
     ['/affiliate-disclosure/', 'Affiliate disclosure'],
+    ['/accessibility/', 'Accessibility'],
   ],
 };
 
@@ -165,7 +167,7 @@ function footer() {
         ${cols}
       </div>
       <div class="disclaimer-strip" style="margin-top: var(--space-2xl)">
-        <span aria-hidden="true">ⓘ</span>
+        ${icon('info', { size: 16 })}
         <span><strong>Not medical advice.</strong> ${escapeHtml(disclaimers.notAffiliated)}</span>
       </div>
       <div class="footer-bottom">

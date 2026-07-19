@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { organizationLd } from '../../lib/seo.mjs';
 
@@ -37,7 +38,7 @@ export default function about(ctx) {
     <h2>Independence from the CDC</h2>
     <p>FluTrack is built entirely on the CDC's public-domain data, but it is an independent project. We have no affiliation, funding relationship, or special access; we read the same open feeds that are available to anyone. Building on government data does not imply that the government endorses this site.</p>
     <div class="callout">
-      <p class="callout__title"><span aria-hidden="true">✓</span> Independent, not official</p>
+      <p class="callout__title">${icon('check')} Independent, not official</p>
       <p class="text-secondary">${escapeHtml(disclaimers.notAffiliated)}</p>
     </div>
 
@@ -45,7 +46,7 @@ export default function about(ctx) {
     <p>FluTrack is free to use, and we intend to keep it that way. It is supported by advertising and by clearly disclosed affiliate links — where we may earn a commission if you buy something through certain links, at no extra cost to you. That revenue never influences the threat levels we report or the way we describe the data: the index is computed the same way no matter who advertises, and it always reflects the CDC's figures alone. You can read exactly how these relationships work on our <a href="/affiliate-disclosure/">affiliate disclosure</a> page.</p>
 
     <div class="callout callout--warn" role="note">
-      <p class="callout__title"><span aria-hidden="true">◷</span> Not medical advice</p>
+      <p class="callout__title">${icon('clock')} Not medical advice</p>
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
 

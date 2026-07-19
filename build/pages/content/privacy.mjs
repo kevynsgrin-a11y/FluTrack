@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
@@ -34,7 +35,7 @@ export default function privacy(ctx) {
     )} and use its features. We have written it to be read, not to be endured. If anything here is unclear, email us at <a href="mailto:${email}">${email}</a> and a real person will answer.</p>
 
     <div class="callout">
-      <p class="callout__title"><span aria-hidden="true">✓</span> The short version</p>
+      <p class="callout__title">${icon('check')} The short version</p>
       <p class="text-secondary">You can read the CDC threat level for every state without giving us anything at all. We ask for an email address only if you choose to sign up for surge alerts. We do not sell your information, and we set no cross-site tracking cookies of our own.</p>
     </div>
 
@@ -141,7 +142,7 @@ export default function privacy(ctx) {
     <p>Questions, access or deletion requests, and privacy concerns are all welcome at <a href="mailto:${email}">${email}</a>.</p>
 
     <div class="callout callout--warn" role="note">
-      <p class="callout__title"><span aria-hidden="true">◷</span> Not medical advice</p>
+      <p class="callout__title">${icon('clock')} Not medical advice</p>
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
   `,

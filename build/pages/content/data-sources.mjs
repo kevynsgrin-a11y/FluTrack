@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
@@ -105,18 +106,18 @@ export default function dataSources(ctx) {
     <p>FluTrack uses <strong>only public-domain U.S. Government data</strong> — the CDC's own surveillance products, which carry no usage restrictions and can be reused by anyone, including on a commercial site. That constraint is a deliberate design choice, not an accident of what was easy to find.</p>
     <p>In particular, FluTrack <strong>deliberately excludes WastewaterSCAN (also referenced as SCAN or Verily) data</strong>. Those wastewater readings are licensed <strong>CC BY-NC 4.0</strong> — a non-commercial license. FluTrack is supported by advertising and affiliate links, which makes it a commercial use, so incorporating that data would violate its license terms. We therefore ingest only the CDC's own public-domain NWSS Wastewater Viral Activity Level product and leave the non-commercial networks out entirely.</p>
     <div class="callout">
-      <p class="callout__title"><span aria-hidden="true">✓</span> The exclusion is enforced in code</p>
+      <p class="callout__title">${icon('check')} The exclusion is enforced in code</p>
       <p class="text-secondary">This is not left to good intentions. The ingestion pipeline runs a defensive source filter — <code>excludeNonCommercial()</code> in <code>src/scripts/data-sources.js</code> — that drops any wastewater row whose provenance references SCAN, WastewaterSCAN, Verily or the other non-commercial networks, so CC BY-NC 4.0 data can never surface on a monetized page even if it appeared in an upstream response.</p>
     </div>
 
     <h2>Independent, not official</h2>
     <p>Building on the CDC's open data does not make FluTrack a government product. We read the same public feeds available to everyone, with no affiliation, funding relationship, or special access.</p>
     <div class="callout">
-      <p class="callout__title"><span aria-hidden="true">✓</span> No CDC affiliation</p>
+      <p class="callout__title">${icon('check')} No CDC affiliation</p>
       <p class="text-secondary">${escapeHtml(disclaimers.notAffiliated)}</p>
     </div>
     <div class="callout callout--warn" role="note">
-      <p class="callout__title"><span aria-hidden="true">◷</span> Not medical advice</p>
+      <p class="callout__title">${icon('clock')} Not medical advice</p>
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
   `)}

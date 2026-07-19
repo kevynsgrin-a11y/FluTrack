@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, signupBand, breadcrumbs } from '../../lib/partials.mjs';
 import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
 
@@ -61,7 +62,7 @@ export default function faq(ctx) {
       ${sections}
 
       <div class="callout callout--warn" role="note" style="margin-top: var(--space-2xl)">
-        <p class="callout__title"><span aria-hidden="true">◷</span> Not medical advice</p>
+        <p class="callout__title">${icon('clock')} Not medical advice</p>
         <p>${escapeHtml(disclaimers.notMedical)}</p>
       </div>
     </div>

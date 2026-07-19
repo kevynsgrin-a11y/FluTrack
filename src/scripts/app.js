@@ -111,7 +111,31 @@ function render(store, abbr) {
       : escapeText(model.trend.label)
   );
   setText('glance-week', formatDate(store.weekEnding));
+  const heroBg = document.querySelector('.hero__bg');
+  if (heroBg && Number.isFinite(model.level)) heroBg.setAttribute('data-sev', String(model.level));
+  repaintMap(store, st.abbr);
   return { st, model };
+}
+
+// Recolor the US tile-grid map from the store (live data upgrade) and highlight
+// the current selection. No-op on pages without a map.
+function repaintMap(store, selectedAbbr) {
+  const tiles = document.querySelectorAll('.us-tile');
+  if (!tiles.length) return;
+  tiles.forEach((tile) => {
+    const abbr = tile.getAttribute('data-abbr');
+    const signals = store.signals.get(abbr);
+    if (signals) {
+      const m = computeModel(signals);
+      if (Number.isFinite(m.level)) tile.setAttribute('data-sev', String(m.level));
+      else tile.removeAttribute('data-sev');
+      const title = tile.querySelector('title');
+      if (title) title.textContent = `${stateByAbbr(abbr)?.name || abbr} — ${m.label}`;
+      const st = stateByAbbr(abbr);
+      if (st) tile.setAttribute('aria-label', `${st.name}: ${m.label}. View ${st.name} report.`);
+    }
+    tile.classList.toggle('is-selected', abbr === selectedAbbr);
+  });
 }
 
 // Announce a picker-driven change to assistive tech via the polite live region.

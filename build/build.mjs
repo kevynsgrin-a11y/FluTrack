@@ -128,8 +128,17 @@ function copyScripts() {
   const outDir = join(dist, 'assets', 'js');
   mkdirSync(outDir, { recursive: true });
   for (const f of readdirSync(srcScripts)) {
+    if (f === 'sw.js') continue; // service worker is emitted at the root scope
     if (f.endsWith('.js')) cpSync(join(srcScripts, f), join(outDir, f));
   }
+}
+
+// Emit the service worker at the site root (root scope), versioned by the CSS
+// content hash so a new deploy activates a fresh cache.
+function writeServiceWorker() {
+  const version = (site.assets?.css || 'styles').replace(/[^a-z0-9]/gi, '') || 'v1';
+  const sw = readFileSync(join(srcScripts, 'sw.js'), 'utf8').replace('__BUILD__', version);
+  writeFileSync(join(dist, 'sw.js'), sw);
 }
 
 function writeAssets() {
@@ -231,6 +240,9 @@ function headers() {
 
 /data/*
   Cache-Control: public, max-age=3600
+
+/sw.js
+  Cache-Control: no-cache
 `;
 }
 
@@ -271,8 +283,9 @@ async function main() {
   // Assets & code
   bundleCss();
   copyScripts();
+  writeServiceWorker();
   writeAssets();
-  log('assets, styles and scripts written');
+  log('assets, styles, scripts and service worker written');
 
   const written = [];
   const sitemap = [];

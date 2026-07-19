@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd, organizationLd } from '../../lib/seo.mjs';
 
@@ -83,7 +84,7 @@ export default function contact(ctx) {
     <h2>For medical concerns</h2>
     <p>FluTrack is a data-visualization utility, not a medical service. We cannot answer questions about your symptoms, offer a diagnosis, or advise on testing, vaccination or treatment, and we cannot respond to medical emergencies. Messages about a personal health situation are outside what this project can help with.</p>
     <div class="callout callout--warn" role="note">
-      <p class="callout__title"><span aria-hidden="true">◷</span> Not a medical service</p>
+      <p class="callout__title">${icon('clock')} Not a medical service</p>
       <p>For questions about your health, contact a qualified healthcare provider. If you think you are experiencing a medical emergency, call your local emergency number (911 in the United States) or go to the nearest emergency department. ${escapeHtml(
         disclaimers.notMedical
       )}</p>
@@ -92,7 +93,7 @@ export default function contact(ctx) {
     <h2>Independent, not official</h2>
     <p>FluTrack is built entirely on the CDC's public-domain data, but it is an independent project with no affiliation, funding relationship, or special access. If you are trying to reach the CDC itself, this is not the place — we cannot relay messages to any government agency.</p>
     <div class="callout">
-      <p class="callout__title"><span aria-hidden="true">✓</span> No CDC affiliation</p>
+      <p class="callout__title">${icon('check')} No CDC affiliation</p>
       <p class="text-secondary">${escapeHtml(disclaimers.notAffiliated)}</p>
     </div>
   `)}
