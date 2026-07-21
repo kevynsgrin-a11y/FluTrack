@@ -7,7 +7,7 @@ export const site = {
   name: 'FluTrack',
   tagline: 'Local flu, RSV & COVID activity in plain English',
   // Production origin. Override at build time with SITE_ORIGIN env var.
-  origin: process.env.SITE_ORIGIN || 'https://flutrack.pages.dev',
+  origin: process.env.SITE_ORIGIN || 'https://flufollower.com',
   locale: 'en_US',
   themeColor: '#0b7285',
   // Descriptions used across meta tags / structured data.

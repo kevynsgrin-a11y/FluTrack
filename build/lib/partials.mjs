@@ -11,9 +11,10 @@ import { icon } from '../../src/scripts/icons.js';
 
 /** A standard page header block for content/legal pages. */
 export function pageHeader({ eyebrow, title, lede }) {
-  return `<section class="section section--tight">
+  return `<section class="section section--tight page-header">
+    <div class="page-header__bg" aria-hidden="true"></div>
     <div class="container container--narrow">
-      ${eyebrow ? `<p class="eyebrow">${escapeHtml(eyebrow)}</p>` : ''}
+      ${eyebrow ? `<p class="eyebrow">${icon('pulse', { size: 14 })} ${escapeHtml(eyebrow)}</p>` : ''}
       <h1>${escapeHtml(title)}</h1>
       ${lede ? `<p class="lede" style="margin-top: var(--space-md)">${escapeHtml(lede)}</p>` : ''}
     </div>

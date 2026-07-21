@@ -161,6 +161,24 @@
   align-self: flex-start;
 }
 
+/* ---- Content page header (lightweight identity share) ----------------- */
+.page-header {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+.page-header__bg {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(
+    36rem 16rem at 12% -30%,
+    color-mix(in srgb, var(--brand-300) 24%, transparent),
+    transparent 62%
+  );
+  pointer-events: none;
+}
+
 /* ---- Section heading -------------------------------------------------- */
 .section-head {
   max-width: 40rem;
@@ -254,14 +272,31 @@
 
 /* ---- Alert signup band ------------------------------------------------ */
 .signup {
-  background: linear-gradient(
-    150deg,
-    var(--brand-600),
-    var(--brand-800)
-  );
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(38rem 22rem at 88% -20%, color-mix(in srgb, var(--brand-300) 55%, transparent), transparent 60%),
+    radial-gradient(30rem 24rem at 0% 120%, color-mix(in srgb, var(--brand-500) 42%, transparent), transparent 62%),
+    linear-gradient(150deg, var(--brand-600), var(--brand-800));
   color: #fff;
   border-radius: var(--radius-xl);
   padding: clamp(var(--space-xl), 5vw, var(--space-2xl));
+  box-shadow: var(--shadow-lg);
+}
+/* Faint pulse-line motif — the identity thread, at whisper opacity. */
+.signup::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: linear-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
+  background-size: 3rem 3rem;
+  -webkit-mask-image: radial-gradient(40rem 20rem at 85% 0%, #000, transparent 70%);
+  mask-image: radial-gradient(40rem 20rem at 85% 0%, #000, transparent 70%);
+  opacity: 0.12;
+  pointer-events: none;
 }
 .signup h2 {
   color: #fff;
