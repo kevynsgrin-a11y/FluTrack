@@ -22,8 +22,14 @@
 // ===========================================================================
 
 import { stateByAbbr, states } from './states-data.js';
+import { labelToLevel } from './threat-index.js';
 
 const SOCRATA_BASE = 'https://data.cdc.gov/resource';
+
+// How much history the live query asks for. The threat model only ever looks at
+// the latest value and the prior three weeks, so a ~4-month window is generous
+// while keeping the response small enough to parse on a phone.
+const HISTORY_DAYS = 120;
 
 /**
  * Dataset registry. `fields` lists candidate Socrata column names in priority
@@ -96,16 +102,46 @@ export function excludeNonCommercial(rows, provenanceFields) {
   });
 }
 
+/**
+ * Coerce a Socrata field to a number.
+ *
+ * Deliberately stricter than Number(): a whitespace-only field must not become
+ * a real 0 (Number(' ') === 0), and booleans/arrays must not coerce either —
+ * a spurious 0 drags a state's score down and can flip its headline level.
+ * CDC suppression markers ('<1', 'suppressed') correctly yield NaN.
+ */
 const numeric = (v) => {
-  if (v == null || v === '') return NaN;
-  const n = Number(v);
+  if (v == null || typeof v === 'boolean' || Array.isArray(v)) return NaN;
+  const s = typeof v === 'string' ? v.trim() : v;
+  if (s === '') return NaN;
+  const n = Number(s);
   return Number.isFinite(n) ? n : NaN;
 };
+
+/** ISO date (YYYY-MM-DD) for `days` ago, used to bound the live query. */
+function sinceDate(days = HISTORY_DAYS) {
+  const d = new Date(Date.now() - days * 86400000);
+  return d.toISOString().slice(0, 10);
+}
 
 /** Build a Socrata SoQL query URL. */
 function socrataUrl(id, params) {
   const qs = new URLSearchParams(params).toString();
   return `${SOCRATA_BASE}/${id}.json?${qs}`;
+}
+
+/**
+ * Standard query params for a live dataset pull: a bounded date window plus a
+ * ceiling on rows. Without the window these endpoints return the entire
+ * national multi-year history (tens of MB) on every page load.
+ */
+function windowedQuery(ds, limit) {
+  const weekField = ds.fields.week[0];
+  return {
+    $where: `${weekField} >= '${sinceDate()}T00:00:00'`,
+    $order: `${weekField} DESC`,
+    $limit: limit,
+  };
 }
 
 async function fetchJson(url, { signal } = {}) {
@@ -121,10 +157,7 @@ async function fetchJson(url, { signal } = {}) {
 
 async function fetchEdVisits(signal) {
   const ds = DATASETS.edVisits;
-  const rows = await fetchJson(
-    socrataUrl(ds.id, { $limit: 60000, $order: `${ds.fields.week[0]} DESC` }),
-    { signal }
-  );
+  const rows = await fetchJson(socrataUrl(ds.id, windowedQuery(ds, 10000)), { signal });
   const byState = new Map();
   for (const row of rows) {
     const geo = pickField(row, ds.fields.geography);
@@ -146,10 +179,7 @@ async function fetchEdVisits(signal) {
 
 async function fetchAri(signal) {
   const ds = DATASETS.ari;
-  const rows = await fetchJson(
-    socrataUrl(ds.id, { $limit: 20000, $order: `${ds.fields.week[0]} DESC` }),
-    { signal }
-  );
+  const rows = await fetchJson(socrataUrl(ds.id, windowedQuery(ds, 5000)), { signal });
   const byState = new Map();
   for (const row of rows) {
     const st = resolveState(pickField(row, ds.fields.geography));
@@ -164,10 +194,7 @@ async function fetchAri(signal) {
 
 async function fetchWastewater(signal) {
   const ds = DATASETS.wastewater;
-  let rows = await fetchJson(
-    socrataUrl(ds.id, { $limit: 60000, $order: `${ds.fields.week[0]} DESC` }),
-    { signal }
-  );
+  let rows = await fetchJson(socrataUrl(ds.id, windowedQuery(ds, 30000)), { signal });
   rows = excludeNonCommercial(rows, ds.fields.provenance);
   const byState = new Map();
   for (const row of rows) {
@@ -190,12 +217,18 @@ function normalizePathogen(raw) {
   return 'combined';
 }
 
+// Lookup tables built once. resolveState() runs per row — a linear scan over 51
+// states with two toLowerCase() allocations per comparison was the dominant
+// post-fetch cost on large responses.
+const BY_LOWER_NAME = new Map(states.map((s) => [s.name.toLowerCase(), s]));
+const BY_LOWER_ABBR = new Map(states.map((s) => [s.abbr.toLowerCase(), s]));
+
 /** Resolve a Socrata geography string to a state record. */
 function resolveState(geo) {
   if (!geo) return null;
-  const g = String(geo).trim();
-  if (g.length === 2) return stateByAbbr(g);
-  return states.find((s) => s.name.toLowerCase() === g.toLowerCase()) || stateByAbbr(g);
+  const g = String(geo).trim().toLowerCase();
+  if (!g) return null;
+  return BY_LOWER_ABBR.get(g) || BY_LOWER_NAME.get(g) || null;
 }
 
 /**
@@ -232,7 +265,9 @@ export async function fetchLiveSignals({ timeoutMs = 12000 } = {}) {
     const ariRows = sortByWeek(ari.get(st.abbr) || []);
     const wwRows = sortByWeek(ww.get(st.abbr) || []);
 
-    const edCombinedSeries = edRows.map((r) => r.combined).filter(Number.isFinite);
+    // NSSP publishes by state and sub-state region, so collapse to one value per
+    // week before the trend model treats consecutive entries as consecutive weeks.
+    const edCombinedSeries = collapseWeeklyMean(edRows, 'combined');
     // State wastewater signal = the weekly PEAK viral activity across pathogens
     // (collapseWeeklyMax already keeps only finite WVAL rows and takes the max).
     const wastewaterSeries = collapseWeeklyMax(wwRows);
@@ -241,7 +276,7 @@ export async function fetchLiveSignals({ timeoutMs = 12000 } = {}) {
     if (week > latestWeek) latestWeek = week;
 
     signalsByAbbr.set(st.abbr, {
-      ariLevel: ariRows.length ? labelFromRow(ariRows.at(-1)) : null,
+      ariLevel: ariRows.length ? labelToLevel(ariRows.at(-1).label) : null,
       edCombinedSeries,
       wastewaterSeries,
       positivityCombined: null,
@@ -254,28 +289,41 @@ export async function fetchLiveSignals({ timeoutMs = 12000 } = {}) {
     });
   }
 
-  return { signalsByAbbr, weekEnding: latestWeek, sources };
+  // How many states the live pull actually produced usable signals for. The
+  // caller uses this to decide whether the refresh may be labeled "live" —
+  // an HTTP 200 carrying zero usable rows must not badge sample data as CDC data.
+  let statesWithData = 0;
+  for (const sig of signalsByAbbr.values()) if (hasSignalData(sig)) statesWithData += 1;
+
+  return { signalsByAbbr, weekEnding: latestWeek, sources, statesWithData };
 }
 
-function labelFromRow(row) {
-  // Deferred import avoids a cycle; labelToLevel is pure.
-  const map = { 'very low': 0, minimal: 0, low: 1, moderate: 2, medium: 2, high: 3, 'very high': 4 };
-  const key = String(row.label || '').trim().toLowerCase();
-  if (key in map) return map[key];
-  const n = Number(row.label);
-  return Number.isFinite(n) ? Math.max(0, Math.min(4, Math.round((n / 13) * 4))) : null;
+/** True when a signal bundle carries at least one usable series/level. */
+export function hasSignalData(sig) {
+  if (!sig) return false;
+  return (
+    (sig.edCombinedSeries && sig.edCombinedSeries.length > 0) ||
+    (sig.wastewaterSeries && sig.wastewaterSeries.length > 0) ||
+    Number.isFinite(sig.ariLevel)
+  );
 }
 
 function pathogenSeries(pathogen, edRows, wwRows) {
   return {
-    edPercentSeries: edRows.map((r) => r[pathogen]).filter(Number.isFinite),
+    edPercentSeries: collapseWeeklyMean(edRows, pathogen),
     wastewaterSeries: collapseWeeklyMax(wwRows.filter((r) => r.pathogen === pathogen)),
     positivitySeries: [],
   };
 }
 
+/** ISO week strings sort correctly as plain strings; localeCompare is both
+ *  locale-dependent and far slower over large row arrays. */
+function byWeekAsc(a, b) {
+  return a.week < b.week ? -1 : a.week > b.week ? 1 : 0;
+}
+
 function sortByWeek(rows) {
-  return [...rows].sort((a, b) => String(a.week).localeCompare(String(b.week)));
+  return [...rows].map((r) => ({ ...r, week: String(r.week) })).sort(byWeekAsc);
 }
 
 /** Collapse multiple rows per week (e.g. many sewersheds) into one weekly max. */
@@ -286,12 +334,49 @@ function collapseWeeklyMax(rows) {
     const cur = byWeek.get(r.week);
     if (cur == null || r.wval > cur) byWeek.set(r.week, r.wval);
   }
-  return [...byWeek.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([, v]) => v);
+  return [...byWeek.keys()]
+    .sort()
+    .map((w) => byWeek.get(w));
+}
+
+/**
+ * Collapse multiple rows per week into one weekly mean for a numeric field.
+ *
+ * NSSP publishes ED data by state AND by sub-state region, so a state-week can
+ * carry several rows. Without collapsing, computeTrend() compares the latest
+ * row against three sibling rows *from the same week* and reports geographic
+ * variance as a time trend.
+ */
+function collapseWeeklyMean(rows, field) {
+  const byWeek = new Map();
+  for (const r of rows) {
+    const v = r[field];
+    if (!Number.isFinite(v)) continue;
+    const cur = byWeek.get(r.week) || { sum: 0, n: 0 };
+    cur.sum += v;
+    cur.n += 1;
+    byWeek.set(r.week, cur);
+  }
+  return [...byWeek.keys()]
+    .sort()
+    .map((w) => {
+      const { sum, n } = byWeek.get(w);
+      return sum / n;
+    });
 }
 
 /** Load the bundled snapshot (illustrative sample data). */
-export async function loadSnapshot(basePath = '') {
-  const res = await fetch(`${basePath}/data/snapshot.json`, { headers: { Accept: 'application/json' } });
-  if (!res.ok) throw new Error(`Failed to load snapshot: HTTP ${res.status}`);
-  return res.json();
+export async function loadSnapshot(basePath = '', { timeoutMs = 8000 } = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${basePath}/data/snapshot.json`, {
+      headers: { Accept: 'application/json' },
+      signal: controller.signal,
+    });
+    if (!res.ok) throw new Error(`Failed to load snapshot: HTTP ${res.status}`);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
 }

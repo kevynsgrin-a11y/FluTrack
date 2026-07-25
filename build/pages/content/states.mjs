@@ -69,7 +69,7 @@ export default function states(ctx) {
   return {
     title: 'All states — respiratory activity directory',
     description:
-      'Browse flu, RSV and COVID-19 respiratory activity for all 50 states and DC. Pick your state for a plain-English threat level and weekly trend from public CDC data.',
+      'Browse flu, RSV and COVID-19 activity for all 50 states and DC — a plain-English threat level and weekly trend for each, from public CDC data.',
     path: '/states/',
     body,
     scripts: ['/assets/js/states-filter.js'],

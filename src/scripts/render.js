@@ -59,8 +59,10 @@ export function sparkline(series, { width = 120, height = 32, direction = 'flat'
 export function arcGauge(model) {
   const score = Number.isFinite(model.composite) ? model.composite : 0;
   const level = Number.isFinite(model.level) ? model.level : 0;
-  const R = 80;
-  const circ = Math.PI * R; // semicircle arc length ≈ 251.3
+  // Must match the radius in the arc path below (A82 82) — computing the dash
+  // length from a different radius left the gauge unable to reach 100%.
+  const R = 82;
+  const circ = Math.PI * R; // semicircle arc length ≈ 257.6
   const dash = (score / 100) * circ;
   const noData = !Number.isFinite(model.composite);
   return `<svg class="gauge" data-sev="${level}" viewBox="0 0 200 126" role="img" aria-label="Composite activity score ${
@@ -79,10 +81,15 @@ export function arcGauge(model) {
 export function provenanceStrip(provenance = {}) {
   const badge = provenance.live
     ? `<span class="prov__live"><span class="prov__dot"></span>Live CDC data</span>`
-    : `<span class="prov__live prov__live--sample">Sample data</span>`;
+    : `<span class="prov__live prov__live--sample">${
+        provenance.failed ? 'Sample data — CDC feed unavailable' : 'Sample data'
+      }</span>`;
+  // The live pull does not currently supply NREVSS positivity, so only claim
+  // that wordmark when the data on screen actually includes it.
+  const tags = provenance.live ? ['NSSP', 'NWSS'] : ['NSSP', 'NWSS', 'NREVSS'];
   return `<div class="prov" role="note">
     <span class="prov__src">CDC surveillance</span>
-    <span class="prov__tags"><span>NSSP</span><span>NWSS</span><span>NREVSS</span></span>
+    <span class="prov__tags">${tags.map((t) => `<span>${t}</span>`).join('')}</span>
     <span class="prov__sep" aria-hidden="true">·</span>
     <span>Updated weekly</span>
     <span class="prov__sep" aria-hidden="true">·</span>
@@ -96,9 +103,10 @@ export function severityMeter(level) {
   const segs = SEVERITY_LABELS.map(
     (_, i) => `<span class="meter__seg" data-on="${i <= on}"></span>`
   ).join('');
-  return `<div class="meter" role="img" aria-label="Severity ${
-    on >= 0 ? on + 1 : 0
-  } of 5: ${escapeHtml(levelLabel(on >= 0 ? on : 0))}">${segs}</div>
+  // An unknown level is not the same as the lowest one — announcing "Severity 0
+  // of 5: Minimal" for missing data tells the reader the opposite of the truth.
+  const label = on >= 0 ? `Severity ${on + 1} of 5: ${escapeHtml(levelLabel(on))}` : 'Severity unknown — no data';
+  return `<div class="meter" role="img" aria-label="${label}">${segs}</div>
   <div class="meter__scale" aria-hidden="true"><span>Minimal</span><span>Very High</span></div>`;
 }
 
@@ -107,7 +115,13 @@ export function provenanceBadge(provenance = {}) {
   if (provenance.live) {
     return `<span class="badge badge--live"><span class="badge__dot"></span>Live CDC data</span>`;
   }
-  return `<span class="badge badge--cached" title="Live CDC feed not loaded yet">Sample data</span>`;
+  // Distinguish "not loaded yet" from "we tried and it failed". Leaving the
+  // optimistic wording up after a failure implies live data is still coming.
+  const title = provenance.failed
+    ? 'Live CDC feed unavailable — showing bundled sample data'
+    : 'Live CDC feed not loaded yet';
+  const text = provenance.failed ? 'Sample data — CDC feed unavailable' : 'Sample data';
+  return `<span class="badge badge--cached" title="${escapeHtml(title)}">${escapeHtml(text)}</span>`;
 }
 
 /** A trend chip: "▲ Rising +14%". */
@@ -199,7 +213,10 @@ function sparkSeriesFor(p) {
 export function stateChip(state, model) {
   const level = Number.isFinite(model?.level) ? model.level : -1;
   const label = model && Number.isFinite(model.level) ? model.label : '—';
-  return `<a class="state-chip" href="/state/${state.slug}/" data-sev="${level < 0 ? 0 : level}">
+  // Omit data-sev entirely when the level is unknown, so a no-data state does
+  // not get the green "Minimal" dot. The CSS already has a :not([data-sev]) branch.
+  const sev = level >= 0 ? ` data-sev="${level}"` : '';
+  return `<a class="state-chip" href="/state/${escapeHtml(state.slug)}/"${sev}>
     <span class="state-chip__name">${escapeHtml(state.name)}</span>
     <span class="cluster" style="gap: var(--space-xs)">
       <span class="muted">${escapeHtml(label)}</span>
@@ -219,9 +236,19 @@ export function signalRows(signals = {}) {
   if (Number.isFinite(ww)) {
     rows.push(row('Wastewater viral activity', ww.toFixed(1), 'CDC NWSS viral activity index (leading indicator)'));
   }
-  if (Number.isFinite(signals.positivityCombined)) {
-    rows.push(row('Test positivity', formatPct(signals.positivityCombined), 'Share of lab tests positive (NREVSS)'));
-  }
+  // Always emit this row. Rendering it conditionally meant a successful live
+  // refresh (which does not yet supply positivity) silently deleted a row the
+  // static page had shown, shifting everything below it. An explicit "—" keeps
+  // the layout stable and makes the gap visible rather than silent.
+  rows.push(
+    row(
+      'Test positivity',
+      formatPct(signals.positivityCombined),
+      Number.isFinite(signals.positivityCombined)
+        ? 'Share of lab tests positive (NREVSS)'
+        : 'Share of lab tests positive (NREVSS) — not available for this view'
+    )
+  );
   if (!rows.length) return '<p class="muted">No signal detail available for this area.</p>';
   return rows.join('');
 }

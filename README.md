@@ -74,10 +74,10 @@ node build/lib/rasterize.mjs
 
 Optional bindings for live surge-alert delivery (Settings → Functions):
 
-- KV namespace **`SUBSCRIBERS`** — persists signups.
+- KV namespace **`SUBSCRIBERS`** — **required**: persists signups and backs the per-IP rate limiter.
 - Env var **`ALERTS_WEBHOOK_URL`** — forwards signups to an email provider/automation.
 
-With neither configured, `/api/subscribe` returns `501` and the form shows a friendly "not switched on" message — the site remains fully functional.
+Without the KV binding, `/api/subscribe` returns `501` and the form shows a friendly "not switched on" message — the site remains fully functional. KV is required rather than optional because the rate limiter is backed by it; a webhook-only deployment would accept unlimited unauthenticated submissions with arbitrary recipient addresses.
 
 Set `SITE_ORIGIN` at build time to your production origin so canonical URLs, sitemap, and Open Graph tags are correct:
 

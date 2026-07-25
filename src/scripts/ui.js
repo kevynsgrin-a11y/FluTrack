@@ -21,6 +21,16 @@ function applyTheme(theme) {
   }
   const toggle = document.getElementById('theme-toggle');
   if (toggle) toggle.setAttribute('aria-pressed', String(theme === 'dark'));
+  // The <meta name="theme-color"> pair is gated on prefers-color-scheme, so a
+  // manual override otherwise left the browser chrome matching the OS, not the
+  // page. An explicit non-media meta wins over the media-gated ones.
+  let meta = document.querySelector('meta[name="theme-color"]:not([media])');
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.setAttribute('name', 'theme-color');
+    document.head.appendChild(meta);
+  }
+  meta.setAttribute('content', theme === 'dark' ? '#0c1116' : '#ffffff');
 }
 
 function initTheme() {
@@ -40,9 +50,16 @@ function initNav() {
   const setOpen = (open) => {
     nav.classList.toggle('is-open', open);
     toggle.setAttribute('aria-expanded', String(open));
+    // Move focus into the panel on open so the menu is reachable with the very
+    // next Tab, and hand it back to the toggle on close.
+    if (open) nav.querySelector('a')?.focus();
   };
 
-  toggle.addEventListener('click', () => setOpen(!nav.classList.contains('is-open')));
+  toggle.addEventListener('click', () => {
+    const open = !nav.classList.contains('is-open');
+    setOpen(open);
+    if (!open) toggle.focus();
+  });
 
   // Close on outside click / Escape for accessibility.
   document.addEventListener('click', (e) => {

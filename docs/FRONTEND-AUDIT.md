@@ -1,5 +1,10 @@
 # FluTrack front-end audit
 
+> **Remediation status (2026-07-25).** Most findings below have since been fixed
+> on this branch — see [Remediation status](#remediation-status) at the end for
+> exactly what was addressed, what was deliberately left, and why. The findings
+> are kept in their original form as the record of what was found.
+
 **Date:** 2026-07-25
 **Scope:** full front end — rendered markup, CSS/design system, client JS, accessibility, performance, SEO/metadata, and live runtime behaviour in a browser.
 **Method:** six independent audits run in parallel over the source tree and the built `dist/` output (66 pages), plus a live browser pass against a locally served build. Findings below are deduplicated and re-prioritised across all six; the highest-severity items were independently re-verified against the code.
@@ -250,3 +255,53 @@ Worth stating plainly, because the defects above are concentrated rather than pe
 6. Tier 2 accessibility, then performance, then Tier 3.
 
 Add the three tests listed above alongside step 1 — the Tier-0 defects are exactly the class of bug that the current suite is structured to miss.
+
+---
+
+## Remediation status
+
+Fixed on this branch. `npm run verify` passes: 66 pages built, QA green, 42 tests (up from 29).
+
+### Tier 0 — all fixed
+
+- **0.1** `fetchLiveSignals` now returns `statesWithData`, and `app.js` only sets `provenance.live` when at least 25 of 51 states were actually replaced **and** `weekEnding` is a valid ISO date. An HTTP 200 carrying nothing usable can no longer badge PRNG data as CDC surveillance.
+- **0.2** The failure path sets `{ live: false, failed: true }`, renders "Sample data — CDC feed unavailable", and announces it via `#live-status`. Verified in a browser with the CDC host unreachable.
+- **0.3** The "Test positivity" row is now unconditional, rendering `—` when absent, so the row count no longer changes between the static and live views. The provenance strip drops the NREVSS wordmark when positivity is not present, rather than claiming a source that did not contribute.
+
+### Tier 1 — all fixed
+
+- **1.1** Added `[hidden] { display: none !important }`. The `/states/` filter works and the contradictory empty-state message no longer renders on load.
+- **1.2** The `prefers-color-scheme: dark` block is now **generated** from `:root[data-theme='dark']` at build time (`emitDarkMediaBlock`), so the two can no longer diverge. Both blocks now carry all 33 tokens. `build/check.mjs` asserts parity as a backstop.
+- **1.3** Focus and invalid states are re-declared inside `.signup__form` with white/light values that clear 3:1 on the teal band; `.input:focus` no longer suppresses the global outline.
+- **1.4** Live queries now carry a `$where` bound to a 120-day window with limits cut from 60000/20000/60000 to 10000/5000/30000, and `resolveState` uses prebuilt `Map`s instead of an O(rows × 51) scan.
+
+### Tier 2 — fixed
+
+Data correctness: state pages no longer fall back to national data; `labelFromRow` deleted in favour of the canonical `labelToLevel` (so CDC's "Extremely High" no longer drops a 0.25-weighted signal); ED rows collapsed per week; `numeric()` no longer turns whitespace into `0`; gauge radius corrected to 82 so it reaches 100%.
+
+Robustness: `AbortController` added to the FCC geocode and the snapshot fetch; the snapshot and live requests now run in parallel; the picker is wired synchronously before any `await` and honours `?state=`; the geolocation button captures its label once and distinguishes permission-denied from other failures; the empty-store case renders an explicit "No data" view instead of returning silently.
+
+Service worker: precaches the hashed CSS and browser entry scripts; refuses to cache non-OK responses; cache key derived from all script contents plus the CSS hash, not the CSS alone; a cache miss returns a real `Response` instead of `undefined`. `/assets/js/*` dropped to `max-age=300` since those filenames are unhashed.
+
+Accessibility: nav moved after the toggle in DOM order with focus moved into the panel on open (CSS `order` preserves the visual layout); inline links in running text underlined; `severityMeter` announces "Severity unknown" rather than "Minimal" for missing data, and `stateChip` omits `data-sev` entirely; scrollable tables given `tabindex`/`role`/label and a `min-width` so they actually scroll; meter segments distinguished by fill-vs-outline rather than colour alone; `--field-border` added for 3:1 control boundaries; `forced-colors` block added; map given a `min-width` so tiles stay ≥24px; live-region announcement now states what changed.
+
+Layout/perf: `will-change` gated on `prefers-reduced-motion`; measure caps on `.callout`/`.notice`/`.disclaimer-strip`; `min-width: 0` on the two shrink-blocked flex/grid children; the `&nbsp;`-joined methodology formula fixed; JS comments stripped at build (`threat-index.js` 10.8 KB → 7.0 KB); ~1.6 KB of dead CSS removed; a full print stylesheet added.
+
+Security: `/api/subscribe` now **requires** the KV binding (the rate limiter is backed by it, so a webhook-only deployment was an unmetered open relay), checks `Origin`/`Sec-Fetch-Site`, truncates and strips control characters from the relayed `User-Agent`, and 303-redirects no-JS submissions to `/alerts/` instead of returning raw JSON. `novalidate` moved out of the markup into `alerts.js`, and the client now sends the honeypot field it previously omitted.
+
+SEO: home `og:title`/`twitter:title` no longer collapse to "FluTrack"; `twitter:image:alt` added; `lang="en-US"`; canonical suppressed on `noindex` pages; `@id`/`@graph` wiring so `Organization` is one entity; `about` uses `MedicalCondition` objects rather than bare strings; `datePublished` fixed rather than tracking the data week; `Dataset` gained `distribution`, `spatialCoverage`, `variableMeasured`, `publisher` and `dateModified`; `FAQPage` removed from the 51 state pages; `/about/` gained breadcrumb markup; two over-long meta descriptions and four uninformative titles rewritten.
+
+Tests: `test/live-signals.test.mjs` covers the empty-response, renamed-geography, duplicate-week and "Extremely High" cases, the signal-row invariant, provenance states, severity labelling, escaping, and `formatDate` boundaries.
+
+### Deliberately not changed
+
+- **Placeholder contact email** (`hello@flutrack.example`) — needs a real monitored mailbox. Nothing to substitute.
+- **Brand/domain mismatch** (FluTrack vs `flufollower.com`) — a product decision.
+- **NREVSS positivity adapter** — needs a dataset ID and a live schema to verify against; `data.cdc.gov` is unreachable from this environment. The row now degrades honestly instead.
+- **Scheduled rebuild** for stale server-rendered data — an infrastructure/cost decision.
+- **Thin state-page content** and the non-monotonic map colour ramp — both editorial/design calls needing a human eye.
+- **Three short legal-page titles** (Medical Disclaimer, Privacy Policy, Terms of Use) — conventional names; keyword-padding them would be worse.
+
+### Verification notes
+
+`data.cdc.gov` is unreachable from this environment, so the live-success path was exercised against stubbed Socrata responses in the new tests rather than the real API. Real schema drift and the actual parse cost of a live response remain untested. Horizontal overflow was measured (`scrollWidth` vs `clientWidth`) across 8 pages × 4 widths — 32/32 clean — and per-element clipping checked inside `overflow: hidden` ancestors.

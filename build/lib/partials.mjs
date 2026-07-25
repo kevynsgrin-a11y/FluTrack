@@ -44,7 +44,11 @@ export function signupBand({ compact = false } = {}) {
         <p class="eyebrow" style="color: rgba(255,255,255,.85)">Free · one email a week at most</p>
         <h2 style="margin-top: var(--space-xs)">Get a surge alert for your state</h2>
         <p class="lede">We'll email you when CDC data shows respiratory activity climbing where you live — so a rise never catches you off guard. No spam, unsubscribe anytime.</p>
-        <form class="signup__form" id="alert-form" method="post" action="/api/subscribe" novalidate>
+        <!-- Deliberately no novalidate attribute: without JS, native constraint
+             validation is the only validation this form gets. alerts.js sets
+             form.noValidate once it takes over, so the enhanced path still
+             shows its own custom error messaging. -->
+        <form class="signup__form" id="alert-form" method="post" action="/api/subscribe">
           <div aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden">
             <label for="alert-company">Company (leave blank)</label>
             <input id="alert-company" name="company" type="text" tabindex="-1" autocomplete="off">
@@ -53,7 +57,7 @@ export function signupBand({ compact = false } = {}) {
           <input class="input" id="alert-email" name="email" type="email" inputmode="email"
             autocomplete="email" placeholder="you@example.com" required>
           <label class="visually-hidden" for="alert-state">Your state</label>
-          <select class="select" id="alert-state" name="state" required>
+          <select class="select" id="alert-state" name="state" autocomplete="address-level1" required>
             <option value="" disabled selected>Choose your state</option>
             ${options}
           </select>
@@ -79,12 +83,16 @@ export function trendDisclaimer() {
 
 /** Consistent breadcrumb markup. */
 export function breadcrumbs(crumbs) {
+  // An ordered list lets assistive tech announce position and count ("2 of 3")
+  // rather than reading a flat run of links.
   const items = crumbs
     .map((c, i) => {
       const last = i === crumbs.length - 1;
-      if (last) return `<span aria-current="page">${escapeHtml(c.name)}</span>`;
-      return `<a href="${c.path}">${escapeHtml(c.name)}</a><span aria-hidden="true">›</span>`;
+      const inner = last
+        ? `<span aria-current="page">${escapeHtml(c.name)}</span>`
+        : `<a href="${escapeHtml(c.path)}">${escapeHtml(c.name)}</a><span aria-hidden="true">›</span>`;
+      return `<li>${inner}</li>`;
     })
-    .join(' ');
-  return `<nav class="breadcrumbs" aria-label="Breadcrumb">${items}</nav>`;
+    .join('');
+  return `<nav aria-label="Breadcrumb"><ol class="breadcrumbs">${items}</ol></nav>`;
 }

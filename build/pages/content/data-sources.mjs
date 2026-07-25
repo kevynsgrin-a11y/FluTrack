@@ -74,7 +74,7 @@ export default function dataSources(ctx) {
     <p>The Centers for Disease Control and Prevention publish a great deal about respiratory illness every week, all of it in the public domain and all of it downloadable from <a href="https://data.cdc.gov/">data.cdc.gov</a>. FluTrack draws on four of those feeds and blends them into a single 0–4 threat level for your state. Nothing below is proprietary, and nothing sits behind a login — you can pull the very same inputs we do and check our work. How the signals are combined is documented separately in our <a href="/methodology/">methodology</a>.</p>
 
     <h2>The datasets behind the index</h2>
-    <div class="table-wrap">
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table">
       <table>
         <thead>
           <tr>
@@ -126,7 +126,7 @@ export default function dataSources(ctx) {
   `;
 
   return {
-    title: 'Data sources',
+    title: 'The CDC data sources behind the threat level',
     description:
       "Every CDC dataset behind FluTrack's respiratory threat level — what each measures, its license and cadence — and why we exclude non-commercial data.",
     path: '/data-sources/',

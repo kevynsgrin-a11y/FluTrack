@@ -9,7 +9,12 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 function init(form) {
   const email = form.querySelector('input[type="email"]');
   const state = form.querySelector('select[name="state"]');
+  const company = form.querySelector('input[name="company"]');
   const status = form.querySelector('#alert-status') || form.parentElement.querySelector('.form-status');
+
+  // Take over validation only now that JS is running — the markup deliberately
+  // ships without `novalidate` so the no-JS path keeps native validation.
+  form.noValidate = true;
 
   // Prefill state from ?state=XX (used by per-state "set up alerts" links).
   try {
@@ -63,7 +68,9 @@ function init(form) {
       const res = await fetch(form.action, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ email: emailVal, state: stateVal }),
+        // Include the honeypot: the server checks `company`, and omitting it
+        // here meant the trap only ever fired on the no-JS path.
+        body: JSON.stringify({ email: emailVal, state: stateVal, company: company?.value || '' }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {

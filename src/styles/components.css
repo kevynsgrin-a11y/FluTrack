@@ -12,9 +12,6 @@
 .container--narrow {
   max-width: var(--container-narrow);
 }
-.container--wide {
-  max-width: var(--container-wide);
-}
 
 .section {
   padding-block: var(--space-2xl);
@@ -82,6 +79,15 @@ main {
   align-items: center;
   gap: var(--space-md);
   justify-content: space-between;
+}
+
+/* The nav sits after .header-actions in the DOM (so the mobile menu button
+ * precedes the links it opens); put it back in the middle visually. */
+.primary-nav {
+  order: 1;
+}
+.header-actions {
+  order: 2;
 }
 
 .brand {
@@ -235,10 +241,6 @@ main {
 }
 :root[data-theme='dark'] .btn--ghost:hover {
   background: var(--surface-2);
-}
-.btn--lg {
-  font-size: var(--step-1);
-  padding: 0.8em 1.4em;
 }
 .btn--block {
   width: 100%;
@@ -511,14 +513,20 @@ main {
   grid-template-columns: repeat(5, 1fr);
   gap: 4px;
 }
+/* Unlit segments are outlined rather than filled. A fill-vs-fill comparison
+ * could not clear 3:1 against every severity color at once (the ramp spans a
+ * bright yellow and a dark green), so the on/off distinction is carried by
+ * shape — filled vs hollow — which holds regardless of the severity hue. */
 .meter__seg {
   height: 10px;
   border-radius: var(--radius-pill);
-  background: var(--border);
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--field-border);
   transition: background var(--dur-med) var(--ease-out);
 }
 .meter__seg[data-on='true'] {
   background: var(--sev);
+  box-shadow: none;
 }
 .meter__scale {
   display: flex;
@@ -584,9 +592,14 @@ main {
 /* ---- US tile-grid map (signature visual) ------------------------------ */
 .us-map {
   width: 100%;
+  /* Below ~26rem the 51 tiles fall under the 24px minimum target size with only
+   * ~3px between them, so let the map scroll rather than shrink further. */
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
 }
 .us-map__svg {
   width: 100%;
+  min-width: 26rem;
   height: auto;
   display: block;
   overflow: visible;
@@ -724,14 +737,12 @@ main {
   flex-direction: column;
   gap: var(--space-2xs);
 }
-.field__label {
-  font-weight: var(--weight-medium);
-  font-size: var(--step-0);
-}
 .input {
   width: 100%;
   background: var(--surface);
-  border: 1px solid var(--border-strong);
+  /* --border-strong is only ~1.4:1 against the page; a form control needs a 3:1
+   * boundary to be identifiable at all (WCAG 1.4.11). */
+  border: 1px solid var(--field-border);
   border-radius: var(--radius-sm);
   padding: 0.7em 0.9em;
   transition: border-color var(--dur-fast) var(--ease-out),
@@ -740,10 +751,11 @@ main {
 .input::placeholder {
   color: var(--text-muted);
 }
-.input:focus {
+/* Keep the global focus outline and treat the border/shadow as decoration.
+ * `outline: none` here previously left a 1.4:1 halo as the only focus cue. */
+.input:focus-visible {
   border-color: var(--focus-ring);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 30%, transparent);
-  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 45%, transparent);
 }
 .input[aria-invalid='true'] {
   border-color: var(--sev-4);
@@ -752,14 +764,12 @@ main {
   font-size: var(--step--1);
   color: var(--text-muted);
 }
-.field__error {
-  font-size: var(--step--1);
-  color: var(--sev-4-ink);
-  font-weight: var(--weight-medium);
-}
 
 /* ---- Callouts --------------------------------------------------------- */
 .callout {
+  /* Sits directly in .container, which is 68rem — without a cap these run to
+   * ~117 characters per line, roughly double a readable measure. */
+  max-width: 46rem;
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
   background: var(--surface-2);
@@ -811,6 +821,10 @@ main {
 }
 .prose table {
   width: 100%;
+  /* Without a min-width the table always fits its wrapper, so .table-wrap's
+   * overflow-x never engages and columns crush to ~44px on a phone instead of
+   * scrolling. */
+  min-width: 32rem;
   border-collapse: collapse;
   font-size: var(--step-0);
 }
@@ -827,6 +841,9 @@ main {
 }
 .table-wrap {
   overflow-x: auto;
+  /* Keeps the table's square corners inside the wrapper's radius now that it
+   * genuinely scrolls. */
+  overflow-y: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
@@ -892,6 +909,7 @@ main {
 
 /* ---- Disclaimer strip ------------------------------------------------- */
 .disclaimer-strip {
+  max-width: 46rem;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -922,10 +940,47 @@ main {
   gap: var(--space-md);
   flex-wrap: wrap;
 }
-.hide-sm {
+
+/* ---- Shrink fixes ----------------------------------------------------- */
+/* Grid and flex children default to min-width: auto, so these could not shrink
+ * below their content and pushed their containers wide. */
+.threat__readout,
+.state-chip__name {
+  min-width: 0;
 }
-@media (max-width: 40rem) {
-  .hide-sm {
-    display: none !important;
+.state-chip__name {
+  overflow-wrap: anywhere;
+}
+
+/* Defensive: no single long token in prose copy should be able to force
+ * horizontal page scroll. */
+.prose,
+.callout,
+.notice {
+  overflow-wrap: break-word;
+}
+
+/* ---- Forced colors (Windows High Contrast) ---------------------------- */
+/* Every severity signal is a background/fill driven by a custom property, all
+ * of which forced-colors would flatten to a single system color — collapsing
+ * five levels and 51 map tiles into one indistinguishable state. */
+@media (forced-colors: active) {
+  .us-tile rect,
+  .meter__seg,
+  .state-chip__dot,
+  .threat__pip,
+  .map-legend__swatch {
+    forced-color-adjust: none;
+  }
+  /* background-clip: text renders as transparent when the background layer is
+   * not painted. */
+  .hero h1 em {
+    -webkit-text-fill-color: currentColor;
+    color: CanvasText;
+    background: none;
+  }
+  .us-tile:focus-visible rect,
+  .us-tile.is-selected rect {
+    stroke: Highlight;
   }
 }

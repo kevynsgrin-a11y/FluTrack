@@ -6,10 +6,18 @@
 
 import { site } from './site.mjs';
 
+// Stable node identifiers. Without these, the Organization emitted on /, /about/
+// and /contact/ was three unconnected anonymous nodes that no consumer could
+// reconcile into one publisher entity — precisely the E-E-A-T signal a YMYL site
+// depends on. Everything that references the publisher now points at one @id.
+export const ORG_ID = `${site.origin}/#organization`;
+export const SITE_ID = `${site.origin}/#website`;
+
 export function organizationLd() {
   const org = {
     '@context': 'https://schema.org',
     '@type': 'Organization',
+    '@id': ORG_ID,
     name: site.name,
     url: site.origin,
     logo: `${site.origin}/assets/icon-512.png`,
@@ -31,11 +39,12 @@ export function websiteLd() {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
+    '@id': SITE_ID,
     name: site.name,
     url: site.origin,
     description: site.description,
     inLanguage: 'en-US',
-    publisher: { '@type': 'Organization', name: site.name },
+    publisher: { '@id': ORG_ID },
     potentialAction: {
       '@type': 'SearchAction',
       target: `${site.origin}/states/?q={search_term_string}`,
@@ -44,20 +53,41 @@ export function websiteLd() {
   };
 }
 
-export function datasetLd() {
+export function datasetLd(weekEnding) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Dataset',
+    '@id': `${site.origin}/#dataset`,
     name: 'FluTrack Respiratory Threat Level',
     description:
       'A unified, state-level respiratory threat level for influenza, RSV and ' +
       'COVID-19, derived from public-domain CDC surveillance systems (NSSP, ' +
       'NWSS, NREVSS).',
-    creator: { '@type': 'Organization', name: site.name },
-    url: `${site.origin}/methodology/`,
+    creator: { '@id': ORG_ID },
+    publisher: { '@id': ORG_ID },
+    // The node is emitted on the home page, so it must describe that URL;
+    // /methodology/ is documentation about the dataset, not the dataset itself.
+    url: site.origin,
+    sameAs: `${site.origin}/methodology/`,
     isBasedOn: 'https://data.cdc.gov/',
     license: 'https://www.usa.gov/government-works',
     isAccessibleForFree: true,
+    spatialCoverage: { '@type': 'Place', name: 'United States' },
+    // A real, fetchable distribution exists — advertise it.
+    distribution: [
+      {
+        '@type': 'DataDownload',
+        encodingFormat: 'application/json',
+        contentUrl: `${site.origin}/data/snapshot.json`,
+      },
+    ],
+    variableMeasured: [
+      { '@type': 'PropertyValue', name: 'Wastewater viral activity level (WVAL)' },
+      { '@type': 'PropertyValue', name: 'Acute respiratory illness activity level' },
+      { '@type': 'PropertyValue', name: 'Emergency department visits for respiratory illness' },
+      { '@type': 'PropertyValue', name: 'Laboratory test positivity' },
+    ],
+    ...(weekEnding ? { dateModified: weekEnding } : {}),
     keywords: ['influenza', 'RSV', 'COVID-19', 'respiratory illness', 'CDC', 'wastewater'],
     // temporalCoverage intentionally omitted: the dataset reflects whatever CDC
     // has most recently published, so a fixed/forward-dated window would overstate
@@ -98,9 +128,31 @@ export function statePageLd(state, weekEnding) {
     name: `${state.name} respiratory illness activity`,
     url: `${site.origin}/state/${state.slug}/`,
     description: `Current flu, RSV and COVID-19 activity level and trend for ${state.name}, from public CDC surveillance data.`,
-    isPartOf: { '@type': 'WebSite', name: site.name, url: site.origin },
-    about: ['Influenza', 'Respiratory syncytial virus', 'COVID-19'],
-    ...(weekEnding ? { datePublished: weekEnding, dateModified: weekEnding } : {}),
+    isPartOf: { '@id': SITE_ID },
+    // schema.org/about expects a Thing, not a bare string — plain strings are a
+    // type error and cannot resolve to the actual disease entities.
+    about: [
+      {
+        '@type': 'MedicalCondition',
+        name: 'Influenza',
+        sameAs: 'https://en.wikipedia.org/wiki/Influenza',
+      },
+      {
+        '@type': 'MedicalCondition',
+        name: 'Respiratory syncytial virus',
+        sameAs: 'https://en.wikipedia.org/wiki/Respiratory_syncytial_virus',
+      },
+      {
+        '@type': 'MedicalCondition',
+        name: 'COVID-19',
+        sameAs: 'https://en.wikipedia.org/wiki/COVID-19',
+      },
+    ],
+    // datePublished is the page's first publication and must NOT track the data
+    // week — advancing it on every rebuild claims the page is newly published
+    // rather than newly updated.
+    datePublished: site.contentPublished,
+    ...(weekEnding ? { dateModified: weekEnding } : {}),
   };
 }
 
