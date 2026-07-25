@@ -304,4 +304,6 @@ Tests: `test/live-signals.test.mjs` covers the empty-response, renamed-geography
 
 ### Verification notes
 
+The `_headers` rules were restructured so that **no emitted asset matches more than one `Cache-Control` rule** (`/assets/js/*`, the exact hashed stylesheet, `/assets/*.png`, `/assets/*.svg`). Cloudflare applies every matching rule, so the original `/assets/*` + `/assets/styles.*.css` pair left the one asset that had earned `immutable` with an indeterminate policy. `build/check.mjs` now fails the build on any overlap. This could not be confirmed against the deployed preview — the environment's network policy blocks `pages.dev` — so the rules were made non-overlapping by construction rather than verified empirically.
+
 `data.cdc.gov` is unreachable from this environment, so the live-success path was exercised against stubbed Socrata responses in the new tests rather than the real API. Real schema drift and the actual parse cost of a live response remain untested. Horizontal overflow was measured (`scrollWidth` vs `clientWidth`) across 8 pages × 4 widths — 32/32 clean — and per-element clipping checked inside `overflow: hidden` ancestors.

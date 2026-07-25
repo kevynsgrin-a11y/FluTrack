@@ -98,6 +98,47 @@ for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_header
   }
 }
 
+// No emitted asset may match more than one Cache-Control rule in _headers.
+// Cloudflare applies every matching rule, so two matches means one file gets two
+// conflicting max-age values and the effective policy is not determinate.
+{
+  const headersPath = join(dist, '_headers');
+  if (existsSync(headersPath)) {
+    const rules = [];
+    let current = null;
+    for (const line of readFileSync(headersPath, 'utf8').split('\n')) {
+      if (/^\/\S/.test(line)) {
+        current = { pattern: line.trim(), hasCacheControl: false };
+        rules.push(current);
+      } else if (current && /^\s+Cache-Control:/i.test(line)) {
+        current.hasCacheControl = true;
+      }
+    }
+    // Cloudflare splats match any characters, including '/'.
+    const toRe = (p) =>
+      new RegExp('^' + p.split('*').map((s) => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$');
+    const cacheRules = rules.filter((r) => r.hasCacheControl && r.pattern !== '/*');
+
+    const walkAssets = (dir, base) => {
+      if (!existsSync(dir)) return [];
+      return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+        e.isDirectory() ? walkAssets(join(dir, e.name), `${base}/${e.name}`) : [`${base}/${e.name}`]
+      );
+    };
+    for (const file of walkAssets(join(dist, 'assets'), '/assets')) {
+      const hits = cacheRules.filter((r) => toRe(r.pattern).test(file));
+      if (hits.length > 1) {
+        errors.push(
+          `${file}: matches ${hits.length} Cache-Control rules (${hits.map((h) => h.pattern).join(', ')})`
+        );
+      }
+      if (hits.length === 0) {
+        warnings.push(`${file}: no Cache-Control rule in _headers`);
+      }
+    }
+  }
+}
+
 // The two dark-theme contexts must declare an identical token set. The media
 // block is generated from the attribute block at build time, so this is a guard
 // against that generation being removed rather than against manual drift.

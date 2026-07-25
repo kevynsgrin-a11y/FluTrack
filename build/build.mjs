@@ -337,14 +337,17 @@ function headers() {
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   Content-Security-Policy: ${csp}
 
-/assets/*
-  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
-
 /assets/js/*
   Cache-Control: public, max-age=300, stale-while-revalidate=86400
 
 /assets/${site.assets.css}
   Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.png
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/assets/*.svg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 /data/*
   Cache-Control: public, max-age=3600
