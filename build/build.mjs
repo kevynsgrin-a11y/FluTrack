@@ -111,9 +111,41 @@ function minifyCss(css) {
     .trim();
 }
 
+/**
+ * Derive the `prefers-color-scheme: dark` block from the single
+ * `:root[data-theme='dark']` rule and substitute it for the generation marker.
+ *
+ * Both contexts must carry an identical set of custom properties. Maintaining
+ * them as two hand-written copies had already gone wrong once — the media copy
+ * was missing four tokens, which is invisible until you view the site on a dark
+ * OS without ever having clicked the theme toggle.
+ */
+function emitDarkMediaBlock(css) {
+  const MARKER = '/* @generated-dark-media-block */';
+  if (!css.includes(MARKER)) {
+    throw new Error('tokens.css is missing the dark-media-block marker');
+  }
+  const m = css.match(/:root\[data-theme='dark'\]\s*\{([\s\S]*?)\n\}/);
+  if (!m) throw new Error("Could not find the :root[data-theme='dark'] rule in tokens.css");
+
+  // Re-indent the captured declarations one level deeper for the nested rule.
+  const body = m[1]
+    .split('\n')
+    .map((line) => (line.trim() ? `  ${line}` : line))
+    .join('\n');
+
+  const block = `@media (prefers-color-scheme: dark) {\n  :root:not([data-theme='light']) {${body}\n  }\n}`;
+  return css.replace(MARKER, block);
+}
+
 function bundleCss() {
   const order = ['tokens.css', 'base.css', 'components.css', 'main.css'];
-  const css = order.map((f) => readFileSync(join(srcStyles, f), 'utf8')).join('\n');
+  const css = order
+    .map((f) => {
+      const raw = readFileSync(join(srcStyles, f), 'utf8');
+      return f === 'tokens.css' ? emitDarkMediaBlock(raw) : raw;
+    })
+    .join('\n');
   const min = minifyCss(css);
   // Content-hash the filename so the immutable cache header is always safe.
   const hash = createHash('sha256').update(min).digest('hex').slice(0, 10);
@@ -124,20 +156,93 @@ function bundleCss() {
   site.assets = { ...(site.assets || {}), css: name };
 }
 
+// Modules the browser loads directly (via <script type="module">). The rest of
+// src/scripts is either imported transitively or build-time only.
+const BROWSER_ENTRIES = ['ui.js', 'alerts.js', 'app.js', 'states-filter.js'];
+
 function copyScripts() {
   const outDir = join(dist, 'assets', 'js');
   mkdirSync(outDir, { recursive: true });
+  const emitted = [];
   for (const f of readdirSync(srcScripts)) {
     if (f === 'sw.js') continue; // service worker is emitted at the root scope
-    if (f.endsWith('.js')) cpSync(join(srcScripts, f), join(outDir, f));
+    if (!f.endsWith('.js')) continue;
+    const src = readFileSync(join(srcScripts, f), 'utf8');
+    writeFileSync(join(outDir, f), stripJsComments(src));
+    emitted.push(`/assets/js/${f}`);
   }
+  site.assets = { ...(site.assets || {}), js: emitted };
 }
 
-// Emit the service worker at the site root (root scope), versioned by the CSS
-// content hash so a new deploy activates a fresh cache.
+// Conservative comment stripper: removes block and line comments while leaving
+// string and template literals intact. The CSS already gets a minify pass; the
+// JS shipped with full JSDoc, which was ~33% of its gzipped weight.
+function stripJsComments(src) {
+  let out = '';
+  let i = 0;
+  const n = src.length;
+  let quote = null; // "'", '"', '`'
+  while (i < n) {
+    const c = src[i];
+    const next = src[i + 1];
+    if (quote) {
+      out += c;
+      if (c === '\\') {
+        out += next ?? '';
+        i += 2;
+        continue;
+      }
+      if (c === quote) quote = null;
+      i += 1;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === '`') {
+      quote = c;
+      out += c;
+      i += 1;
+      continue;
+    }
+    if (c === '/' && next === '*') {
+      const end = src.indexOf('*/', i + 2);
+      i = end === -1 ? n : end + 2;
+      continue;
+    }
+    if (c === '/' && next === '/') {
+      // Not a comment if this '/' opens a regex literal — check the previous
+      // meaningful char. Line comments always follow whitespace or a statement
+      // end in this codebase, so the simple guard is sufficient.
+      const prev = out.replace(/\s+$/, '').slice(-1);
+      if (!['(', ',', '=', ':', '[', '!', '&', '|', '?', '{', '}', ';', '+', '-', '*', '~', '%'].includes(prev)) {
+        const end = src.indexOf('\n', i);
+        i = end === -1 ? n : end;
+        continue;
+      }
+    }
+    out += c;
+    i += 1;
+  }
+  // Collapse the blank lines the comment removal leaves behind.
+  return out.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+\n/g, '\n');
+}
+
+// Emit the service worker at the site root (root scope). The cache key is
+// derived from EVERY emitted asset, not just the stylesheet — keying it on the
+// CSS hash alone meant a JS-only deploy never rotated the cache, so users stayed
+// one deploy behind on scripts indefinitely.
 function writeServiceWorker() {
-  const version = (site.assets?.css || 'styles').replace(/[^a-z0-9]/gi, '') || 'v1';
-  const sw = readFileSync(join(srcScripts, 'sw.js'), 'utf8').replace('__BUILD__', version);
+  const h = createHash('sha256').update(site.assets?.css || '');
+  // Hash the actual script contents so any JS change rotates the cache, not
+  // just a change to the (unhashed) filenames.
+  for (const f of readdirSync(srcScripts).sort()) {
+    if (f.endsWith('.js')) h.update(readFileSync(join(srcScripts, f)));
+  }
+  const fingerprint = h.digest('hex').slice(0, 12);
+  // Precache the stylesheet and the scripts the browser actually loads, so the
+  // offline shell renders styled and interactive.
+  const precache = [`/assets/${site.assets.css}`, ...BROWSER_ENTRIES.map((f) => `/assets/js/${f}`)];
+  const sw = readFileSync(join(srcScripts, 'sw.js'), 'utf8')
+    .replace('__BUILD__', fingerprint)
+    .replace('__ASSETS__', JSON.stringify(precache));
   writeFileSync(join(dist, 'sw.js'), sw);
 }
 
@@ -232,11 +337,17 @@ function headers() {
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   Content-Security-Policy: ${csp}
 
-/assets/*
+/assets/js/*
+  Cache-Control: public, max-age=300, stale-while-revalidate=86400
+
+/assets/${site.assets.css}
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/*.png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
-/assets/styles.*.css
-  Cache-Control: public, max-age=31536000, immutable
+/assets/*.svg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 /data/*
   Cache-Control: public, max-age=3600

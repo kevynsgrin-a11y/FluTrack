@@ -66,6 +66,10 @@ function head(page) {
   const canonical = `${site.origin}${page.path}`;
   const ogType = page.ogType || 'website';
   const ogImage = `${site.origin}/assets/og-default.png`;
+  const ogImageAlt = `${site.name} — a local respiratory threat level for flu, RSV and COVID-19`;
+  // Social titles must not collapse to the bare brand name on the home page
+  // (page.title is '' there) — use the same string as <title>.
+  const socialTitle = page.title ? `${page.title} · ${site.name}` : `${site.name} — ${site.tagline}`;
   const jsonld = (page.jsonld || [])
     .map((obj) => `<script type="application/ld+json">${JSON.stringify(obj)}</script>`)
     .join('\n  ');
@@ -75,7 +79,7 @@ function head(page) {
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(desc)}">
   <meta name="author" content="${escapeHtml(site.publisher.name)}">
-  <link rel="canonical" href="${escapeHtml(canonical)}">
+  ${page.noindex ? '' : `<link rel="canonical" href="${escapeHtml(canonical)}">`}
   <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0c1116" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
@@ -84,19 +88,20 @@ function head(page) {
 
   <meta property="og:type" content="${ogType}">
   <meta property="og:site_name" content="${escapeHtml(site.name)}">
-  <meta property="og:title" content="${escapeHtml(page.title || site.name)}">
+  <meta property="og:title" content="${escapeHtml(socialTitle)}">
   <meta property="og:description" content="${escapeHtml(desc)}">
   <meta property="og:url" content="${escapeHtml(canonical)}">
   <meta property="og:locale" content="${escapeHtml(site.locale)}">
   <meta property="og:image" content="${escapeHtml(ogImage)}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="${escapeHtml(site.name)} — a local respiratory threat level for flu, RSV and COVID-19">
+  <meta property="og:image:alt" content="${escapeHtml(ogImageAlt)}">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="${escapeHtml(site.social.twitter)}">
-  <meta name="twitter:title" content="${escapeHtml(page.title || site.name)}">
+  <meta name="twitter:title" content="${escapeHtml(socialTitle)}">
   <meta name="twitter:description" content="${escapeHtml(desc)}">
   <meta name="twitter:image" content="${escapeHtml(ogImage)}">
+  <meta name="twitter:image:alt" content="${escapeHtml(ogImageAlt)}">
 
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/assets/favicon-32.png" sizes="32x32">
@@ -120,9 +125,6 @@ function header(page) {
         ${brandMark()}
         <span class="brand__name">Flu<b>Track</b></span>
       </a>
-      <nav class="primary-nav" id="primary-nav" aria-label="Primary">
-        ${links}
-      </nav>
       <div class="header-actions">
         <button class="icon-btn" id="theme-toggle" type="button" aria-label="Switch color theme" aria-pressed="false">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
@@ -131,6 +133,13 @@ function header(page) {
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
         </button>
       </div>
+      <!-- The nav follows the toggle in DOM order so that opening the menu and
+           pressing Tab moves into it. With the nav first, the next tab stop
+           after the toggle was the main landmark, skipping the menu entirely.
+           CSS order restores the intended visual placement on desktop. -->
+      <nav class="primary-nav" id="primary-nav" aria-label="Primary">
+        ${links}
+      </nav>
     </div>
   </header>`;
 }
@@ -190,7 +199,7 @@ export function layout(page) {
     .join('\n  ');
 
   return `<!doctype html>
-<html lang="en">
+<html lang="en-US">
 <head>
   ${head(page)}
 </head>

@@ -34,6 +34,10 @@ export const site = {
   dataCadence: 'Weekly (CDC surveillance systems publish on Fridays)',
   // Content/legal-page revision date (for sitemap <lastmod>). Bump when copy changes.
   contentUpdated: '2026-07-19',
+  // First-publication date for the state reports. Fixed on purpose: JSON-LD
+  // datePublished must not move with the CDC data week, or every rebuild claims
+  // the pages are newly published rather than newly updated.
+  contentPublished: '2026-07-19',
   // Season framing — 2026–2027 respiratory season (MMWR Week 40 → Week 20).
   season: {
     label: '2026–2027 respiratory season',

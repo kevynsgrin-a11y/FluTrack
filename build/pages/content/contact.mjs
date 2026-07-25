@@ -102,7 +102,7 @@ export default function contact(ctx) {
   `;
 
   return {
-    title: 'Contact',
+    title: 'Contact the FluTrack team',
     description:
       'Contact FluTrack for general questions, data corrections, press and partnership inquiries. Independent of the CDC, and not a medical service.',
     path: '/contact/',

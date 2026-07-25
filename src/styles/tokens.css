@@ -75,6 +75,9 @@
   --surface-2: var(--gray-50);
   --border: var(--gray-200);
   --border-strong: var(--gray-300);
+  /* Form-control boundary. Must clear 3:1 against the page (WCAG 1.4.11), which
+   * --border-strong does not — it is a decorative divider, not a control edge. */
+  --field-border: var(--gray-400);
   --text: var(--gray-900);
   --text-secondary: var(--gray-600);
   --text-muted: #5b6773; /* AA (≥4.5:1) on the off-white --bg/--surface-2 */
@@ -163,6 +166,7 @@
   --surface-2: var(--gray-800);
   --border: #2a333c;
   --border-strong: #3a444e;
+  --field-border: #6b7785;
   --text: #eef2f4;
   --text-secondary: #b4bec7;
   --text-muted: #85929d;
@@ -196,40 +200,14 @@
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
 }
 
-/* Honor OS preference when the user has not explicitly chosen a theme. */
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme='light']) {
-    --bg: var(--gray-950);
-    --bg-elevated: var(--gray-900);
-    --bg-sunken: #0a0e12;
-    --surface: var(--gray-900);
-    --surface-2: var(--gray-800);
-    --border: #2a333c;
-    --border-strong: #3a444e;
-    --text: #eef2f4;
-    --text-secondary: #b4bec7;
-    --text-muted: #85929d;
-    --text-inverse: var(--gray-950);
-    --link: var(--brand-200);
-    --link-hover: var(--brand-100);
-    --focus-ring: var(--brand-300);
-    --accent: var(--brand-300);
-
-    --sev-0-soft: #113023;
-    --sev-1-soft: #1f2e12;
-    --sev-2-soft: #33280a;
-    --sev-3-soft: #331c0c;
-    --sev-4-soft: #331313;
-
-    --sev-0-ink: #6fd39b;
-    --sev-1-ink: #b6de84;
-    --sev-2-ink: #f6cf5c;
-    --sev-3-ink: #f39b5a;
-    --sev-4-ink: #f08a8a;
-
-    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.4);
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.5);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
-    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.6);
-  }
-}
+/* ---------------------------------------------------------------------------
+ * The OS-preference dark block is GENERATED at build time from the
+ * :root[data-theme='dark'] rule above (see emitDarkMediaBlock in
+ * build/build.mjs) and injected here.
+ *
+ * It used to be hand-maintained, and it drifted: four tokens (--trend-up,
+ * --trend-down, --trend-flat, --map-empty) were missing from the copy, so every
+ * visitor on a dark OS who had never touched the theme toggle rendered light
+ * trend colors at ~2.4:1. Deriving it removes that failure mode entirely.
+ * ------------------------------------------------------------------------- */
+/* @generated-dark-media-block */

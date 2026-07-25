@@ -2,15 +2,19 @@
 // Cloudflare Pages Function — POST /api/subscribe
 //
 // Backs the "surge alert" email signup. Deployment-agnostic by design:
-//   * If a KV namespace binding `SUBSCRIBERS` is configured, the subscription is
-//     persisted (keyed by email) — deduped and timestamped.
-//   * If `ALERTS_WEBHOOK_URL` is configured (e.g. an email provider / automation
-//     endpoint), the subscription is forwarded to it.
-//   * If NEITHER is configured, we respond 501 so the client shows a friendly
+//   * The KV namespace binding `SUBSCRIBERS` is REQUIRED. It stores the
+//     subscription (keyed by email, deduped and timestamped) and backs the
+//     per-IP rate limiter. Without it the endpoint declines all work with 501,
+//     because an unmetered public POST endpoint that forwards arbitrary
+//     addresses to an email provider is an open relay.
+//   * If `ALERTS_WEBHOOK_URL` is also configured (e.g. an email provider /
+//     automation endpoint), each subscription is additionally forwarded to it on
+//     a best-effort basis; KV remains the source of truth.
+//   * If KV is absent we respond 501 so the client shows a friendly
 //     "not switched on in this demo" message instead of a hard error.
 //
 // Bind these in the Cloudflare Pages dashboard (Settings → Functions):
-//   KV namespace: SUBSCRIBERS
+//   KV namespace: SUBSCRIBERS          (required)
 //   Env var:      ALERTS_WEBHOOK_URL   (optional)
 // ===========================================================================
 
@@ -34,8 +38,40 @@ function json(data, status = 200) {
   });
 }
 
+/**
+ * Redirect non-JSON (i.e. no-JS form) submissions back to a human-readable page.
+ * The endpoint only ever returned JSON, so a visitor without JS landed on a
+ * white page showing a raw object.
+ */
+function seeOther(path) {
+  return new Response(null, {
+    status: 303,
+    headers: { Location: path, 'Cache-Control': 'no-store' },
+  });
+}
+
 export async function onRequestPost({ request, env }) {
+  // A cross-origin <form> can drive this endpoint without JS (urlencoded bodies
+  // are CORS "simple requests"), so reject anything that did not originate here.
+  const originHeader = request.headers.get('origin');
+  const fetchSite = request.headers.get('sec-fetch-site');
+  if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') {
+    return json({ ok: false, message: 'Cross-origin submissions are not accepted.' }, 403);
+  }
+  if (originHeader) {
+    let sameOrigin = false;
+    try {
+      sameOrigin = new URL(originHeader).origin === new URL(request.url).origin;
+    } catch (e) {
+      sameOrigin = false;
+    }
+    if (!sameOrigin) {
+      return json({ ok: false, message: 'Cross-origin submissions are not accepted.' }, 403);
+    }
+  }
+
   let payload;
+  let wantsHtml = false;
   try {
     const ct = request.headers.get('content-type') || '';
     if (ct.includes('application/json')) {
@@ -43,6 +79,10 @@ export async function onRequestPost({ request, env }) {
     } else {
       const form = await request.formData();
       payload = Object.fromEntries(form.entries());
+      // A native form POST (no fetch) expects a document back, not JSON.
+      wantsHtml =
+        request.headers.get('sec-fetch-dest') === 'document' ||
+        (request.headers.get('accept') || '').includes('text/html');
     }
   } catch (e) {
     return json({ ok: false, message: 'Invalid request body.' }, 400);
@@ -53,23 +93,29 @@ export async function onRequestPost({ request, env }) {
   const honeypot = String(payload.company || '').trim(); // bots fill hidden fields
 
   // Silently accept-and-drop obvious bot submissions.
-  if (honeypot) return json({ ok: true, message: 'Thanks!' });
+  if (honeypot) {
+    return wantsHtml ? seeOther('/alerts/?subscribed=1') : json({ ok: true, message: 'Thanks!' });
+  }
 
   const hasKv = env && env.SUBSCRIBERS && typeof env.SUBSCRIBERS.put === 'function';
   const hasWebhook = env && env.ALERTS_WEBHOOK_URL;
 
-  if (!hasKv && !hasWebhook) {
-    // Not configured in this deployment — the client treats 501 gracefully.
+  // KV is now REQUIRED, not optional. The rate limiter below is backed by KV, so
+  // a webhook-only deployment previously accepted unlimited unauthenticated
+  // POSTs with arbitrary victim addresses — a free relay into whatever email
+  // provider sits behind the webhook. Without a durable counter we decline the
+  // work entirely; the client already treats 501 as a friendly "not switched on".
+  if (!hasKv) {
     return json(
       { ok: false, message: 'Subscription delivery is not configured in this deployment.' },
       501
     );
   }
 
-  // Best-effort per-IP rate limiting (requires KV), BEFORE validation so that a
-  // flood of malformed submissions is also counted. Eventually-consistent, so
-  // it is friction, not a hard guarantee.
-  if (hasKv) {
+  // Best-effort per-IP rate limiting, BEFORE validation so that a flood of
+  // malformed submissions is also counted. Eventually-consistent, so it is
+  // friction, not a hard guarantee.
+  {
     const ip = request.headers.get('cf-connecting-ip') || 'unknown';
     const rlKey = `rl:${ip}`;
     try {
@@ -83,11 +129,16 @@ export async function onRequestPost({ request, env }) {
     }
   }
 
-  if (!EMAIL_RE.test(email) || email.length > 254) {
-    return json({ ok: false, message: 'Please enter a valid email address.' }, 422);
+  // Cheap length guard before the regex.
+  if (email.length > 254 || !EMAIL_RE.test(email)) {
+    return wantsHtml
+      ? seeOther('/alerts/?error=email')
+      : json({ ok: false, message: 'Please enter a valid email address.' }, 422);
   }
   if (!US_STATES.has(state)) {
-    return json({ ok: false, message: 'Please choose a valid U.S. state.' }, 422);
+    return wantsHtml
+      ? seeOther('/alerts/?error=state')
+      : json({ ok: false, message: 'Please choose a valid U.S. state.' }, 422);
   }
 
   const record = {
@@ -95,37 +146,46 @@ export async function onRequestPost({ request, env }) {
     state,
     source: 'flutrack-web',
     ts: new Date().toISOString(),
-    ua: request.headers.get('user-agent') || '',
-    country: request.headers.get('cf-ipcountry') || '',
+    // Truncated and stripped of control characters: this value is attacker-
+    // controlled and is relayed to a third-party system that may render it.
+    ua: sanitizeHeader(request.headers.get('user-agent'), 256),
+    country: sanitizeHeader(request.headers.get('cf-ipcountry'), 8),
   };
 
   // Run the durable write and the optional webhook independently. Success is
   // gated on the DURABLE store (KV) when present; a webhook-only failure is
   // logged but does not fail the request.
-  let durableOk = !hasKv; // if no KV, success rides on the webhook
-  if (hasKv) {
-    try {
-      await env.SUBSCRIBERS.put(`sub:${email}`, JSON.stringify(record), {
-        metadata: { state, ts: record.ts },
-      });
-      durableOk = true;
-    } catch (e) {
-      durableOk = false;
-    }
+  let durableOk = false;
+  try {
+    await env.SUBSCRIBERS.put(`sub:${email}`, JSON.stringify(record), {
+      metadata: { state, ts: record.ts },
+    });
+    durableOk = true;
+  } catch (e) {
+    durableOk = false;
   }
-  if (hasWebhook) {
-    const webhookOk = await postWebhook(env.ALERTS_WEBHOOK_URL, record);
-    if (!hasKv) durableOk = webhookOk;
-  }
+  // The webhook is a best-effort side-channel; KV is the source of truth.
+  if (hasWebhook) await postWebhook(env.ALERTS_WEBHOOK_URL, record);
 
   if (!durableOk) {
-    return json({ ok: false, message: 'Could not save your subscription. Please try again shortly.' }, 502);
+    return wantsHtml
+      ? seeOther('/alerts/?error=save')
+      : json({ ok: false, message: 'Could not save your subscription. Please try again shortly.' }, 502);
   }
 
-  return json({
-    ok: true,
-    message: "You're on the list. We'll email you when activity climbs in your state.",
-  });
+  return wantsHtml
+    ? seeOther('/alerts/?subscribed=1')
+    : json({
+        ok: true,
+        message: "You're on the list. We'll email you when activity climbs in your state.",
+      });
+}
+
+/** Clamp an attacker-controlled header to a bounded, printable string. */
+function sanitizeHeader(value, max) {
+  return String(value || '')
+    .replace(/[\u0000-\u001F\u007F]/g, '')
+    .slice(0, max);
 }
 
 /** POST the record to an external webhook with a hard timeout. Returns bool. */

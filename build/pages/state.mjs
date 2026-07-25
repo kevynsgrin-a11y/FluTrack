@@ -117,7 +117,12 @@ export function statePage(ctx, state) {
     body,
     scripts: ['/assets/js/app.js'],
     ogType: 'article',
-    jsonld: [breadcrumbLd(crumbs), statePageLd(state, weekEnding), faqLd(faqs.map((f) => ({ q: f.q, a: stripTags(f.a) })))],
+    // No FAQPage here. Since Google restricted FAQ rich results to authoritative
+    // government/health sites in 2023 this markup earns nothing, and emitting a
+    // near-identical copy on all 51 state pages ("Is this medical advice?"
+    // appeared verbatim on 52 pages) is 51 duplicates of the same entity. The
+    // visible <details> FAQ stays; only the structured data is dropped.
+    jsonld: [breadcrumbLd(crumbs), statePageLd(state, weekEnding)],
   };
 }
 

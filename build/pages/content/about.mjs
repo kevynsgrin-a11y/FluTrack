@@ -1,7 +1,7 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
-import { organizationLd } from '../../lib/seo.mjs';
+import { organizationLd, breadcrumbLd } from '../../lib/seo.mjs';
 
 /**
  * About page — mission, editorial stance (E-E-A-T), independence, funding,
@@ -58,13 +58,19 @@ export default function about(ctx) {
   `;
 
   return {
-    title: 'About',
+    title: 'About FluTrack: independent CDC respiratory data',
     description:
       "What FluTrack is and how we turn public-domain CDC respiratory data into one plain-English state threat level — independent, free, not medical advice.",
     path: '/about/',
     body,
     changefreq: 'monthly',
     priority: 0.5,
-    jsonld: [organizationLd()],
+    jsonld: [
+      breadcrumbLd([
+        { name: 'Home', path: '/' },
+        { name: 'About', path: '/about/' },
+      ]),
+      organizationLd(),
+    ],
   };
 }

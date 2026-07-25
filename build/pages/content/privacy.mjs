@@ -57,7 +57,7 @@ export default function privacy(ctx) {
     <h3>Approximate location — only when you ask for it</h3>
     <p>The home page offers a “Use my location” button. It does nothing unless you tap it and your browser then grants permission. If you do, your device provides approximate coordinates, which are sent once to the U.S. Federal Communications Commission's public <a href="https://geo.fcc.gov/">Area API geocoder</a> (<code>geo.fcc.gov</code>) purely to resolve which U.S. state you are in. That state is used to pre-select the picker for you and nothing more. <strong>We do not store your coordinates or your resolved location</strong> — the value is discarded as soon as the picker is set. If you never tap the button, no location is ever requested.</p>
 
-    <div class="table-wrap">
+    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table">
       <table>
         <thead>
           <tr>

@@ -159,7 +159,7 @@ export default function home(ctx) {
     path: '/',
     body,
     scripts: ['/assets/js/app.js'],
-    jsonld: [websiteLd(), organizationLd(), datasetLd()],
+    jsonld: [websiteLd(), organizationLd(), datasetLd(weekEnding)],
   };
 }
 

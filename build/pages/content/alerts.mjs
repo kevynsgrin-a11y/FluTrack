@@ -108,7 +108,7 @@ export default function alerts(ctx) {
   `;
 
   return {
-    title: 'Surge alerts',
+    title: 'Free flu, RSV & COVID surge alerts by state',
     description:
       'Free FluTrack surge alerts email you when CDC data shows flu, RSV or COVID-19 activity climbing in your state — at most weekly, no spam, not medical advice.',
     path: '/alerts/',

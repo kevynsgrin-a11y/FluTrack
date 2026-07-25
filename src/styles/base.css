@@ -78,6 +78,18 @@ a {
   text-underline-offset: 0.15em;
 }
 
+/* Links sitting inside running text must not be distinguished by color alone —
+ * link-vs-body contrast here is ~1.1:1, well under the 3:1 WCAG 1.4.1 requires
+ * when there is no non-color cue. Navigation, buttons and cards are exempt:
+ * their position and shape already identify them. */
+p a,
+li a,
+dd a,
+figcaption a,
+blockquote a {
+  text-decoration: underline;
+}
+
 a:hover {
   color: var(--link-hover);
   text-decoration: underline;
@@ -154,6 +166,16 @@ samp {
 }
 
 /* Accessibility helpers ---------------------------------------------------- */
+
+/* The UA's [hidden] { display: none } lives in the user-agent origin, so ANY
+ * author `display` declaration beats it regardless of specificity. Several
+ * components set `display: flex`, which silently defeated every `el.hidden =
+ * true` in the JS — the states filter hid nothing and its empty-state message
+ * rendered on page load. Restore the intended behavior in the author origin. */
+[hidden] {
+  display: none !important;
+}
+
 .visually-hidden {
   position: absolute !important;
   width: 1px;

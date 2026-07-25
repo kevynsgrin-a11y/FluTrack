@@ -7,6 +7,7 @@
 // ===========================================================================
 
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 
@@ -45,7 +46,16 @@ for (const file of htmlFiles) {
   // Required SEO tags.
   if (!/<title>[^<]{3,}<\/title>/.test(html)) errors.push(`${rel}: missing/empty <title>`);
   if (!/<meta name="description" content="[^"]{20,}"/.test(html)) errors.push(`${rel}: missing meta description`);
-  if (!/<link rel="canonical"/.test(html)) errors.push(`${rel}: missing canonical`);
+  // noindex pages (404, offline) intentionally carry no canonical: the server
+  // serves them under arbitrary URLs, so a self-referencing canonical would
+  // point every missing path at /404.html.
+  const noindex = /<meta name="robots" content="noindex/.test(html);
+  if (!noindex && !/<link rel="canonical"/.test(html)) {
+    errors.push(`${rel}: missing canonical`);
+  }
+  if (noindex && /<link rel="canonical"/.test(html)) {
+    errors.push(`${rel}: noindex page must not declare a canonical`);
+  }
   const h1s = (html.match(/<h1[\s>]/g) || []).length;
   if (h1s === 0) warnings.push(`${rel}: no <h1>`);
   if (h1s > 1) warnings.push(`${rel}: ${h1s} <h1> elements (expected 1)`);
@@ -67,6 +77,92 @@ for (const file of htmlFiles) {
 // Required top-level artifacts.
 for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_headers', '404.html', 'data/snapshot.json']) {
   if (!existsSync(join(dist, req))) errors.push(`missing required artifact: ${req}`);
+}
+
+// Every emitted script must still parse as an ES module. The build strips
+// comments from the JS it copies, so a stripper bug would otherwise ship broken
+// syntax that nothing else in the pipeline exercises.
+{
+  const jsDir = join(dist, 'assets', 'js');
+  if (existsSync(jsDir)) {
+    for (const f of readdirSync(jsDir)) {
+      if (!f.endsWith('.js')) continue;
+      // `node --check` resolves module vs script from the nearest package.json,
+      // which declares "type": "module" — so this parses these files as ESM.
+      const res = spawnSync(process.execPath, ['--check', join(jsDir, f)], { encoding: 'utf8' });
+      if (res.status !== 0) {
+        const detail = (res.stderr || '').split('\n').find((l) => /Error/.test(l)) || 'parse failed';
+        errors.push(`assets/js/${f}: does not parse as an ES module — ${detail.trim()}`);
+      }
+    }
+  }
+}
+
+// No emitted asset may match more than one Cache-Control rule in _headers.
+// Cloudflare applies every matching rule, so two matches means one file gets two
+// conflicting max-age values and the effective policy is not determinate.
+{
+  const headersPath = join(dist, '_headers');
+  if (existsSync(headersPath)) {
+    const rules = [];
+    let current = null;
+    for (const line of readFileSync(headersPath, 'utf8').split('\n')) {
+      if (/^\/\S/.test(line)) {
+        current = { pattern: line.trim(), hasCacheControl: false };
+        rules.push(current);
+      } else if (current && /^\s+Cache-Control:/i.test(line)) {
+        current.hasCacheControl = true;
+      }
+    }
+    // Cloudflare splats match any characters, including '/'.
+    const toRe = (p) =>
+      new RegExp('^' + p.split('*').map((s) => s.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*') + '$');
+    const cacheRules = rules.filter((r) => r.hasCacheControl && r.pattern !== '/*');
+
+    const walkAssets = (dir, base) => {
+      if (!existsSync(dir)) return [];
+      return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+        e.isDirectory() ? walkAssets(join(dir, e.name), `${base}/${e.name}`) : [`${base}/${e.name}`]
+      );
+    };
+    for (const file of walkAssets(join(dist, 'assets'), '/assets')) {
+      const hits = cacheRules.filter((r) => toRe(r.pattern).test(file));
+      if (hits.length > 1) {
+        errors.push(
+          `${file}: matches ${hits.length} Cache-Control rules (${hits.map((h) => h.pattern).join(', ')})`
+        );
+      }
+      if (hits.length === 0) {
+        warnings.push(`${file}: no Cache-Control rule in _headers`);
+      }
+    }
+  }
+}
+
+// The two dark-theme contexts must declare an identical token set. The media
+// block is generated from the attribute block at build time, so this is a guard
+// against that generation being removed rather than against manual drift.
+{
+  const cssName = readdirSync(join(dist, 'assets')).find((f) => f.endsWith('.css'));
+  if (cssName) {
+    const css = readFileSync(join(dist, 'assets', cssName), 'utf8');
+    const tokensIn = (re) => {
+      const m = css.match(re);
+      return m ? new Set([...m[1].matchAll(/(--[a-z0-9-]+):/g)].map((x) => x[1])) : null;
+    };
+    const attr = tokensIn(/:root\[data-theme='dark'\]\{(.*?)\}/);
+    const media = tokensIn(
+      /@media \(prefers-color-scheme: dark\)\{:root:not\(\[data-theme='light'\]\)\{(.*?)\}\}/
+    );
+    if (!attr || !media) {
+      errors.push('dark-theme token blocks not found in the bundled stylesheet');
+    } else {
+      const missing = [...attr].filter((t) => !media.has(t));
+      const extra = [...media].filter((t) => !attr.has(t));
+      if (missing.length) errors.push(`dark tokens missing from the media block: ${missing.join(', ')}`);
+      if (extra.length) errors.push(`dark tokens only in the media block: ${extra.join(', ')}`);
+    }
+  }
 }
 
 console.log(`Checked ${htmlFiles.length} HTML pages.`);
