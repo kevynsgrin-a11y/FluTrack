@@ -15,11 +15,11 @@
   --brand-600: #0a6474;
   --brand-700: #08505d;
   --brand-800: #073f4a;
-  --brand-900: #05303a;
 
   /* ---- Severity scale (Very Low → Very High) --------------------------
-     Colorblind-considered: hue + lightness both shift monotonically, and the
-     UI never relies on color alone (labels + icons accompany every use). */
+     Colorblind-considered: every use is accompanied by a text label or icon, so
+     the UI never relies on colour alone. (The map ramp below carries the
+     monotonic-luminance guarantee; this badge ramp is always paired with words.) */
   --sev-0: #2f9e63; /* Minimal / Very Low  */
   --sev-1: #8bc34a; /* Low                 */
   --sev-2: #f4b400; /* Moderate            */
@@ -38,13 +38,23 @@
   --sev-3-ink: #a04a00;
   --sev-4-ink: #9b1c1c;
 
-  /* Map heatmap fills — theme-independent, saturated-dark so WHITE tile labels
-     clear AA (≥4.5:1) in both light and dark. A muted, professional heatmap. */
-  --map-0: #1c6b41;
-  --map-1: #467019;
-  --map-2: #795e00;
-  --map-3: #a04a00;
-  --map-4: #9b1c1c;
+  /* Map heatmap fills — theme-independent.
+   * Luminance decreases monotonically from Minimal to Very High, so
+   * severity survives greyscale printing and colour-vision deficiency: verified
+   * monotonic under both deuteranopia and protanopia simulation, with adjacent
+   * contrast 1.43-1.87 (the previous ramp was non-monotonic and INVERTED under
+   * deuteranopia, so "High" read lighter than "Minimal"). Tile ink switches from
+   * dark to white at level 3 -- see --map-N-ink -- so labels clear 4.5:1 throughout. */
+  --map-0: #90d2ac;
+  --map-1: #90ab36;
+  --map-2: #aa760e;
+  --map-3: #a73c07;
+  --map-4: #741313;
+  --map-0-ink: #111111;
+  --map-1-ink: #111111;
+  --map-2-ink: #111111;
+  --map-3-ink: #ffffff;
+  --map-4-ink: #ffffff;
   --map-empty: #c2ccd4;
 
   /* Trend direction accents (light). --trend-flat darkened to clear AA on the
@@ -62,7 +72,6 @@
   --gray-400: #9aa7b1;
   --gray-500: #6b7785;
   --gray-600: #4c5763;
-  --gray-700: #363f49;
   --gray-800: #232a32;
   --gray-900: #141a20;
   --gray-950: #0c1116;
@@ -81,7 +90,6 @@
   --text: var(--gray-900);
   --text-secondary: var(--gray-600);
   --text-muted: #5b6773; /* AA (≥4.5:1) on the off-white --bg/--surface-2 */
-  --text-inverse: var(--gray-0);
   --link: var(--brand-600);
   --link-hover: var(--brand-700);
   --focus-ring: var(--brand-400);
@@ -107,7 +115,6 @@
   --leading-normal: 1.6;
   --tracking-tight: -0.02em;
   --tracking-wide: 0.04em;
-  --weight-normal: 400;
   --weight-medium: 500;
   --weight-semibold: 600;
   --weight-bold: 700;
@@ -140,7 +147,6 @@
   /* ---- Layout --------------------------------------------------------- */
   --container: 68rem;
   --container-narrow: 46rem;
-  --container-wide: 78rem;
   --header-height: 4rem;
 
   /* ---- Motion --------------------------------------------------------- */
@@ -150,8 +156,8 @@
   --dur-med: 220ms;
   --dur-slow: 400ms;
 
+  --z-below: -1;
   --z-header: 100;
-  --z-overlay: 200;
   --z-toast: 300;
 
   color-scheme: light dark;
@@ -166,11 +172,10 @@
   --surface-2: var(--gray-800);
   --border: #2a333c;
   --border-strong: #3a444e;
-  --field-border: #6b7785;
+  --field-border: var(--gray-500);
   --text: #eef2f4;
   --text-secondary: #b4bec7;
   --text-muted: #85929d;
-  --text-inverse: var(--gray-950);
   --link: var(--brand-200);
   --link-hover: var(--brand-100);
   --focus-ring: var(--brand-300);

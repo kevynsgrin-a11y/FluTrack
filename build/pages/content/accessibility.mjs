@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { hasPublisherEmail } from '../../lib/site.mjs';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
@@ -10,7 +11,10 @@ import { breadcrumbLd } from '../../lib/seo.mjs';
  */
 export default function accessibility(ctx) {
   const { site } = ctx;
-  const email = site.publisher.email;
+  const email = escapeHtml(site.publisher.email);
+  const contactLink = hasPublisherEmail()
+    ? `<a href="mailto:${email}">${email}</a>`
+    : '<a href="/contact/">our contact page</a>';
   const crumbs = [
     { name: 'Home', path: '/' },
     { name: 'Accessibility', path: '/accessibility/' },
@@ -45,11 +49,7 @@ export default function accessibility(ctx) {
     <h2>Tell us about a barrier</h2>
     <div class="callout">
       <p class="callout__title">${icon('bell')} Report an accessibility issue</p>
-      <p class="text-secondary">If you encounter anything on FluTrack that is difficult to use with assistive technology, please email <a href="mailto:${escapeHtml(
-        email
-      )}">${escapeHtml(
-      email
-    )}</a> with the page and what you experienced. We take these reports seriously and will respond as quickly as we can.</p>
+      <p class="text-secondary">If you encounter anything on FluTrack that is difficult to use with assistive technology, please reach us via ${contactLink} with the page and what you experienced. We take these reports seriously and will respond as quickly as we can.</p>
     </div>
 
     <p class="muted">This statement was last reviewed in July 2026 and is updated as the site changes.</p>

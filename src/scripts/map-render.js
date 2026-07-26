@@ -35,18 +35,30 @@ export function usMap(entries, opts = {}) {
         e.slug
       )}/" aria-label="${aria}" tabindex="0">
       <title>${escapeHtml(e.name)} — ${escapeHtml(e.label || 'No data')}</title>
-      <rect x="${x}" y="${y}" width="${SIZE}" height="${SIZE}" rx="8" style="animation-delay:${(row + col) * 22}ms"></rect>
-      <text x="${x + SIZE / 2}" y="${y + SIZE / 2 + 1}" text-anchor="middle" dominant-baseline="central">${abbr}</text>
+      <rect x="${x}" y="${y}" width="${SIZE}" height="${SIZE}" rx="8" style="animation-delay:${
+        Math.min(row + col, 6) * 22
+      }ms"></rect>
+      <text x="${x + SIZE / 2}" y="${y + SIZE / 2 - 3}" text-anchor="middle" dominant-baseline="central">${abbr}</text>${
+        hasData
+          ? `\n      <text class="us-tile__lvl" x="${x + SIZE / 2}" y="${
+              y + SIZE - 8
+            }" text-anchor="middle" dominant-baseline="central" aria-hidden="true">${e.level}</text>`
+          : ''
+      }
     </a>`;
     })
     .join('\n    ');
 
+  // The map is 51 consecutive tab stops in the middle of the page; give keyboard
+  // users a way past it that does not require 51 presses.
+  const skipId = `${opts.idPrefix || ''}skip-map`;
   return `<div class="us-map" role="group" aria-label="United States respiratory activity by state">
+    <a class="skip-link skip-link--inline" href="#${skipId}">Skip the state map</a>
     ${mapLegend()}
     <svg class="us-map__svg" viewBox="0 0 ${w} ${h}" role="presentation" preserveAspectRatio="xMidYMid meet">
     ${tiles}
     </svg>
-    <p class="us-map__hint muted">Tap or select a state for its full report.</p>
+    <p class="us-map__hint muted" id="${skipId}" tabindex="-1">Tap or select a state for its full report.</p>
   </div>`;
 }
 
@@ -54,9 +66,11 @@ export function usMap(entries, opts = {}) {
 export function mapLegend() {
   const chips = SEVERITY_LABELS.map(
     (label, i) =>
-      `<span class="map-legend__item"><span class="map-legend__swatch" data-sev="${i}"></span>${escapeHtml(
+      `<span class="map-legend__item"><span class="map-legend__swatch" data-sev="${i}" aria-hidden="true"></span>${escapeHtml(
         label
       )}</span>`
   ).join('');
-  return `<div class="map-legend" aria-hidden="true"><span class="map-legend__title">Activity</span>${chips}<span class="map-legend__item"><span class="map-legend__swatch map-legend__swatch--empty"></span>No data</span></div>`;
+  // Not aria-hidden: the swatches are decorative, but the scale itself is
+  // meaningful to anyone trying to understand what the tile levels mean.
+  return `<div class="map-legend"><span class="map-legend__title">Activity</span>${chips}<span class="map-legend__item"><span class="map-legend__swatch map-legend__swatch--empty" aria-hidden="true"></span>No data</span></div>`;
 }

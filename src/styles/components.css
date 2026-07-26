@@ -620,8 +620,14 @@ main {
 .us-tile[data-sev='2'] rect { fill: var(--map-2); }
 .us-tile[data-sev='3'] rect { fill: var(--map-3); }
 .us-tile[data-sev='4'] rect { fill: var(--map-4); }
+/* The ramp spans light to dark, so the label ink has to switch with it. */
+.us-tile[data-sev='0'] text { fill: var(--map-0-ink); }
+.us-tile[data-sev='1'] text { fill: var(--map-1-ink); }
+.us-tile[data-sev='2'] text { fill: var(--map-2-ink); }
+.us-tile[data-sev='3'] text { fill: var(--map-3-ink); }
+.us-tile[data-sev='4'] text { fill: var(--map-4-ink); }
 .us-tile text {
-  fill: #fff;
+  fill: var(--text);
   font-size: 15px;
   font-weight: 700;
   font-family: var(--font-sans);
@@ -629,24 +635,44 @@ main {
   pointer-events: none;
 }
 .us-tile:not([data-sev]) text {
-  fill: var(--text-muted);
+  fill: var(--text);
 }
+/* Non-colour severity channel. Lightness alone is still "colour" for WCAG 1.4.1
+ * purposes, so each tile also carries its 0-4 level as a digit. It is the only
+ * cue that survives a monochrome print or a fully achromatic display. */
+.us-tile__lvl {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.75;
+  pointer-events: none;
+}
+.us-tile[data-sev='0'] .us-tile__lvl { fill: var(--map-0-ink); }
+.us-tile[data-sev='1'] .us-tile__lvl { fill: var(--map-1-ink); }
+.us-tile[data-sev='2'] .us-tile__lvl { fill: var(--map-2-ink); }
+.us-tile[data-sev='3'] .us-tile__lvl { fill: var(--map-3-ink); }
+.us-tile[data-sev='4'] .us-tile__lvl { fill: var(--map-4-ink); }
 .us-tile:hover rect {
   filter: brightness(1.12) saturate(1.05);
   stroke: var(--text);
   stroke-width: 2.5;
 }
+/* A stroke centred on the rect edge sits half-over the fill, where the ring
+ * measured 1.7-2.5:1 against the tile. Paint it as an outline instead, outside
+ * the shape entirely, so its contrast is against the page and independent of
+ * the severity colour. */
 .us-tile:focus-visible {
-  outline: none;
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
 }
 .us-tile:focus-visible rect {
-  stroke: var(--focus-ring);
-  stroke-width: 3;
   filter: brightness(1.08);
 }
+/* Selection differs from focus by dash pattern, not only by stroke colour. */
 .us-tile.is-selected rect {
   stroke: var(--text);
   stroke-width: 3;
+  stroke-dasharray: 5 3;
 }
 @media (prefers-reduced-motion: no-preference) {
   .us-tile rect {
@@ -689,6 +715,12 @@ main {
   display: inline-flex;
   align-items: center;
   gap: 0.4em;
+}
+/* An inline skip link: hidden off-screen until focused, like the page-level one. */
+.skip-link--inline {
+  position: absolute;
+  left: var(--space-md);
+  z-index: var(--z-header);
 }
 .map-legend__swatch {
   width: 0.85rem;
@@ -941,6 +973,15 @@ main {
   flex-wrap: wrap;
 }
 
+/* Reserve the scripted regions' height so the live-data swap and the returning-
+ * visitor personalisation redraw in place instead of reflowing the page. */
+[data-region='threat-card'] {
+  min-height: 19rem;
+}
+[data-region='signal-rows'] {
+  min-height: 11rem;
+}
+
 /* ---- Shrink fixes ----------------------------------------------------- */
 /* Grid and flex children default to min-width: auto, so these could not shrink
  * below their content and pushed their containers wide. */
@@ -982,5 +1023,37 @@ main {
   .us-tile:focus-visible rect,
   .us-tile.is-selected rect {
     stroke: Highlight;
+  }
+}
+
+/* ---- prefers-contrast: more ------------------------------------------- */
+/* Users asking for more contrast get stronger boundaries on the elements whose
+   edges are deliberately soft at default contrast. */
+@media (prefers-contrast: more) {
+  .card,
+  .threat,
+  .pathogen,
+  .callout,
+  .notice,
+  .table-wrap,
+  .state-chip,
+  .badge {
+    border-color: var(--text-secondary);
+  }
+  .input,
+  .select {
+    border-color: var(--text);
+    border-width: 2px;
+  }
+  .meter__seg {
+    box-shadow: inset 0 0 0 2px var(--text);
+  }
+  .us-tile rect {
+    stroke: var(--text);
+    stroke-width: 2;
+  }
+  /* Underline every link, not just those in running text. */
+  a {
+    text-decoration: underline;
   }
 }

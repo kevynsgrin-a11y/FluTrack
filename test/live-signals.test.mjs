@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { fetchLiveSignals, hasSignalData } from '../src/scripts/data-sources.js';
-import { signalRows, provenanceBadge, severityMeter } from '../src/scripts/render.js';
+import { signalRows, provenanceBadge, severityMeter, stateSummary } from '../src/scripts/render.js';
 import { escapeHtml, formatDate } from '../src/scripts/util.js';
 
 // ---------------------------------------------------------------------------
@@ -197,4 +197,50 @@ test('formatDate returns its input unchanged when it cannot parse it', () => {
   // The caller relies on this identity to avoid overwriting good server-rendered
   // text with a malformed value.
   assert.equal(formatDate('not-a-date'), 'not-a-date');
+});
+
+// ---------------------------------------------------------------------------
+// Data-derived state summary
+// ---------------------------------------------------------------------------
+
+test('stateSummary reports the state\'s own figures, not boilerplate', () => {
+  const ca = stateSummary(
+    { name: 'California' },
+    {
+      level: 2,
+      label: 'Moderate',
+      composite: 44,
+      trend: { direction: 'flat', changePct: 6, label: 'Holding steady' },
+      contributors: ['ari', 'edVisits', 'wastewater', 'positivity'],
+      pathogens: {
+        influenza: { score: 11, level: 0, label: 'Minimal', trend: { direction: 'flat', label: 'Holding steady' } },
+        covid: { score: 55, level: 2, label: 'Moderate', trend: { direction: 'up', label: 'Rising' } },
+        rsv: { score: 13, level: 0, label: 'Minimal', trend: { direction: 'flat', label: 'Holding steady' } },
+      },
+    },
+    { edCombinedSeries: [4.0], wastewaterSeries: [5.7], positivityCombined: 13.0 }
+  );
+  assert.match(ca, /California/);
+  assert.match(ca, /Moderate/);
+  assert.match(ca, /44 out of 100/);
+  assert.match(ca, /COVID is the largest contributor/);
+  assert.match(ca, /4\.0%/, 'quotes the ED reading');
+  assert.match(ca, /5\.7/, 'quotes the wastewater index');
+  assert.match(ca, /all four CDC signals/);
+  // Strictly descriptive: no advice, no prediction.
+  assert.doesNotMatch(ca, /should|recommend|advise|you must|consider getting|protect yourself/i);
+});
+
+test('stateSummary degrades honestly when there is no model', () => {
+  const none = stateSummary({ name: 'Wyoming' }, { level: null, composite: null });
+  assert.match(none, /not published enough recent surveillance data/);
+  assert.doesNotMatch(none, /Minimal/, 'absence must not read as the lowest level');
+});
+
+test('stateSummary escapes interpolated values', () => {
+  const evil = stateSummary(
+    { name: '"><img src=x onerror=alert(1)>' },
+    { level: 1, label: 'Low', composite: 20, trend: { direction: 'flat', label: 'Holding steady' }, pathogens: {}, contributors: [] }
+  );
+  assert.doesNotMatch(evil, /<img/);
 });

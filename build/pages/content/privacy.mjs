@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { hasPublisherEmail } from '../../lib/site.mjs';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
@@ -14,6 +15,11 @@ import { breadcrumbLd } from '../../lib/seo.mjs';
 export default function privacy(ctx) {
   const { site, disclaimers } = ctx;
   const email = escapeHtml(site.publisher.email);
+  // Only link a mailbox that actually receives mail; otherwise route to the
+  // contact page so no policy commitment points at a dead address.
+  const contactLink = hasPublisherEmail()
+    ? `<a href="mailto:${email}">${email}</a>`
+    : '<a href="/contact/">our contact page</a>';
 
   const crumbs = [
     { name: 'Home', path: '/' },
@@ -32,7 +38,7 @@ export default function privacy(ctx) {
     `
     <p>This Privacy Policy describes how FluTrack (“FluTrack”, “we”, “us”) handles information when you visit ${escapeHtml(
       site.origin.replace(/^https?:\/\//, '')
-    )} and use its features. We have written it to be read, not to be endured. If anything here is unclear, email us at <a href="mailto:${email}">${email}</a> and a real person will answer.</p>
+    )} and use its features. We have written it to be read, not to be endured. If anything here is unclear, contact us via ${contactLink} and a real person will answer.</p>
 
     <div class="callout">
       <p class="callout__title">${icon('check')} The short version</p>
@@ -43,7 +49,7 @@ export default function privacy(ctx) {
     <p>FluTrack is an independent publisher that turns public-domain CDC respiratory surveillance data into a plain-English, state-level threat level for flu, RSV and COVID-19. We are the data controller responsible for the information described in this policy. ${escapeHtml(
       disclaimers.notAffiliated
     )}</p>
-    <p>You can reach us about anything in this policy, including a request to access or delete your information, at <a href="mailto:${email}">${email}</a>.</p>
+    <p>You can reach us about anything in this policy, including a request to access or delete your information, at ${contactLink}.</p>
 
     <h2>What we collect</h2>
     <p>We collect as little as the site can function on. In practice that falls into three narrow categories.</p>
@@ -59,6 +65,7 @@ export default function privacy(ctx) {
 
     <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table">
       <table>
+        <caption class="visually-hidden">Categories of information collected and why</caption>
         <thead>
           <tr>
             <th scope="col">What</th>
@@ -120,16 +127,16 @@ export default function privacy(ctx) {
     <p>We describe these providers by role rather than by brand because vendors can change; in every case they are used only for the narrow purpose above and are not permitted to use your information for their own marketing.</p>
 
     <h2>Surge-alert emails and unsubscribing</h2>
-    <p>If you subscribe to surge alerts, we will email you when CDC data shows respiratory activity climbing in your chosen state — at most about once a week, and often less. Every alert email includes a one-click unsubscribe link, and unsubscribing takes effect immediately. You can also ask us to remove you by emailing <a href="mailto:${email}">${email}</a>. Once you unsubscribe, we delete your email address and state from the alert list.</p>
+    <p>If you subscribe to surge alerts, we will email you when CDC data shows respiratory activity climbing in your chosen state — at most about once a week, and often less. Every alert email includes a one-click unsubscribe link, and unsubscribing takes effect immediately. You can also ask us to remove you via ${contactLink}. Once you unsubscribe, we delete your email address and state from the alert list.</p>
 
     <h2>How long we keep information</h2>
     <p>We keep information only as long as it serves the purpose it was collected for. Subscription details (your email and state) are retained until you unsubscribe. Server logs are kept for a short operational window and then deleted or anonymized. Analytics are retained only in aggregate. Location data from the “Use my location” feature is never retained at all.</p>
 
     <h2>Children's privacy</h2>
-    <p>FluTrack is a general-audience information site and is not directed to children under 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided us an email address through the alert form, contact us at <a href="mailto:${email}">${email}</a> and we will delete it.</p>
+    <p>FluTrack is a general-audience information site and is not directed to children under 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided us an email address through the alert form, contact us at ${contactLink} and we will delete it.</p>
 
     <h2>Your privacy rights</h2>
-    <p>Because we hold so little, exercising your rights is simple: email <a href="mailto:${email}">${email}</a> and tell us what you would like. We will honor requests to <strong>access</strong> the information associated with your email address, to <strong>correct</strong> it, or to <strong>delete</strong> it.</p>
+    <p>Because we hold so little, exercising your rights is simple: contact us via ${contactLink} and tell us what you would like. We will honor requests to <strong>access</strong> the information associated with your email address, to <strong>correct</strong> it, or to <strong>delete</strong> it.</p>
     <p>Depending on where you live, you may have additional rights under laws such as the EU/UK General Data Protection Regulation (GDPR) or the California Consumer Privacy Act (CCPA). In plain terms, that means you can ask us what we hold about you, ask us to delete it, and object to certain uses — and we will not treat you differently for asking. <strong>We do not sell your personal information</strong>, and we do not share it for cross-context behavioral advertising in exchange for payment. Where the GDPR applies, our lawful bases are your consent (for alert emails, which you can withdraw at any time) and our legitimate interest in keeping the site secure and understanding aggregate usage.</p>
 
     <h2>International visitors and data transfers</h2>
@@ -139,7 +146,7 @@ export default function privacy(ctx) {
     <p>We may update this policy as the site evolves or as the law requires. When we do, we will revise the “Last updated” date at the top of this page, and for material changes we will make the update prominent rather than quietly editing it in. Continued use of FluTrack after an update means you accept the revised policy.</p>
 
     <h2>Contact us</h2>
-    <p>Questions, access or deletion requests, and privacy concerns are all welcome at <a href="mailto:${email}">${email}</a>.</p>
+    <p>Questions, access or deletion requests, and privacy concerns are all welcome at ${contactLink}.</p>
 
     <div class="callout callout--warn" role="note">
       <p class="callout__title">${icon('clock')} Not medical advice</p>
