@@ -293,13 +293,28 @@ SEO: home `og:title`/`twitter:title` no longer collapse to "FluTrack"; `twitter:
 
 Tests: `test/live-signals.test.mjs` covers the empty-response, renamed-geography, duplicate-week and "Extremely High" cases, the signal-row invariant, provenance states, severity labelling, escaping, and `formatDate` boundaries.
 
+### Second pass (follow-up to the merged remediation)
+
+A later pass took on the items the first one had flagged as needing human judgement, plus the remaining Tier 2/3 backlog.
+
+- **Map colour ramp rebuilt.** The old ramp had non-monotonic luminance (0.111 → 0.130 → 0.121 → 0.124 → 0.079) and *inverted* under deuteranopia, so "High" read lighter than "Minimal". The new ramp decreases monotonically (0.550 → 0.353 → 0.215 → 0.115 → 0.042) with adjacent contrast 1.49–1.78, and stays monotonic under both deuteranopia and protanopia simulation (1.43–1.87). Tile ink switches dark→white at level 3 so labels clear 4.5:1 across the whole ramp. Each tile also carries its 0–4 level as a digit — the only severity cue that survives a monochrome print.
+- **Placeholder address no longer published anywhere.** `hasPublisherEmail()` gates every visible route: `mailto:` links, `security.txt`, `humans.txt`, and the four contact-page CTAs now fall back to the contact page. `flutrack.example` occurrences in `dist/` went 24 → 0, and `check.mjs` now fails the build on any RFC-2606 reserved-TLD address in the output.
+- **State pages carry data-derived prose.** `stateSummary()` generates a paragraph from the state's own model — level, composite score, trend, dominant pathogen, the concrete ED/wastewater/positivity readings, and which of the four signals contributed. It renders into a `data-region` so the live refresh rewrites it in step with the card, which is what the original static intro was avoiding. Unique-sentence share vs a sibling state: 11% → 18%. Honest caveat: the FAQ and legal boilerplate still dominate the word count, so this improves substance more than it moves the ratio.
+- **Redundant snapshot fetch removed from state pages.** Each state page inlines its own ~1 KB signal bundle instead of fetching the 51-state snapshot it was already rendered from. Verified via the Resource Timing API: `/state/california/` no longer requests `snapshot.json` (−12.4 KB gzip, one fewer request); the home page still does, correctly, because its map needs all 51.
+- **Resource hints added.** `modulepreload` for the seven transitively-imported modules plus `preconnect` to `data.cdc.gov`, collapsing a three-wave module waterfall.
+- Also: focus ring moved outside the tile fill (it was 1.7–2.5:1 against the fill it sat on); selection now differs from focus by dash pattern, not only colour; a "skip the state map" bypass for the 51 tab stops; table `<caption>`s; the legend un-hidden from assistive tech; `prefers-contrast: more` support; three-state theme toggle (light → dark → system) with a `matchMedia` listener; `?state=` reflected into the URL; CLS reservations on the threat card, signal rows and form status; build-only modules no longer copied to `dist/`; manifest `theme_color`/`lang`/`dir`; `article:published_time`/`modified_time`; `Organization.alternateName` for the brand/domain split; unused tokens pruned and `z-index: -1` tokenised; `aggregate.js` returning `null` rather than `NaN`.
+
+Tests: 44 → 47 (map level digits and bypass link, `stateSummary` content/escaping/no-data behaviour).
+
 ### Deliberately not changed
 
 - **Placeholder contact email** (`hello@flutrack.example`) — needs a real monitored mailbox. Nothing to substitute.
 - **Brand/domain mismatch** (FluTrack vs `flufollower.com`) — a product decision.
 - **NREVSS positivity adapter** — needs a dataset ID and a live schema to verify against; `data.cdc.gov` is unreachable from this environment. The row now degrades honestly instead.
 - **Scheduled rebuild** for stale server-rendered data — an infrastructure/cost decision.
-- **Thin state-page content** and the non-monotonic map colour ramp — both editorial/design calls needing a human eye.
+- **Cascade layers (`@layer`).** Worth doing, but not blind: with layer ordering, a high-specificity rule in `components` starts losing to a low-specificity one in `pages`, which would silently change dark-theme selectors like `:root[data-theme='dark'] .select`. Needs visual review across all 66 pages.
+- **Desktop-first media queries.** All eight layout queries are `max-width` across five ad-hoc breakpoints. Inverting them is a genuine refactor with regression risk that automated checks would not catch.
+- **Per-state OG images and icon PNG re-encoding.** The generator and rasteriser exist; this is deferred on cost/benefit rather than difficulty.
 - **Three short legal-page titles** (Medical Disclaimer, Privacy Policy, Terms of Use) — conventional names; keyword-padding them would be worse.
 
 ### Verification notes

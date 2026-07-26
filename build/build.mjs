@@ -27,7 +27,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 
 import { createHash } from 'node:crypto';
-import { site, disclaimers } from './lib/site.mjs';
+import { site, disclaimers, hasPublisherEmail } from './lib/site.mjs';
 import { states } from './lib/states.mjs';
 import { layout, BOOT_SCRIPT } from './lib/layout.mjs';
 import { computeModel } from '../src/scripts/model.js';
@@ -160,12 +160,17 @@ function bundleCss() {
 // src/scripts is either imported transitively or build-time only.
 const BROWSER_ENTRIES = ['ui.js', 'alerts.js', 'app.js', 'states-filter.js'];
 
+// Imported only by the Node build (SSR), never by a browser module graph.
+// Copying them shipped dead bytes to the CDN.
+const BUILD_ONLY = new Set(['icons.js', 'map-render.js', 'us-tilegrid.js']);
+
 function copyScripts() {
   const outDir = join(dist, 'assets', 'js');
   mkdirSync(outDir, { recursive: true });
   const emitted = [];
   for (const f of readdirSync(srcScripts)) {
     if (f === 'sw.js') continue; // service worker is emitted at the root scope
+    if (BUILD_ONLY.has(f)) continue;
     if (!f.endsWith('.js')) continue;
     const src = readFileSync(join(srcScripts, f), 'utf8');
     writeFileSync(join(outDir, f), stripJsComments(src));
@@ -286,8 +291,13 @@ function writeRootFiles(sitemapEntries) {
 
 function securityTxt() {
   // Expires ~1 year out from the season anchor (stable, avoids build-time Date).
+  // Contact MUST be reachable — a security.txt pointing at a dead mailbox is
+  // worse than none, so fall back to the contact page when no real mailbox is set.
+  const contact = hasPublisherEmail()
+    ? `mailto:${site.publisher.email}`
+    : `${site.origin}/contact/`;
   return `# ${site.name} security contact
-Contact: mailto:${site.publisher.email}
+Contact: ${contact}
 Expires: ${site.season.endsISO}T00:00:00Z
 Preferred-Languages: en
 Canonical: ${site.origin}/.well-known/security.txt
@@ -297,7 +307,7 @@ Canonical: ${site.origin}/.well-known/security.txt
 function humansTxt() {
   return `/* TEAM */
   Site: ${site.name}
-  Contact: ${site.publisher.email}
+  Contact: ${hasPublisherEmail() ? site.publisher.email : `${site.origin}/contact/`}
 
 /* SITE */
   An independent, plain-English respiratory illness tracker built on

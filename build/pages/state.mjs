@@ -1,5 +1,5 @@
 import { escapeHtml, formatDate, formatChange } from '../../src/scripts/util.js';
-import { threatCard, pathogenTiles, signalRows } from '../../src/scripts/render.js';
+import { threatCard, pathogenTiles, signalRows, stateSummary } from '../../src/scripts/render.js';
 import { signupBand, trendDisclaimer, breadcrumbs } from '../lib/partials.mjs';
 import { breadcrumbLd, statePageLd, faqLd } from '../lib/seo.mjs';
 
@@ -47,6 +47,14 @@ export function statePage(ctx, state) {
           <div data-region="threat-card" data-state="${escapeHtml(state.abbr)}" data-week="${escapeHtml(weekEnding)}">
             ${threatCard(state, model, { weekEnding, provenance })}
           </div>
+          <div data-region="state-summary">${stateSummary(state, model, signals)}</div>
+          <!-- This state's signals, inlined (~1 KB). A state page has no use for
+               the other 50, so fetching the full 51-state snapshot here was 12 KB
+               gzip of pure redundancy on top of markup already rendered from it. -->
+          <script type="application/json" data-state-signals>${JSON.stringify(signals).replace(
+            /</g,
+            '\\u003c'
+          )}</script>
           ${trendDisclaimer()}
           <div>
             <h2 style="font-size: var(--step-2)">By virus</h2>

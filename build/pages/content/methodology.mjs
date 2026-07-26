@@ -52,6 +52,7 @@ export default function methodology(ctx) {
     exactly on a boundary rounds up into the higher level.</p>
     <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table">
       <table>
+        <caption class="visually-hidden">The five threat levels and their composite score ranges</caption>
         <thead>
           <tr><th scope="col">Level</th><th scope="col">Label</th><th scope="col">Composite score (0&ndash;100)</th><th scope="col">In plain English</th></tr>
         </thead>
@@ -71,6 +72,7 @@ export default function methodology(ctx) {
     signals are present. The weights are fixed:</p>
     <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table">
       <table>
+        <caption class="visually-hidden">The four CDC surveillance signals and their weights</caption>
         <thead>
           <tr><th scope="col">Signal</th><th scope="col">CDC source</th><th scope="col">Weight</th><th scope="col">Why this weight</th></tr>
         </thead>
@@ -112,6 +114,7 @@ export default function methodology(ctx) {
     CDC cut points.</p>
     <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table">
       <table>
+        <caption class="visually-hidden">Per-signal breakpoints that separate the five levels</caption>
         <thead>
           <tr>
             <th scope="col">Signal</th>
@@ -177,6 +180,7 @@ export default function methodology(ctx) {
     Each present signal is scored, then blended:</p>
     <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table">
       <table>
+        <caption class="visually-hidden">Trend thresholds for rising, falling and holding steady</caption>
         <thead>
           <tr><th scope="col">Signal</th><th scope="col">Reading</th><th scope="col">Sub-score</th><th scope="col">Weight</th></tr>
         </thead>

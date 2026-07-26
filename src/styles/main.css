@@ -18,7 +18,7 @@
   position: absolute;
   inset: -20% -10% auto -10%;
   height: 150%;
-  z-index: -1;
+  z-index: var(--z-below);
   background:
     radial-gradient(42rem 26rem at 8% -6%, color-mix(in srgb, var(--hero-accent) 34%, transparent), transparent 62%),
     radial-gradient(40rem 30rem at 92% 4%, color-mix(in srgb, var(--brand-300) 30%, transparent), transparent 60%),
@@ -44,7 +44,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: var(--z-below);
   background-image: linear-gradient(var(--border) 1px, transparent 1px),
     linear-gradient(90deg, var(--border) 1px, transparent 1px);
   background-size: 3.5rem 3.5rem;
@@ -177,7 +177,7 @@
 .page-header__bg {
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: var(--z-below);
   background: radial-gradient(
     36rem 16rem at 12% -30%,
     color-mix(in srgb, var(--brand-300) 24%, transparent),
@@ -190,6 +190,15 @@
 .section-head {
   max-width: 40rem;
   margin-bottom: var(--space-xl);
+}
+/* When a section head is also a .between flex row, the measure cap belongs on
+   the text, not the row — otherwise the trailing CTA is stranded at the 40rem
+   mark with dead space to its right. */
+.between.section-head {
+  max-width: none;
+}
+.between.section-head > :first-child {
+  max-width: 40rem;
 }
 
 /* ---- State page ------------------------------------------------------- */
@@ -299,7 +308,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: var(--z-below);
   background-image: linear-gradient(rgba(255, 255, 255, 0.5) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.5) 1px, transparent 1px);
   background-size: 3rem 3rem;
@@ -373,6 +382,9 @@
 
 /* Form status messaging */
 .form-status {
+  /* Reserve the line before it is written to, so a slow API response does not
+     push .signup__fine down and register as layout shift. */
+  min-height: 1.5em;
   margin-top: var(--space-sm);
   font-weight: var(--weight-medium);
 }
@@ -527,4 +539,16 @@
   .prose table {
     min-width: 0;
   }
+}
+
+/* Data-derived state summary — regenerated per state each build and rewritten
+   by the live refresh, so it never contradicts the card above it. */
+.state-summary {
+  max-width: 46rem;
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+  margin: 0;
+}
+.state-summary strong {
+  color: var(--text);
 }

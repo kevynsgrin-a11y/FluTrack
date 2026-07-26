@@ -101,7 +101,13 @@ function head(page) {
   <meta name="twitter:title" content="${escapeHtml(socialTitle)}">
   <meta name="twitter:description" content="${escapeHtml(desc)}">
   <meta name="twitter:image" content="${escapeHtml(ogImage)}">
-  <meta name="twitter:image:alt" content="${escapeHtml(ogImageAlt)}">
+  <meta name="twitter:image:alt" content="${escapeHtml(ogImageAlt)}">${
+    ogType === 'article'
+      ? `
+  <meta property="article:published_time" content="${escapeHtml(site.contentPublished)}">
+  <meta property="article:modified_time" content="${escapeHtml(page.modified || site.contentUpdated)}">`
+      : ''
+  }
 
   <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
   <link rel="icon" href="/assets/favicon-32.png" sizes="32x32">
@@ -109,6 +115,7 @@ function head(page) {
   <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="stylesheet" href="/assets/${cssHref}">
+  ${resourceHints(page)}
   ${jsonld ? '\n  ' + jsonld : ''}
   <script>${BOOT_SCRIPT}</script>`;
 }
@@ -193,6 +200,33 @@ function footer() {
  * Compose a full HTML document.
  * @param page { title, description, path, body, jsonld, bodyClass, scripts, noindex }
  */
+// Modules that app.js pulls in transitively. The browser cannot discover these
+// until the importing module has downloaded and parsed, which put them three
+// waterfall waves deep; declaring them up front collapses that to one.
+const APP_MODULE_GRAPH = [
+  '/assets/js/data-sources.js',
+  '/assets/js/model.js',
+  '/assets/js/aggregate.js',
+  '/assets/js/render.js',
+  '/assets/js/states-data.js',
+  '/assets/js/util.js',
+  '/assets/js/threat-index.js',
+];
+
+function resourceHints(page) {
+  const hints = [];
+  const loadsApp = (page.scripts || []).some((s) => s.endsWith('/app.js'));
+  if (loadsApp) {
+    for (const m of APP_MODULE_GRAPH) {
+      hints.push(`<link rel="modulepreload" href="${m}">`);
+    }
+    // app.js opens a connection to the CDC Socrata API as soon as it runs; warm
+    // the DNS + TLS handshake now rather than at the end of the module waterfall.
+    hints.push('<link rel="preconnect" href="https://data.cdc.gov" crossorigin>');
+  }
+  return hints.join('\n  ');
+}
+
 export function layout(page) {
   const scripts = (page.scripts || [])
     .map((src) => `<script type="module" src="${src}"></script>`)

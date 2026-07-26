@@ -98,6 +98,29 @@ for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_header
   }
 }
 
+// No RFC-2606 reserved-TLD address may appear anywhere in the output. Those
+// domains never resolve, so publishing one gives a health site a contact route
+// that silently fails — worse than showing no address at all.
+{
+  const RESERVED = /[\w.+-]+@[\w.-]+\.(example|invalid|test|localhost)\b/gi;
+  const scan = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) {
+        scan(p);
+      } else if (/\.(html|txt|json|xml|webmanifest|js|css)$/.test(e.name)) {
+        const hits = readFileSync(p, 'utf8').match(RESERVED);
+        if (hits) {
+          errors.push(
+            `${p.replace(dist, '')}: publishes a non-routable address (${[...new Set(hits)].join(', ')})`
+          );
+        }
+      }
+    }
+  };
+  scan(dist);
+}
+
 // No emitted asset may match more than one Cache-Control rule in _headers.
 // Cloudflare applies every matching rule, so two matches means one file gets two
 // conflicting max-age values and the effective policy is not determinate.

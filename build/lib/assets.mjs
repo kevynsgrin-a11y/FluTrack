@@ -104,7 +104,11 @@ export function manifest(site) {
       background_color: '#ffffff',
       // Match the light-mode <meta name="theme-color"> so the installed-PWA UI
       // tint agrees with the in-browser tint.
-      theme_color: '#ffffff',
+      // Matches the brand, not a flat white — the installed PWA otherwise renders
+      // white-tinted chrome regardless of the user's theme.
+      theme_color: site.themeColor,
+      lang: 'en-US',
+      dir: 'ltr',
       categories: ['health', 'medical', 'utilities'],
       icons: [
         { src: '/assets/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },

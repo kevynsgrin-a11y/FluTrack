@@ -76,6 +76,7 @@ export default function dataSources(ctx) {
     <h2>The datasets behind the index</h2>
     <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table">
       <table>
+        <caption class="visually-hidden">CDC surveillance datasets used, with identifiers and licensing</caption>
         <thead>
           <tr>
             <th scope="col">Dataset</th>

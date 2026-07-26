@@ -33,12 +33,53 @@ function applyTheme(theme) {
   meta.setAttribute('content', theme === 'dark' ? '#0c1116' : '#ffffff');
 }
 
+/** Drop the stored override and fall back to the OS preference. */
+function clearThemeOverride() {
+  root.removeAttribute('data-theme');
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+function storedTheme() {
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch (e) {
+    return null;
+  }
+}
+
 function initTheme() {
   const toggle = document.getElementById('theme-toggle');
   if (!toggle) return;
-  toggle.setAttribute('aria-pressed', String(currentTheme() === 'dark'));
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
+
+  const sync = () => {
+    const dark = currentTheme() === 'dark';
+    toggle.setAttribute('aria-pressed', String(dark));
+    // Three states, so the label has to say which one is active.
+    toggle.setAttribute(
+      'title',
+      storedTheme() ? `Theme: ${storedTheme()} (click to cycle)` : 'Theme: match system (click to cycle)'
+    );
+  };
+  sync();
+
+  // Cycle light -> dark -> system, rather than pinning the user to an override
+  // forever the moment they touch the toggle once.
   toggle.addEventListener('click', () => {
-    applyTheme(currentTheme() === 'dark' ? 'light' : 'dark');
+    const stored = storedTheme();
+    if (!stored) applyTheme(media.matches ? 'light' : 'dark');
+    else if (stored === (media.matches ? 'light' : 'dark')) applyTheme(media.matches ? 'dark' : 'light');
+    else clearThemeOverride();
+    sync();
+  });
+
+  // Follow later OS changes while no explicit override is set.
+  media.addEventListener('change', () => {
+    if (!storedTheme()) sync();
   });
 }
 

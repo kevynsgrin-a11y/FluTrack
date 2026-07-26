@@ -144,7 +144,11 @@ export function threatCard(state, model, opts = {}) {
   const level = Number.isFinite(model.level) ? model.level : 0;
   const noData = !Number.isFinite(model.level);
   const asOf = opts.weekEnding ? formatDate(opts.weekEnding) : '';
-  return `<article class="threat" data-sev="${level}" aria-labelledby="threat-level">
+  // aria-labelledby="threat-level" named the region with the bare word
+  // ("Moderate"), which is meaningless out of context.
+  return `<article class="threat" data-sev="${level}" aria-label="Respiratory threat level${
+    state && state.name ? ` for ${escapeHtml(state.name)}` : ''
+  }">
     <div class="threat__head">
       <p class="threat__label"><span class="threat__pip" aria-hidden="true"></span> Respiratory threat level · ${escapeHtml(
         state.name
@@ -258,4 +262,122 @@ function row(name, value, hint) {
     <span class="signal-row__name">${escapeHtml(name)}<br><span class="field__hint">${escapeHtml(hint)}</span></span>
     <span class="signal-row__val">${escapeHtml(value)}</span>
   </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// Data-derived state summary.
+//
+// The 51 state reports were ~80% boilerplate: the only genuinely state-specific
+// prose was one sentence naming neighbouring states, so the pages read as
+// scaled/templated content. This paragraph is generated from the state's own
+// model, so its assertions differ per state and change as the data does.
+//
+// It is a pure function of (state, model), shared by the build and the browser,
+// and it is rendered into a data-region — so the live CDC refresh rewrites it in
+// step with the threat card rather than leaving stale prose contradicting fresh
+// numbers. That contradiction is exactly why the original intro avoided data.
+//
+// Strictly descriptive of the data. No advice, no prediction, no diagnosis.
+// ---------------------------------------------------------------------------
+const SIGNAL_NAMES = {
+  ari: 'ARI activity level',
+  edVisits: 'emergency-department visits',
+  wastewater: 'wastewater viral activity',
+  positivity: 'laboratory test positivity',
+};
+
+export function stateSummary(state, model, signals = {}) {
+  if (!model || !Number.isFinite(model.level)) {
+    return `<p class="state-summary">The CDC has not published enough recent surveillance data to compute a threat level for ${escapeHtml(
+      state.name
+    )} this week.</p>`;
+  }
+
+  const parts = [];
+  const score = Number.isFinite(model.composite) ? model.composite : null;
+
+  parts.push(
+    `Respiratory activity in ${escapeHtml(state.name)} is currently <strong>${escapeHtml(
+      model.label
+    )}</strong>${score !== null ? `, a composite score of ${score} out of 100` : ''}.`
+  );
+
+  if (model.trend && model.trend.direction) {
+    const pct = Number.isFinite(model.trend.changePct) ? Math.abs(model.trend.changePct) : null;
+    if (model.trend.direction === 'flat') {
+      parts.push('Week over week it is holding steady.');
+    } else {
+      const dir = model.trend.direction === 'up' ? 'higher' : 'lower';
+      parts.push(
+        `That is ${pct !== null ? `about ${pct}% ` : ''}${dir} than the average of the preceding weeks.`
+      );
+    }
+  }
+
+  // Which virus is carrying the composite, and where the other two sit.
+  const ranked = ['influenza', 'covid', 'rsv']
+    .map((k) => ({ key: k, p: model.pathogens?.[k] }))
+    .filter((x) => x.p && Number.isFinite(x.p.score))
+    .sort((a, b) => b.p.score - a.p.score);
+
+  if (ranked.length) {
+    const top = ranked[0];
+    const topName = PATHOGEN_META[top.key].short;
+    const rest = ranked.slice(1);
+    const allEqual = rest.every((r) => r.p.level === top.p.level);
+    if (rest.length && !allEqual) {
+      parts.push(
+        `${escapeHtml(topName)} is the largest contributor at <strong>${escapeHtml(
+          top.p.label
+        )}</strong>, with ${rest
+          .map((r) => `${escapeHtml(PATHOGEN_META[r.key].short)} at ${escapeHtml(r.p.label)}`)
+          .join(' and ')}.`
+      );
+    } else {
+      parts.push(
+        `All three tracked viruses are at similar levels, with ${escapeHtml(topName)} at <strong>${escapeHtml(
+          top.p.label
+        )}</strong>.`
+      );
+    }
+    if (top.p.trend && top.p.trend.direction !== 'flat') {
+      parts.push(
+        `${escapeHtml(topName)} specifically is ${escapeHtml(top.p.trend.label.toLowerCase())}.`
+      );
+    }
+  }
+
+  // The concrete readings behind the score. These are the most genuinely
+  // state-specific facts on the page — two states at the same level still differ
+  // here — and they let a reader check the level against its inputs.
+  const readings = [];
+  const ed = signals.edCombinedSeries?.at?.(-1);
+  if (Number.isFinite(ed)) {
+    readings.push(`${formatPct(ed)} of emergency-department visits were for respiratory illness`);
+  }
+  const ww = signals.wastewaterSeries?.at?.(-1);
+  if (Number.isFinite(ww)) {
+    readings.push(`wastewater viral activity measured ${ww.toFixed(1)}`);
+  }
+  if (Number.isFinite(signals.positivityCombined)) {
+    readings.push(`test positivity was ${formatPct(signals.positivityCombined)}`);
+  }
+  if (readings.length) {
+    parts.push(`In the most recent reporting week, ${escapeHtml(listJoinPlain(readings))}.`);
+  }
+
+  // Be explicit about which federal signals actually backed this reading.
+  const contributors = (model.contributors || []).map((c) => SIGNAL_NAMES[c]).filter(Boolean);
+  if (contributors.length) {
+    const count =
+      contributors.length === 4 ? 'all four CDC signals' : `${contributors.length} of the four CDC signals`;
+    parts.push(`This reading is based on ${count} — ${escapeHtml(listJoinPlain(contributors))}.`);
+  }
+
+  return `<p class="state-summary">${parts.join(' ')}</p>`;
+}
+
+function listJoinPlain(items) {
+  if (items.length <= 1) return items[0] || '';
+  return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 }

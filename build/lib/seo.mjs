@@ -4,7 +4,7 @@
 // what FluTrack is, who publishes it, and where the data comes from.
 // ===========================================================================
 
-import { site } from './site.mjs';
+import { site, hasPublisherEmail } from './site.mjs';
 
 // Stable node identifiers. Without these, the Organization emitted on /, /about/
 // and /contact/ was three unconnected anonymous nodes that no consumer could
@@ -23,12 +23,16 @@ export function organizationLd() {
     logo: `${site.origin}/assets/icon-512.png`,
     description: site.shortDescription,
   };
-  // Only advertise a contact email / social profile in structured data once a
-  // real one is configured — never a placeholder (RFC-2606 `.example`, or an
-  // unverified handle that nothing on the site actually links to).
-  if (site.publisher.email && !/\.example$/.test(site.publisher.email)) {
-    org.email = site.publisher.email;
+  // The brand and the domain differ (FluTrack vs flufollower.com). Declaring the
+  // alternate name lets the two resolve to one entity instead of competing.
+  const domain = site.origin.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0];
+  if (domain && domain.toLowerCase() !== site.name.toLowerCase()) {
+    org.alternateName = domain.charAt(0).toUpperCase() + domain.slice(1);
   }
+  // Only advertise a contact email / social profile in structured data once a
+  // real one is configured — never a placeholder (RFC-2606 reserved TLD, or an
+  // unverified handle that nothing on the site actually links to).
+  if (hasPublisherEmail()) org.email = site.publisher.email;
   if (site.social && site.social.url) {
     org.sameAs = [site.social.url];
   }

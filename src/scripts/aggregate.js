@@ -49,7 +49,7 @@ export function nationalSignals(signalsList) {
     ariLevel: ariMean == null ? null : Math.round(ariMean),
     edCombinedSeries: meanSeries(list.map((s) => s.edCombinedSeries)),
     wastewaterSeries: meanSeries(list.map((s) => s.wastewaterSeries)),
-    positivityCombined: round(mean(list.map((s) => s.positivityCombined)) ?? NaN),
+    positivityCombined: round(mean(list.map((s) => s.positivityCombined)) ?? null),
     // Most recent week across all states (not just the first), so the national
     // "as of" date never shows a lagging state's week.
     weekEnding: list.map((s) => s.weekEnding).filter(Boolean).sort().at(-1) || list[0]?.weekEnding,

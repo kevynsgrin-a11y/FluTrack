@@ -21,8 +21,13 @@ export const site = {
   // Publisher / contact — E-E-A-T transparency signals.
   publisher: {
     name: 'FluTrack',
-    // Placeholder — set a real, monitored mailbox before launch. While it ends
-    // in `.example`, it is shown as a visible contact but omitted from JSON-LD.
+    // Placeholder — set a real, monitored mailbox before launch.
+    //
+    // While this ends in `.example` (RFC 2606, permanently non-routable) it is
+    // treated as ABSENT everywhere, not merely omitted from JSON-LD: no mailto:
+    // link, no security.txt Contact, no humans.txt entry. Publishing a dead
+    // address on a health site is worse than publishing none, because every
+    // contact route silently fails. Use `hasPublisherEmail()` to branch.
     email: 'hello@flutrack.example',
     // Editorial responsibility statement shown in the footer / about page.
     role: 'Independent data-visualization utility',
@@ -45,6 +50,20 @@ export const site = {
     endsISO: '2027-05-22', //   MMWR Week 20
   },
 };
+
+/**
+ * True only when a real, routable publisher mailbox is configured.
+ * RFC-2606 reserved TLDs (.example / .invalid / .test / .localhost) never resolve.
+ */
+export function hasPublisherEmail() {
+  const e = site.publisher.email;
+  return Boolean(e) && !/\.(example|invalid|test|localhost)$/i.test(e);
+}
+
+/** The contact route to advertise: a real mailbox if configured, else the form. */
+export function contactHref() {
+  return hasPublisherEmail() ? `mailto:${site.publisher.email}` : '/contact/';
+}
 
 // The disclaimer text is referenced in many places; keep it centralized so the
 // legal wording stays identical everywhere it appears.

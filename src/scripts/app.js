@@ -15,7 +15,7 @@
 import { loadSnapshot, fetchLiveSignals, hasSignalData } from './data-sources.js';
 import { computeModel } from './model.js';
 import { nationalSignals } from './aggregate.js';
-import { threatCard, pathogenTiles, signalRows } from './render.js';
+import { threatCard, pathogenTiles, signalRows, stateSummary } from './render.js';
 import { states, stateByAbbr } from './states-data.js';
 import { formatDate, formatChange } from './util.js';
 
@@ -56,15 +56,28 @@ async function boot() {
     return null;
   });
 
-  try {
-    const snap = await loadSnapshot('');
-    ingestSnapshot(store, snap);
-    if (snap && snap.note) store.sampleNote = snap.note;
-  } catch (e) {
-    console.warn('[FluTrack] snapshot load failed', e);
+  // A state page server-renders from exactly one state's signals and inlines
+  // them, so it needs no network round trip at all for its baseline view.
+  const inlined = readInlineSignals();
+  if (inlined && pinnedAbbr) {
+    store.signals.set(pinnedAbbr, inlined);
+    store.weekEnding = inlined.weekEnding || cardRegion.getAttribute('data-week') || '';
+  } else {
+    try {
+      const snap = await loadSnapshot('');
+      ingestSnapshot(store, snap);
+      if (snap && snap.note) store.sampleNote = snap.note;
+    } catch (e) {
+      console.warn('[FluTrack] snapshot load failed', e);
+    }
   }
 
-  render(store, selection);
+  // The server already rendered this exact view from this exact data, so the
+  // first client render would be byte-identical — it would only tear down the
+  // DOM and restart the gauge and tile animations. Skip it.
+  const ssrWeek = cardRegion.getAttribute('data-week');
+  const ssrMatches = Boolean(ssrWeek) && ssrWeek === store.weekEnding && selection === (pinnedAbbr || readSavedSelection());
+  if (!ssrMatches) render(store, selection);
 
   // --- 2. Apply the live refresh if it produced usable data --------------
   const live = await livePromise;
@@ -86,6 +99,18 @@ async function boot() {
     store.provenance = { live: false, failed: true };
     render(store, selection);
     announceLiveFailure();
+  }
+}
+
+/** Read the per-state signal bundle inlined by the build, if present. */
+function readInlineSignals() {
+  const el = document.querySelector('script[type="application/json"][data-state-signals]');
+  if (!el) return null;
+  try {
+    return JSON.parse(el.textContent);
+  } catch (e) {
+    console.warn('[FluTrack] inline state signals could not be parsed', e);
+    return null;
   }
 }
 
@@ -140,6 +165,9 @@ function render(store, abbr) {
   setRegion('threat-card', threatCard(st, model, opts));
   setRegion('pathogen-tiles', pathogenTiles(model));
   setRegion('signal-rows', signalRows(signals));
+  // Keep the prose in step with the numbers — stale data-derived text sitting
+  // under a freshly-updated card is worse than no prose at all.
+  setRegion('state-summary', stateSummary(st, model, signals));
 
   // Home-only regions.
   setText('state-name', st.isNational ? 'the U.S.' : st.name);
@@ -241,6 +269,7 @@ function wirePicker(store, onChange) {
   const apply = (abbr) => {
     onChange(abbr);
     saveSelection(abbr);
+    reflectSelectionInUrl(abbr);
     const r = render(store, abbr);
     if (r) announceSelection(r.st, r.model);
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -356,6 +385,22 @@ function announceLive(store, selection, live) {
 
 function announceLiveFailure() {
   setStatus('Live CDC data is unavailable. Showing bundled sample data instead.');
+}
+
+/**
+ * Mirror the selection into ?state=XX so the view can be linked and shared.
+ * replaceState (not pushState): the picker is a filter on one page, not a
+ * navigation, so it should not stack up Back-button entries.
+ */
+function reflectSelectionInUrl(abbr) {
+  try {
+    const url = new URL(window.location.href);
+    if (!abbr || abbr === 'US') url.searchParams.delete('state');
+    else url.searchParams.set('state', abbr);
+    window.history.replaceState(null, '', url);
+  } catch (e) {
+    /* ignore */
+  }
 }
 
 /** Read a ?state=XX parameter, so a selection can be linked and shared. */
