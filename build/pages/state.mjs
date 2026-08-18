@@ -1,5 +1,5 @@
 import { escapeHtml, formatDate, formatChange } from '../../src/scripts/util.js';
-import { threatCard, pathogenTiles, signalRows, stateSummary } from '../../src/scripts/render.js';
+import { threatCard, pathogenTiles, signalRows, stateSummary, stateEvidence } from '../../src/scripts/render.js';
 import { signupBand, trendDisclaimer, breadcrumbs } from '../lib/partials.mjs';
 import { breadcrumbLd, statePageLd, faqLd } from '../lib/seo.mjs';
 
@@ -48,6 +48,10 @@ export function statePage(ctx, state) {
             ${threatCard(state, model, { weekEnding, provenance })}
           </div>
           <div data-region="state-summary">${stateSummary(state, model, signals)}</div>
+          <!-- The one block on a state page built entirely from THIS state's own
+               numbers. Everything else here is necessarily similar across 51
+               routes; this is where the page shows its work. -->
+          <div data-region="state-evidence">${stateEvidence(state, model, signals, { weekEnding })}</div>
           <!-- This state's signals, inlined (~1 KB). A state page has no use for
                the other 50, so fetching the full 51-state snapshot here was 12 KB
                gzip of pure redundancy on top of markup already rendered from it. -->

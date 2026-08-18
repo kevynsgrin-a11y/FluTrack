@@ -158,7 +158,7 @@ function bundleCss() {
 
 // Modules the browser loads directly (via <script type="module">). The rest of
 // src/scripts is either imported transitively or build-time only.
-const BROWSER_ENTRIES = ['ui.js', 'alerts.js', 'app.js', 'states-filter.js'];
+const BROWSER_ENTRIES = ['ui.js', 'alerts.js', 'consent.js', 'app.js', 'states-filter.js'];
 
 // Imported only by the Node build (SSR), never by a browser module graph.
 // Copying them shipped dead bytes to the CDN.
@@ -317,34 +317,60 @@ function humansTxt() {
 `;
 }
 
+// Cloudflare Web Analytics is enabled for this zone with automatic injection,
+// so the edge adds <script src="https://static.cloudflareinsights.com/beacon.min.js">
+// to every HTML response. It is not in this repo and cannot be hashed here, so
+// the CSP must name its host explicitly — otherwise the tag ships on every page
+// and is blocked on every load, which is both a broken beacon and a privacy
+// policy that describes analytics the site never actually collects. The beacon
+// reports to cloudflareinsights.com, hence the connect-src entry.
+const CF_BEACON_HOST = 'https://static.cloudflareinsights.com';
+const CF_BEACON_REPORT_HOST = 'https://cloudflareinsights.com';
+
 function headers() {
   // Content-Security-Policy tuned to exactly what FluTrack loads:
   //   * scripts are self-hosted ES modules; the single inline theme-boot script
   //     is allowlisted by its SHA-256 hash rather than 'unsafe-inline'.
   //   * style-src keeps 'unsafe-inline' because the templates use inline
   //     style="" attributes (no inline <style> blocks or remote styles).
+  //     script-src-attr 'none' still blocks inline event handlers outright.
   //   * connect-src permits the CDC Socrata API and the FCC geocoder used for
   //     "use my location".
+  //   * violations are reported to a first-party collector; report-uri is kept
+  //     alongside report-to because it is still the only form Safari honours.
   const bootHash = createHash('sha256').update(BOOT_SCRIPT).digest('base64');
   const csp = [
     "default-src 'self'",
     "base-uri 'self'",
-    `script-src 'self' 'sha256-${bootHash}'`,
+    "object-src 'none'",
+    "frame-ancestors 'none'",
+    "form-action 'self'",
+    `script-src 'self' 'sha256-${bootHash}' ${CF_BEACON_HOST}`,
+    "script-src-attr 'none'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    "connect-src 'self' https://data.cdc.gov https://geo.fcc.gov",
-    "form-action 'self'",
-    "frame-ancestors 'none'",
-    "object-src 'none'",
+    `connect-src 'self' https://data.cdc.gov https://geo.fcc.gov ${CF_BEACON_REPORT_HOST}`,
+    "manifest-src 'self'",
+    "worker-src 'self'",
     'upgrade-insecure-requests',
+    'report-uri /api/csp-report',
+    'report-to csp-endpoint',
   ].join('; ');
+
+  // Strict-Transport-Security deliberately carries NO `preload` token. Preload
+  // is effectively irreversible and asserts HTTPS on every present and future
+  // subdomain; adding it before a complete subdomain inventory is how a stray
+  // HTTP-only host becomes unreachable with no quick way back.
   return `/*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=()
+  Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=(), browsing-topics=()
   Strict-Transport-Security: max-age=63072000; includeSubDomains
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  Reporting-Endpoints: csp-endpoint="${site.origin}/api/csp-report"
   Content-Security-Policy: ${csp}
 
 /assets/js/*

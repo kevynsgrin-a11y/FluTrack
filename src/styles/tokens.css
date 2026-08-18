@@ -158,6 +158,9 @@
 
   --z-below: -1;
   --z-header: 100;
+  /* Above the sticky header: a consent prompt the header can cover is a
+     consent prompt some visitors never get to answer. */
+  --z-banner: 200;
   --z-toast: 300;
 
   color-scheme: light dark;

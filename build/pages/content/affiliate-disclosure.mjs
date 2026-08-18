@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
+import { pageHeader, prose, signupBand, affiliateLink } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
 /**
@@ -63,7 +63,28 @@ export default function affiliateDisclosure(ctx) {
     <p>Advertising and editorial data live in separate lanes. Display ads are supplied by third-party advertising partners and are presented as advertising — distinct from the CDC-derived threat level, pathogen breakdown, and underlying signals, which are ours and are never sponsored. An advertiser's presence on a page has no bearing on the numbers shown beside it. We do not let sponsors review the data before it publishes, and we do not shade our description of the CDC's figures to suit anyone paying to reach our readers. How the index is built is documented in full on our <a href="/methodology/">methodology</a> and <a href="/data-sources/">data sources</a> pages, so anyone can check it against the public feeds.</p>
 
     <h2>How we label ads and affiliate links</h2>
-    <p>We aim to make the commercial parts of the page obvious rather than disguised. Advertising is presented as advertising. Where a link is an affiliate or sponsored link, it is labeled as such — with wording such as “affiliate link,” “sponsored,” or a note that we may earn a commission — placed clearly enough to notice before you click. Our goal is simple: you should never have to guess whether FluTrack stands to earn from a link.</p>
+    <p>We aim to make the commercial parts of the page obvious rather than disguised. Advertising is presented as advertising. Every affiliate or sponsored link on FluTrack is rendered by a single shared component that carries its disclosure with it, so the label cannot drift away from the link it describes. It looks exactly like this, every time:</p>
+
+    ${affiliateLink({ label: 'Visit merchant', example: true })}
+
+    <p style="margin-top: var(--space-lg)">The disclosure always appears <strong>immediately before</strong> the link, never in a footer or a collapsed panel, and the link itself carries <code>rel="sponsored nofollow"</code> so search engines can see the relationship too. Our build fails if a sponsored link ever ships without that disclosure attached — this is enforced mechanically, not by remembering. You should never have to guess whether FluTrack stands to earn from a link.</p>
+
+    <h2>What we will never target</h2>
+    <p>This is a respiratory-illness data utility, and that puts one particular temptation in front of us: the ability to sell against fear. We do not. <strong>No advertising or affiliate placement on FluTrack may be targeted using any of the following:</strong></p>
+    <ul>
+      <li><strong>Precise location</strong> — beyond the state page you chose to look at;</li>
+      <li><strong>Alert status</strong> — whether you have subscribed to surge alerts, or been sent one;</li>
+      <li><strong>Threat level</strong> — a state's reading may never be used to select, price, or intensify a commercial message;</li>
+      <li><strong>Symptom, diagnosis, or health condition</strong> — inferred or stated;</li>
+      <li><strong>Pregnancy</strong>;</li>
+      <li><strong>Age</strong>; and</li>
+      <li><strong>Inferred vulnerability</strong> of any other kind.</li>
+    </ul>
+    <div class="callout callout--warn" role="note">
+      <p class="callout__title">${icon('alert')} Severity is not a targeting signal</p>
+      <p>Showing a reader more or different commercial content <em>because</em> their state's respiratory activity is climbing would turn a public-health readout into a pressure tactic. The threat level drives what the data says and nothing else. It is not passed to any advertising system, and it is not available as a targeting parameter to any partner.</p>
+    </div>
+    <p>These rules bind our partners as well as us: any advertising or affiliate arrangement we enter carries them as a condition, and we will end an arrangement rather than relax them. They are recorded alongside our <a href="/vendors/">vendor register</a>, and any change to them is logged in our <a href="/changelog/">changelog</a>.</p>
 
     <h2>Following the FTC's guidance</h2>
     <p>In the United States, the Federal Trade Commission asks websites to disclose, clearly and conspicuously, any financial relationship behind a recommendation or a link — so that readers can factor it in. Its Endorsement Guides (16 CFR Part 255) are the plain-language rulebook for this. This page, together with the labels on individual links, is how FluTrack meets that standard: we tell you up front that we may be paid when you buy through certain links, we keep those disclosures near the links themselves, and we do not dress up paid placement as neutral editorial content. When we describe the CDC's data, that description is not sponsored; when a link can earn us a commission, we say so.</p>
@@ -88,7 +109,7 @@ export default function affiliateDisclosure(ctx) {
       )}</p>
     </div>
   `,
-    { updated: 'July 2026' }
+    { updated: 'August 2026' }
   )}
 
   ${signupBand()}
