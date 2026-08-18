@@ -10,9 +10,18 @@ import { icon } from '../../src/scripts/icons.js';
 // The single inline script on the site: a FOUC-free theme boot that runs before
 // first paint. Kept as one exact string so the build can hash it for the CSP
 // (script-src uses 'sha256-…' instead of 'unsafe-inline').
+// It also settles <meta name="theme-color"> in the same pass. The page ships
+// two media-scoped tags so first paint matches the OS, but an explicit override
+// contradicts the OS by definition — and browsers disagree about which of
+// several matching tags wins (Chrome takes the first match, others the last).
+// Rewriting every tag to one agreed value makes the resolution identical
+// everywhere, and doing it here means the chrome is right at first paint rather
+// than after the deferred module graph loads.
 export const BOOT_SCRIPT =
   `(function(){try{var t=localStorage.getItem('flutrack-theme');` +
-  `if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`;
+  `if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);` +
+  `var c=t==='dark'?'#0c1116':'#ffffff',m=document.querySelectorAll('meta[name="theme-color"]');` +
+  `for(var i=0;i<m.length;i++)m[i].setAttribute('content',c);}}catch(e){}})();`;
 
 export const NAV = [
   { href: '/', label: 'Home', match: (p) => p === '/' },
@@ -32,6 +41,7 @@ const FOOTER = {
   Data: [
     ['/data-sources/', 'Data sources'],
     ['/methodology/', 'Methodology'],
+    ['/changelog/', 'Corrections & changelog'],
     ['https://data.cdc.gov/', 'CDC Open Data ↗'],
   ],
   Company: [
@@ -44,6 +54,8 @@ const FOOTER = {
     ['/terms/', 'Terms of use'],
     ['/affiliate-disclosure/', 'Affiliate disclosure'],
     ['/accessibility/', 'Accessibility'],
+    ['/consent/', 'Your privacy choices'],
+    ['/vendors/', 'Vendor register'],
   ],
 };
 
@@ -241,12 +253,19 @@ export function layout(page) {
   <a class="skip-link" href="#main">Skip to content</a>
   ${header(page)}
   <main id="main" tabindex="-1">
+    <!-- Empty in the served HTML and hidden while empty. app.js fills it when
+         the device is offline, so a cached page states its own staleness at the
+         top of the content rather than looking like a live reading. -->
+    <div class="container cache-notice-slot" data-region="cache-notice"></div>
 ${page.body}
   </main>
   ${footer()}
   <p class="visually-hidden" id="live-status" role="status" aria-live="polite"></p>
   <script type="module" src="/assets/js/ui.js"></script>
   <script type="module" src="/assets/js/alerts.js"></script>
+  <!-- The consent gate loads on every page, ahead of any page-specific script,
+       so no non-essential tag can ever run before the gate has been consulted. -->
+  <script type="module" src="/assets/js/consent.js"></script>
   ${scripts}
 </body>
 </html>`;

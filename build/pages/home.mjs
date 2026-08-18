@@ -132,6 +132,10 @@ export default function home(ctx) {
         <p class="callout__title">${icon('shield-check')} Licensing note</p>
         <p class="text-secondary">FluTrack deliberately uses only public-domain CDC feeds. We exclude non-commercially licensed datasets (such as WastewaterSCAN, CC BY-NC 4.0) so this free, ad-supported utility stays fully within its rights. <a href="/data-sources/">More on our sources →</a></p>
       </div>
+      <div class="callout callout--warn" role="note" style="margin-top: var(--space-md)">
+        <p class="callout__title">${icon('info')} The bundled file is an example, not a data product</p>
+        <p class="text-secondary">This page ships with a small illustrative JSON file (<code>/data/snapshot.json</code>) so it paints instantly and still works offline. It is <strong>example data, not a published CDC dataset</strong>, and your browser replaces it with the live CDC reading as soon as the feed responds. We do not offer it as a downloadable data product, and it is not described as one in this page's structured data.</p>
+      </div>
     </div>
   </section>
 
@@ -159,7 +163,7 @@ export default function home(ctx) {
     path: '/',
     body,
     scripts: ['/assets/js/app.js'],
-    jsonld: [websiteLd(), organizationLd(), datasetLd(weekEnding)],
+    jsonld: [websiteLd(), organizationLd(), datasetLd(ctx.snapshot)],
   };
 }
 

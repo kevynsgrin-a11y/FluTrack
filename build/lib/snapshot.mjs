@@ -73,8 +73,15 @@ export function generateSnapshot() {
   const weeks = weekList(AS_OF, WEEKS);
   const out = {
     kind: 'sample',
+    // Version and temporal coverage are consumed by the Dataset JSON-LD. They
+    // exist so the structured data can describe exactly WHICH artifact is being
+    // served and WHICH weeks it covers, rather than implying the index has an
+    // open-ended, always-current published distribution.
+    version: `sample-${AS_OF}`,
     generatedAt: `${AS_OF}T12:00:00Z`,
     weekEnding: AS_OF,
+    // ISO 8601 interval over the weeks actually present in this artifact.
+    temporalCoverage: `${weeks[0]}/${AS_OF}`,
     scenario: 'Off-season (mid-July) baseline with a regional COVID-19 summer uptick',
     note:
       'Illustrative sample data for demonstration only — not real-time CDC ' +

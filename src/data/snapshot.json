@@ -1,7 +1,9 @@
 {
   "kind": "sample",
+  "version": "sample-2026-07-11",
   "generatedAt": "2026-07-11T12:00:00Z",
   "weekEnding": "2026-07-11",
+  "temporalCoverage": "2026-04-25/2026-07-11",
   "scenario": "Off-season (mid-July) baseline with a regional COVID-19 summer uptick",
   "note": "Illustrative sample data for demonstration only — not real-time CDC surveillance. The live feed loads in your browser and replaces this.",
   "season": {

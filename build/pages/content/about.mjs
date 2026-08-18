@@ -1,4 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
+import { privacyEmail } from '../../lib/site.mjs';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { organizationLd, breadcrumbLd } from '../../lib/seo.mjs';
@@ -9,6 +10,8 @@ import { organizationLd, breadcrumbLd } from '../../lib/seo.mjs';
  */
 export default function about(ctx) {
   const { site, disclaimers } = ctx;
+  const dataEmail = site.publisher.email;
+  const rightsEmail = privacyEmail();
 
   const body = `
   ${pageHeader({
@@ -17,6 +20,45 @@ export default function about(ctx) {
     lede:
       "FluTrack reads the CDC's weekly respiratory surveillance and translates it into a single, local answer to the question people actually ask: how much flu, RSV and COVID-19 is going around near me — and is it rising or falling?",
   })}
+
+  <section class="section" style="padding-top: 0">
+    <div class="container container--narrow">
+      <div class="card accountability">
+        <h2 style="font-size: var(--step-1)">${icon('shield-check')} Who publishes this, and who is accountable</h2>
+        <dl class="accountability__list">
+          <div><dt>Publisher</dt><dd><strong>${escapeHtml(site.publisher.legalName)}</strong></dd></div>
+          <div><dt>Index method maintained by</dt><dd>The ${escapeHtml(
+            site.publisher.editorRole
+          )} at ${escapeHtml(site.publisher.legalName)}</dd></div>
+          <div><dt>Editorial review</dt><dd>${
+            site.medicallyReviewed
+              ? 'Reviewed by the named qualified reviewer listed on this page'
+              : '<strong>Not medically reviewed.</strong> No clinician reviews this content'
+          }</dd></div>
+          <div><dt>Report a data issue</dt><dd><a href="mailto:${escapeHtml(
+            dataEmail
+          )}?subject=${encodeURIComponent('Data issue')}">${escapeHtml(dataEmail)}</a></dd></div>
+          <div><dt>Corrections &amp; method changes</dt><dd><a href="/changelog/">Recorded at /changelog/</a></dd></div>
+          ${
+            rightsEmail
+              ? `<div><dt>Privacy requests</dt><dd><a href="mailto:${escapeHtml(
+                  rightsEmail
+                )}">${escapeHtml(rightsEmail)}</a></dd></div>`
+              : ''
+          }
+        </dl>
+        <p class="text-secondary" style="margin-top: var(--space-md)">FluTrack is published by ${escapeHtml(
+          site.publisher.legalName
+        )}. The index method is maintained by the ${escapeHtml(
+          site.publisher.editorRole
+        )}. <strong>It is not clinical guidance and is not medically reviewed</strong> — we would only claim otherwise if a named, qualified reviewer were listed here, and none is. Report data issues at <a href="mailto:${escapeHtml(
+          dataEmail
+        )}">${escapeHtml(
+          dataEmail
+        )}</a>; corrections and methodology changes are recorded at <a href="/changelog/">/changelog/</a>.</p>
+      </div>
+    </div>
+  </section>
 
   ${prose(`
     <h2>What FluTrack is</h2>
@@ -33,7 +75,9 @@ export default function about(ctx) {
     <p>Every threat level on FluTrack is traceable back to its inputs. We document exactly which surveillance systems feed the index, and how they are combined, on our <a href="/methodology/">methodology</a> and <a href="/data-sources/">data sources</a> pages. We label whether a reading is live or cached, and we date every figure to the week it represents. We deliberately draw on U.S. Government public-domain sources only, so that anyone can audit, reproduce, or reuse the very same inputs we do.</p>
 
     <h3>Corrections</h3>
-    <p>Surveillance data is revised as later reports arrive, and no translation of it is ever perfect. When an underlying CDC figure is restated, FluTrack's numbers move with it on the next weekly refresh. If we find a mistake in how we have computed or described something, we correct it promptly — and where a change materially alters what a page said, we note the correction rather than quietly editing it away. If something here looks wrong to you, please <a href="/contact/">tell us</a> and we will look into it.</p>
+    <p>Surveillance data is revised as later reports arrive, and no translation of it is ever perfect. When an underlying CDC figure is restated, FluTrack's numbers move with it on the next weekly refresh. If we find a mistake in how we have computed or described something, we correct it promptly — and where a change materially alters what a page said, we record it in our public <a href="/changelog/">corrections and changelog</a> rather than quietly editing it away. Entries there are marked when a correction affected a reading that had already been published. If something here looks wrong to you, please <a href="mailto:${escapeHtml(
+      dataEmail
+    )}?subject=${encodeURIComponent('Data issue')}">tell us</a> and we will look into it.</p>
 
     <h2>Independence from the CDC</h2>
     <p>FluTrack is built entirely on the CDC's public-domain data, but it is an independent project. We have no affiliation, funding relationship, or special access; we read the same open feeds that are available to anyone. Building on government data does not imply that the government endorses this site.</p>

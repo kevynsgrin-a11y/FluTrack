@@ -23,6 +23,18 @@ export function organizationLd() {
     logo: `${site.origin}/assets/icon-512.png`,
     description: site.shortDescription,
   };
+  // The accountable entity behind a health-adjacent site is exactly the signal
+  // consumers of this markup are looking for, so name it rather than leaving
+  // the brand to stand in for a publisher. `parentOrganization`, not
+  // `legalName`: FluTrack is a brand operated BY the LLC, so claiming the LLC
+  // as FluTrack's own registered name would be the wrong relationship.
+  if (site.publisher.legalName && site.publisher.legalName !== site.name) {
+    org.parentOrganization = {
+      '@type': 'Organization',
+      '@id': `${site.origin}/#publisher`,
+      name: site.publisher.legalName,
+    };
+  }
   // The brand and the domain differ (FluTrack vs flufollower.com). Declaring the
   // alternate name lets the two resolve to one entity instead of competing.
   const domain = site.origin.replace(/^https?:\/\//, '').replace(/^www\./, '').split('.')[0];
@@ -57,8 +69,29 @@ export function websiteLd() {
   };
 }
 
-export function datasetLd(weekEnding) {
-  return {
+/**
+ * The Dataset node for the FluTrack Respiratory Threat Level.
+ *
+ * `DataDownload` is emitted ONLY when the bundled artifact is a verified
+ * published snapshot (`kind: 'published'`). The artifact shipped today is
+ * deterministic, clearly-labelled ILLUSTRATIVE sample data that the browser
+ * replaces with a live CDC pull — advertising it as a distribution made stale
+ * demonstration content look like a current public data product, which is the
+ * one claim a health-adjacent dataset must never make loosely. When the
+ * artifact is illustrative the node says so in `description` instead, and the
+ * page labels it the same way, so the HTML and the schema agree.
+ *
+ * @param snapshot the bundled snapshot object (kind, version, generatedAt,
+ *                 weekEnding, temporalCoverage)
+ */
+export function datasetLd(snapshot = {}) {
+  const isPublished = snapshot.kind === 'published';
+  const illustrative =
+    ' The JSON artifact bundled with this page is an illustrative example used for ' +
+    'first paint and offline fallback, not a published data product; the live ' +
+    'reading is fetched from the CDC in the visitor\u2019s browser.';
+
+  const ds = {
     '@context': 'https://schema.org',
     '@type': 'Dataset',
     '@id': `${site.origin}/#dataset`,
@@ -66,7 +99,7 @@ export function datasetLd(weekEnding) {
     description:
       'A unified, state-level respiratory threat level for influenza, RSV and ' +
       'COVID-19, derived from public-domain CDC surveillance systems (NSSP, ' +
-      'NWSS, NREVSS).',
+      'NWSS, NREVSS).' + (isPublished ? '' : illustrative),
     creator: { '@id': ORG_ID },
     publisher: { '@id': ORG_ID },
     // The node is emitted on the home page, so it must describe that URL;
@@ -77,26 +110,36 @@ export function datasetLd(weekEnding) {
     license: 'https://www.usa.gov/government-works',
     isAccessibleForFree: true,
     spatialCoverage: { '@type': 'Place', name: 'United States' },
-    // A real, fetchable distribution exists — advertise it.
-    distribution: [
-      {
-        '@type': 'DataDownload',
-        encodingFormat: 'application/json',
-        contentUrl: `${site.origin}/data/snapshot.json`,
-      },
-    ],
     variableMeasured: [
       { '@type': 'PropertyValue', name: 'Wastewater viral activity level (WVAL)' },
       { '@type': 'PropertyValue', name: 'Acute respiratory illness activity level' },
       { '@type': 'PropertyValue', name: 'Emergency department visits for respiratory illness' },
       { '@type': 'PropertyValue', name: 'Laboratory test positivity' },
     ],
-    ...(weekEnding ? { dateModified: weekEnding } : {}),
     keywords: ['influenza', 'RSV', 'COVID-19', 'respiratory illness', 'CDC', 'wastewater'],
-    // temporalCoverage intentionally omitted: the dataset reflects whatever CDC
-    // has most recently published, so a fixed/forward-dated window would overstate
-    // what is actually available.
   };
+
+  // Provenance fields, all sourced from the artifact itself rather than from
+  // build time — a forward-dated or rebuild-tracking value would overstate how
+  // current the served reading is.
+  if (snapshot.generatedAt) ds.dateModified = snapshot.generatedAt;
+  else if (snapshot.weekEnding) ds.dateModified = snapshot.weekEnding;
+  if (snapshot.temporalCoverage) ds.temporalCoverage = snapshot.temporalCoverage;
+  if (snapshot.version) ds.version = snapshot.version;
+
+  if (isPublished) {
+    ds.distribution = [
+      {
+        '@type': 'DataDownload',
+        name: 'FluTrack state threat-level snapshot (JSON)',
+        encodingFormat: 'application/json',
+        contentUrl: `${site.origin}/data/snapshot.json`,
+        ...(snapshot.generatedAt ? { dateModified: snapshot.generatedAt } : {}),
+      },
+    ];
+  }
+
+  return ds;
 }
 
 export function breadcrumbLd(crumbs) {

@@ -8,7 +8,7 @@
 // ===========================================================================
 
 import { escapeHtml, formatPct, formatChange, formatDate, trendGlyph } from './util.js';
-import { SEVERITY_LABELS, levelLabel } from './threat-index.js';
+import { SEVERITY_LABELS, levelLabel, SIGNAL_WEIGHTS } from './threat-index.js';
 
 const PATHOGEN_META = {
   influenza: { name: 'Influenza (Flu)', short: 'Flu' },
@@ -94,6 +94,162 @@ export function provenanceStrip(provenance = {}) {
     <span>Updated weekly</span>
     <span class="prov__sep" aria-hidden="true">·</span>
     ${badge}
+  </div>`;
+}
+
+const SIGNAL_META = {
+  wastewater: { name: 'Wastewater viral activity', system: 'NWSS' },
+  ari: { name: 'Acute Respiratory Illness activity level', system: 'NSSP ARI' },
+  edVisits: { name: 'Emergency-department visits', system: 'NSSP' },
+  positivity: { name: 'Laboratory test positivity', system: 'NREVSS' },
+};
+
+// The NSSP emergency-department dataset the ED figures come from. Linking the
+// state's own rows lets a reader check our arithmetic against the source, which
+// is the only claim to authority a derived index can honestly make.
+const NSSP_ED_DATASET = 'vutn-jzwm';
+
+/** Signed difference between the last two points of a series, or null. */
+function weekOverWeek(series) {
+  const clean = (series || []).filter((n) => Number.isFinite(n));
+  if (clean.length < 2) return null;
+  const latest = clean[clean.length - 1];
+  const prior = clean[clean.length - 2];
+  return { latest, prior, delta: Math.round((latest - prior) * 100) / 100 };
+}
+
+/**
+ * Per-state evidence: only fields that can be read straight off this state's
+ * own signal bundle.
+ *
+ * Every one of these is verifiable against the snapshot or the CDC source, and
+ * every one differs between states — which is the point. The prose elsewhere on
+ * a state page is necessarily similar across 51 routes; this block is where the
+ * page earns the claim that it is about THIS state. It contains no advice, no
+ * seasonal filler, and no forecast, and it links out to the single canonical
+ * explainer at /methodology/ rather than restating the method 51 times.
+ */
+export function stateEvidence(state, model, signals = {}, opts = {}) {
+  const weekEnding = opts.weekEnding || signals.weekEnding || '';
+  const contributors = Array.isArray(model?.contributors) ? model.contributors : [];
+  const all = Object.keys(SIGNAL_META);
+
+  if (!contributors.length) {
+    return `<div class="card evidence">
+      <h2 style="font-size: var(--step-1)">What we can verify for ${escapeHtml(state.name)}</h2>
+      <p class="text-secondary">The CDC published none of the four surveillance signals for ${escapeHtml(
+        state.name
+      )} for this week, so there is nothing here we can show a source for. See <a href="/methodology/">how the index works</a>.</p>
+    </div>`;
+  }
+
+  const present = all.filter((k) => contributors.includes(k));
+  const missing = all.filter((k) => !contributors.includes(k));
+  const wow = weekOverWeek(signals.edCombinedSeries);
+
+  const rows = [];
+
+  rows.push({
+    term: 'Source coverage',
+    value: `<strong>${present.length} of ${all.length}</strong> CDC signals reported: ${present
+      .map((k) => escapeHtml(SIGNAL_META[k].name))
+      .join(', ')}.${
+      missing.length
+        ? ` Not reported this week: ${missing.map((k) => escapeHtml(SIGNAL_META[k].name)).join(', ')}.`
+        : ''
+    }`,
+  });
+
+  if (wow) {
+    const dir = wow.delta > 0 ? 'up' : wow.delta < 0 ? 'down' : 'unchanged';
+    rows.push({
+      term: 'Week over week',
+      value:
+        wow.delta === 0
+          ? `Emergency-department visits for respiratory illness held at <strong>${formatPct(
+              wow.latest
+            )}</strong> of visits.`
+          : `Emergency-department visits for respiratory illness went ${dir} <strong>${Math.abs(
+              wow.delta
+            ).toFixed(2)} points</strong>, from ${formatPct(wow.prior)} to <strong>${formatPct(
+              wow.latest
+            )}</strong> of visits.`,
+    });
+  }
+
+  if (weekEnding) {
+    rows.push({
+      term: 'Last reliable week',
+      value: `Week ending <strong>${escapeHtml(
+        formatDate(weekEnding)
+      )}</strong>. CDC surveillance for a week typically firms up one to two weeks after it, so more recent days are not yet represented.`,
+    });
+  }
+
+  rows.push({
+    term: 'Check the source',
+    value: `<a href="https://data.cdc.gov/resource/${NSSP_ED_DATASET}.json?geography=${encodeURIComponent(
+      state.name
+    )}" rel="noopener nofollow">${escapeHtml(
+      state.name
+    )}'s own rows in the CDC NSSP dataset ↗</a> — the emergency-department figures above come from these records.`,
+  });
+
+  const items = rows
+    .map(
+      (r) => `<div><dt>${escapeHtml(r.term)}</dt><dd>${r.value}</dd></div>`
+    )
+    .join('');
+
+  return `<div class="card evidence">
+    <h2 style="font-size: var(--step-1)">What we can verify for ${escapeHtml(state.name)}</h2>
+    <dl class="evidence__list">${items}</dl>
+    <p class="text-secondary evidence__note">${methodNote(state, contributors)} <a href="/methodology/">How the index works →</a></p>
+  </div>`;
+}
+
+/**
+ * One method-aware sentence about what this particular state's signal mix means
+ * for the reading — never about what the reader should do.
+ */
+function methodNote(state, contributors) {
+  const hasWastewater = contributors.includes('wastewater');
+  const weight = SIGNAL_WEIGHTS.wastewater;
+  if (hasWastewater) {
+    return `Wastewater carries the highest weight in this index (${weight}) and is present for ${escapeHtml(
+      state.name
+    )}, so this reading leans on the signal that typically moves five to seven days ahead of clinical reporting.`;
+  }
+  return `Wastewater — the earliest-moving signal and the most heavily weighted (${weight}) — was not reported for ${escapeHtml(
+    state.name
+  )} this week, so the weights are renormalized over the remaining signals and this reading reflects clinical reporting, which lags infection.`;
+}
+
+/**
+ * The freshness boundary for cached / offline views.
+ *
+ * A service worker that serves a page offline is a feature; a page that looks
+ * identical whether it is live or three weeks stale is a hazard on a
+ * respiratory signal. This states the boundary in as many words, names the
+ * snapshot actually on screen, and offers a way back to the network.
+ *
+ * Rendered by both the build (the offline page, where the timestamp is the
+ * snapshot that shipped) and the browser (when the device drops offline).
+ *
+ * @param opts { weekEnding, retry } — retry adds the visible refresh control.
+ */
+export function cachedNotice({ weekEnding, retry = true } = {}) {
+  const stamp = weekEnding ? formatDate(weekEnding) : 'not recorded';
+  return `<div class="callout callout--warn cache-notice" role="status">
+    <p class="callout__title">Cached data — may not be current</p>
+    <p>You are viewing a cached FluTrack page. Data may not be current. Last verified snapshot: ${escapeHtml(
+      stamp
+    )}. Reconnect and refresh for the latest CDC-derived update.</p>
+    ${
+      retry
+        ? `<div class="cache-notice__actions"><button class="btn btn--secondary" type="button" data-action="retry-refresh">Retry refresh</button></div>`
+        : ''
+    }
   </div>`;
 }
 

@@ -15,7 +15,14 @@
 import { loadSnapshot, fetchLiveSignals, hasSignalData } from './data-sources.js';
 import { computeModel } from './model.js';
 import { nationalSignals } from './aggregate.js';
-import { threatCard, pathogenTiles, signalRows, stateSummary } from './render.js';
+import {
+  threatCard,
+  pathogenTiles,
+  signalRows,
+  stateSummary,
+  stateEvidence,
+  cachedNotice,
+} from './render.js';
 import { states, stateByAbbr } from './states-data.js';
 import { formatDate, formatChange } from './util.js';
 
@@ -79,27 +86,112 @@ async function boot() {
   const ssrMatches = Boolean(ssrWeek) && ssrWeek === store.weekEnding && selection === (pinnedAbbr || readSavedSelection());
   if (!ssrMatches) render(store, selection);
 
-  // --- 2. Apply the live refresh if it produced usable data --------------
-  const live = await livePromise;
+  // --- 2. Wire the offline/cached freshness boundary ---------------------
+  // Wired before the live result settles so a device that is already offline
+  // says so immediately, rather than after the fetch has finished timing out.
+  wireCacheNotice(store, () => selection);
+
+  // --- 3. Apply the live refresh if it produced usable data --------------
+  settleLive(store, await livePromise, selection);
+}
+
+/**
+ * Apply a live result (or the lack of one) to the store and the page.
+ * Shared by the initial load and by the "Retry refresh" control, so the two
+ * paths cannot drift into treating the same response differently.
+ */
+function settleLive(store, live, selection) {
   if (live && live.statesWithData >= LIVE_STATE_FLOOR && isIsoDate(live.weekEnding)) {
     ingestLive(store, live);
     store.provenance = { live: true, sources: live.sources };
     render(store, selection);
+    paintCacheNotice(store);
     announceLive(store, selection, live);
-  } else {
-    // Either the fetch failed, or it succeeded but carried nothing usable
-    // (empty result set, or an upstream schema change that stopped resolving
-    // geographies). Both cases leave sample data on screen, so say so plainly
-    // rather than leaving the badge reading "not loaded yet" forever.
-    if (live) {
-      console.warn(
-        `[FluTrack] live CDC feed returned no usable data (${live.statesWithData} states); keeping sample data`
-      );
-    }
-    store.provenance = { live: false, failed: true };
-    render(store, selection);
-    announceLiveFailure();
+    return true;
   }
+  // Either the fetch failed, or it succeeded but carried nothing usable
+  // (empty result set, or an upstream schema change that stopped resolving
+  // geographies). Both cases leave sample data on screen, so say so plainly
+  // rather than leaving the badge reading "not loaded yet" forever.
+  if (live) {
+    console.warn(
+      `[FluTrack] live CDC feed returned no usable data (${live.statesWithData} states); keeping sample data`
+    );
+  }
+  store.provenance = { live: false, failed: true };
+  render(store, selection);
+  paintCacheNotice(store);
+  announceLiveFailure();
+  return false;
+}
+
+// --- Offline / cached-data boundary --------------------------------------- //
+
+/** `navigator.onLine` is only reliable in the negative — which is the case we
+ *  care about here: false means definitively no network. */
+function isOffline() {
+  return navigator.onLine === false;
+}
+
+/**
+ * Show or clear the freshness boundary. A cached page that looks identical to a
+ * live one is the hazard; naming the snapshot on screen is the fix.
+ */
+function paintCacheNotice(store) {
+  const region = document.querySelector('[data-region="cache-notice"]');
+  if (!region) return;
+  if (!isOffline()) {
+    region.innerHTML = '';
+    return;
+  }
+  // Re-rendering identical markup would steal focus from the retry button a
+  // keyboard user is sitting on.
+  if (region.querySelector('.cache-notice')) return;
+  region.innerHTML = cachedNotice({ weekEnding: store.weekEnding });
+}
+
+/**
+ * Wire the boundary: paint it now, keep it in step with connectivity changes,
+ * and make the visible Retry control actually re-attempt the live pull.
+ */
+function wireCacheNotice(store, getSelection) {
+  const region = document.querySelector('[data-region="cache-notice"]');
+  if (!region) return;
+
+  let retrying = false;
+  const retry = async (btn) => {
+    if (retrying) return;
+    retrying = true;
+    const label = btn ? btn.textContent : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Refreshing…';
+    }
+    try {
+      const live = await fetchLiveSignals().catch(() => null);
+      const ok = settleLive(store, live, getSelection());
+      if (!ok) setStatus('Still offline or unable to reach the CDC feed. Showing cached data.');
+    } finally {
+      retrying = false;
+      if (btn && btn.isConnected) {
+        btn.disabled = false;
+        btn.textContent = label;
+      }
+    }
+  };
+
+  region.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="retry-refresh"]');
+    if (btn) retry(btn);
+  });
+
+  window.addEventListener('offline', () => paintCacheNotice(store));
+  window.addEventListener('online', () => {
+    paintCacheNotice(store);
+    retry(region.querySelector('[data-action="retry-refresh"]'));
+  });
+
+  paintCacheNotice(store);
 }
 
 /** Read the per-state signal bundle inlined by the build, if present. */
@@ -156,6 +248,7 @@ function render(store, abbr) {
     setRegion('threat-card', threatCard(st, empty, { weekEnding: '', provenance: store.provenance }));
     setRegion('pathogen-tiles', pathogenTiles(empty));
     setRegion('signal-rows', signalRows({}));
+    setRegion('state-evidence', stateEvidence(st, empty, {}, { weekEnding: '' }));
     setStatus(`No data available for ${st.isNational ? 'the United States' : st.name}.`);
     return;
   }
@@ -166,8 +259,10 @@ function render(store, abbr) {
   setRegion('pathogen-tiles', pathogenTiles(model));
   setRegion('signal-rows', signalRows(signals));
   // Keep the prose in step with the numbers — stale data-derived text sitting
-  // under a freshly-updated card is worse than no prose at all.
+  // under a freshly-updated card is worse than no prose at all. The evidence
+  // block cites concrete figures, so it is the last thing that may lag.
   setRegion('state-summary', stateSummary(st, model, signals));
+  setRegion('state-evidence', stateEvidence(st, model, signals, { weekEnding: store.weekEnding }));
 
   // Home-only regions.
   setText('state-name', st.isNational ? 'the U.S.' : st.name);
@@ -214,9 +309,21 @@ function repaintMap(store, selectedAbbr) {
 }
 
 // Announce a picker-driven change to assistive tech via the polite live region.
+//
+// While offline the reading is qualified rather than stated bare. A cached page
+// can hold a weeks-old level, and announcing "Very High, rising" from stale
+// data is indistinguishable from a live severity alert — which is the one thing
+// a respiratory tracker must never fake.
+//
+// INVARIANT: no severity may be announced as current while offline. This is the
+// only in-page path that states one today; any future escalation notice must
+// carry the same isOffline() guard. Covered by test/offline-boundary.test.mjs.
 function announceSelection(st, model) {
-  setStatus(`${st.isNational ? 'United States' : st.name}: ${model.label}, ${model.trend.label}.`);
+  const where = st.isNational ? 'United States' : st.name;
+  const suffix = isOffline() ? ' (cached data — may not be current).' : '.';
+  setStatus(`${where}: ${model.label}, ${model.trend.label}${suffix}`);
 }
+
 
 function setStatus(text) {
   const region = document.getElementById('live-status');

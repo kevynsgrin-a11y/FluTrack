@@ -73,6 +73,39 @@ export function signupBand({ compact = false } = {}) {
   </section>`;
 }
 
+/**
+ * A commercial link, with its disclosure attached.
+ *
+ * This is the ONLY sanctioned way to render an affiliate or sponsored link on
+ * FluTrack. The disclosure is emitted immediately before the link, in the same
+ * component, so the two cannot be separated by a later edit — a disclosure that
+ * lives somewhere else on the page is a disclosure a reader can miss. The
+ * wording is fixed here rather than passed in, so every instance says the same
+ * thing. build/check.mjs fails the build on any `rel="sponsored"` link in the
+ * output that is not preceded by this text.
+ *
+ * @param href    destination URL
+ * @param label   the link text
+ * @param rel     defaults to "sponsored nofollow"; pass "nofollow" alone for a
+ *                paid placement that is not a commission link
+ * @param example render a non-navigating sample (used on the disclosure page to
+ *                show readers exactly what to look for)
+ */
+export function affiliateLink({ href, label, rel = 'sponsored nofollow', example = false } = {}) {
+  const action = example
+    ? `<button class="btn btn--secondary affiliate__link" type="button" disabled>${escapeHtml(
+        label
+      )} <span class="muted">(example)</span></button>`
+    : `<a class="btn btn--secondary affiliate__link" href="${escapeHtml(
+        href
+      )}" rel="${escapeHtml(rel)}">${escapeHtml(label)}</a>`;
+
+  return `<div class="affiliate">
+    <p class="affiliate__disclosure">${escapeHtml(disclaimers.affiliate)}</p>
+    ${action}
+  </div>`;
+}
+
 /** A compact "not medical advice / trend not live" callout. */
 export function trendDisclaimer() {
   return `<div class="callout callout--warn" role="note">

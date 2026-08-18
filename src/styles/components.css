@@ -1027,6 +1027,264 @@ main {
 }
 
 /* ---- prefers-contrast: more ------------------------------------------- */
+/* --- Per-state evidence block ------------------------------------------- */
+.evidence__list {
+  display: grid;
+  gap: var(--space-md);
+  margin-block-start: var(--space-md);
+}
+
+.evidence__list > div {
+  padding-block-end: var(--space-md);
+  border-block-end: 1px solid var(--border);
+}
+
+.evidence__list > div:last-child {
+  border-block-end: 0;
+  padding-block-end: 0;
+}
+
+.evidence__list dt {
+  color: var(--text-secondary);
+  font-size: var(--step--1);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.evidence__list dd {
+  margin: 0;
+  margin-block-start: var(--space-2xs);
+  /* Long source URLs and state names must wrap rather than widen the card. */
+  overflow-wrap: break-word;
+}
+
+.evidence__note {
+  margin-block-start: var(--space-lg);
+  padding-block-start: var(--space-md);
+  border-block-start: 1px solid var(--border);
+  font-size: var(--step--1);
+}
+
+/* --- Commercial links --------------------------------------------------- */
+/* The disclosure sits directly above the control and is deliberately NOT muted
+   into invisibility: it has to be readable before the click, which is the whole
+   point of putting it here rather than in a footer. */
+.affiliate {
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  background: var(--surface-2);
+  max-width: 60ch;
+}
+
+.affiliate__disclosure {
+  font-size: var(--step--1);
+  color: var(--text-secondary);
+  margin-block-end: var(--space-md);
+}
+
+.affiliate__link[disabled] {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+/* --- Cached / offline freshness notice ---------------------------------- */
+.cache-notice__actions {
+  margin-block-start: var(--space-md);
+}
+
+/* The notice is injected into a region that is empty in the served HTML, so it
+   must not reserve space or draw a border until it actually has content. */
+[data-region='cache-notice']:empty {
+  display: none;
+}
+
+.cache-notice-slot:not(:empty) {
+  padding-block-start: var(--space-lg);
+}
+
+/* --- Accountability block & changelog ----------------------------------- */
+.accountability__list {
+  display: grid;
+  gap: var(--space-sm);
+  margin-block-start: var(--space-md);
+}
+
+.accountability__list > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2xs) var(--space-sm);
+  align-items: baseline;
+  padding-block-end: var(--space-sm);
+  border-block-end: 1px solid var(--border);
+}
+
+.accountability__list > div:last-child {
+  border-block-end: 0;
+  padding-block-end: 0;
+}
+
+.accountability__list dt {
+  color: var(--text-secondary);
+  font-size: var(--step--1);
+  flex: 0 0 14rem;
+  /* Without this the term refuses to shrink and shoves the value off a phone. */
+  min-width: 0;
+}
+
+.accountability__list dd {
+  margin: 0;
+  min-width: 0;
+}
+
+.changelog {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: var(--space-xl);
+}
+
+.changelog__item {
+  padding-inline-start: var(--space-lg);
+  border-inline-start: 2px solid var(--border-strong);
+}
+
+.changelog__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  align-items: center;
+  color: var(--text-secondary);
+  font-size: var(--step--1);
+}
+
+.changelog__item h3 {
+  font-size: var(--step-1);
+  margin-block-start: var(--space-2xs);
+}
+
+.changelog__item p {
+  margin-block-start: var(--space-2xs);
+  max-width: 70ch;
+}
+
+@media (max-width: 40rem) {
+  .accountability__list dt {
+    flex-basis: 100%;
+  }
+}
+
+/* --- Consent gate ------------------------------------------------------- */
+/* The banner is only ever inserted when a gated vendor is registered AND no
+   decision exists, so most visitors never see it. It is styled as a bottom
+   sheet rather than a modal: it must not trap focus or block the content, since
+   refusing to decide is itself a valid state (everything stays denied). */
+.consent-banner {
+  position: fixed;
+  inset-inline: 0;
+  inset-block-end: 0;
+  z-index: var(--z-banner);
+  background: var(--surface);
+  border-block-start: 1px solid var(--border-strong);
+  box-shadow: 0 -8px 24px rgb(0 0 0 / 12%);
+  padding: var(--space-md);
+  padding-block-end: max(var(--space-md), env(safe-area-inset-bottom));
+}
+
+.consent-banner__inner {
+  max-width: var(--container);
+  margin-inline: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.consent-banner__copy {
+  /* Without this the copy refuses to shrink and pushes the actions off-screen
+     on narrow viewports. */
+  min-width: 0;
+  flex: 1 1 22rem;
+  max-width: 60ch;
+}
+
+.consent-banner__title {
+  font-weight: 600;
+}
+
+.consent-banner__text {
+  color: var(--text-secondary);
+  font-size: var(--step--1);
+  margin-block-start: var(--space-2xs);
+}
+
+/* All three actions share .btn--secondary. Equal prominence between Reject all
+   and Accept all is a requirement, so nothing here may weight one over the
+   other — no ghost variant, no reordering, no size difference. */
+.consent-banner__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.consent-banner__actions .btn {
+  flex: 1 1 auto;
+}
+
+.consent-rows {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.consent-row__control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.consent-row__control input[type='checkbox'] {
+  inline-size: 1.15rem;
+  block-size: 1.15rem;
+  accent-color: var(--brand-500);
+  flex: none;
+}
+
+.consent-row__desc {
+  margin-block-start: var(--space-2xs);
+  margin-inline-start: calc(1.15rem + var(--space-sm));
+  max-width: 68ch;
+}
+
+.consent-actions .btn {
+  flex: 1 1 12rem;
+}
+
+/* A button that reads as a link: used for "withdraw", which must be as easy to
+   find as granting was, but sits in running text. */
+.linklike {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--link, var(--brand-600));
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.linklike:hover {
+  text-decoration-thickness: 2px;
+}
+
+@media (max-width: 40rem) {
+  .consent-banner__actions {
+    inline-size: 100%;
+  }
+  .consent-banner__actions .btn {
+    flex: 1 1 100%;
+  }
+}
+
 /* Users asking for more contrast get stronger boundaries on the elements whose
    edges are deliberately soft at default contrast. */
 @media (prefers-contrast: more) {

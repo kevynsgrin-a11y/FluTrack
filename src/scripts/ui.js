@@ -5,6 +5,32 @@
 
 const root = document.documentElement;
 const STORAGE_KEY = 'flutrack-theme';
+const THEME_COLORS = { light: '#ffffff', dark: '#0c1116' };
+
+/**
+ * Point every <meta name="theme-color"> at one agreed value.
+ *
+ * The page ships two media-scoped tags so first paint matches the OS. Browsers
+ * disagree about which tag wins when more than one matches — Chrome takes the
+ * first match, others the last — so an explicit user choice is applied by
+ * rewriting them ALL, not by appending a third, unscoped tag. Appending was
+ * what left the document carrying two candidate colours whose winner depended
+ * on the browser, so the chrome and the page could disagree.
+ *
+ * @param theme 'light' | 'dark' to pin a colour, or null to restore each tag to
+ *              the colour its own media query means.
+ */
+function setThemeColor(theme) {
+  const metas = document.querySelectorAll('meta[name="theme-color"]');
+  metas.forEach((meta) => {
+    if (theme) {
+      meta.setAttribute('content', THEME_COLORS[theme] || THEME_COLORS.light);
+      return;
+    }
+    const media = meta.getAttribute('media') || '';
+    meta.setAttribute('content', media.includes('dark') ? THEME_COLORS.dark : THEME_COLORS.light);
+  });
+}
 
 function currentTheme() {
   const explicit = root.getAttribute('data-theme');
@@ -21,16 +47,7 @@ function applyTheme(theme) {
   }
   const toggle = document.getElementById('theme-toggle');
   if (toggle) toggle.setAttribute('aria-pressed', String(theme === 'dark'));
-  // The <meta name="theme-color"> pair is gated on prefers-color-scheme, so a
-  // manual override otherwise left the browser chrome matching the OS, not the
-  // page. An explicit non-media meta wins over the media-gated ones.
-  let meta = document.querySelector('meta[name="theme-color"]:not([media])');
-  if (!meta) {
-    meta = document.createElement('meta');
-    meta.setAttribute('name', 'theme-color');
-    document.head.appendChild(meta);
-  }
-  meta.setAttribute('content', theme === 'dark' ? '#0c1116' : '#ffffff');
+  setThemeColor(theme);
 }
 
 /** Drop the stored override and fall back to the OS preference. */
@@ -41,6 +58,9 @@ function clearThemeOverride() {
   } catch (e) {
     /* ignore */
   }
+  // Hand the media-scoped tags back their own colours, or the chrome would stay
+  // pinned to the override the visitor just cleared.
+  setThemeColor(null);
 }
 
 function storedTheme() {

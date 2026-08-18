@@ -121,6 +121,109 @@ for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_header
   scan(dist);
 }
 
+// --- Release gate: checks that block a deploy ---------------------------- //
+// These encode invariants the site cannot ship without. Each one exists because
+// the failure it catches is invisible in a passing build: a sponsored link that
+// lost its disclosure still renders, a security directive that got dropped from
+// the CSP still serves, an unlabelled icon button still looks fine.
+
+// Every commercial link ships with its disclosure attached. The shared
+// component in build/lib/partials.mjs emits the two together; separating them
+// is the failure this catches.
+{
+  const DISCLOSURE = 'FluTrack may earn a commission if you buy through this link';
+  const SPONSORED = /<a\b[^>]*\brel="[^"]*\bsponsored\b[^"]*"[^>]*>/g;
+  for (const file of htmlFiles) {
+    const html = readFileSync(file, 'utf8');
+    let m;
+    while ((m = SPONSORED.exec(html)) !== null) {
+      // The component puts the disclosure a few hundred characters ahead of the
+      // anchor; anything further away is not "immediately before" the link.
+      const preceding = html.slice(Math.max(0, m.index - 600), m.index);
+      if (!preceding.includes(DISCLOSURE)) {
+        errors.push(
+          `${file.replace(dist, '')}: a rel="sponsored" link has no affiliate disclosure immediately before it`
+        );
+      }
+    }
+  }
+}
+
+// Every <meta name="theme-color"> must be media-scoped. An unscoped duplicate
+// is what made the resolved colour depend on whether the browser takes the
+// first or the last matching tag; the explicit user override is applied by
+// rewriting the scoped tags, never by appending another one.
+{
+  for (const file of htmlFiles) {
+    const html = readFileSync(file, 'utf8');
+    const tags = html.match(/<meta name="theme-color"[^>]*>/g) || [];
+    const unscoped = tags.filter((t) => !/\bmedia=/.test(t));
+    if (unscoped.length) {
+      errors.push(
+        `${file.replace(dist, '')}: ${unscoped.length} <meta name="theme-color"> tag(s) without a media attribute`
+      );
+    }
+  }
+}
+
+// Security directives that must be present in _headers. Losing one is a silent
+// downgrade — the site still serves, just less safely.
+{
+  const headersPath = join(dist, '_headers');
+  if (existsSync(headersPath)) {
+    const text = readFileSync(headersPath, 'utf8');
+    const REQUIRED = [
+      "default-src 'self'",
+      "base-uri 'self'",
+      "object-src 'none'",
+      "frame-ancestors 'none'",
+      "form-action 'self'",
+      "script-src-attr 'none'",
+      "manifest-src 'self'",
+      "worker-src 'self'",
+      'upgrade-insecure-requests',
+      'report-to csp-endpoint',
+      'Cross-Origin-Opener-Policy: same-origin',
+      'Cross-Origin-Resource-Policy: same-origin',
+      'X-Content-Type-Options: nosniff',
+      'Referrer-Policy: strict-origin-when-cross-origin',
+      'Strict-Transport-Security:',
+      'Reporting-Endpoints:',
+    ];
+    for (const directive of REQUIRED) {
+      if (!text.includes(directive)) errors.push(`_headers: missing required directive "${directive}"`);
+    }
+    // HSTS preload is deliberately absent until a full subdomain inventory
+    // confirms HTTPS everywhere: preloading is effectively irreversible.
+    if (/Strict-Transport-Security:[^\n]*preload/.test(text)) {
+      errors.push('_headers: HSTS carries `preload` — remove it until a subdomain inventory is signed off');
+    }
+    // The CSP names the analytics beacon host the edge injects. Without it the
+    // tag ships on every page and is blocked on every load, so the privacy
+    // policy would describe analytics that never actually run.
+    if (!text.includes('https://static.cloudflareinsights.com')) {
+      errors.push('_headers: CSP does not allow the injected Cloudflare Web Analytics beacon host');
+    }
+  }
+}
+
+// Every interactive control needs an accessible name. An icon-only button with
+// no aria-label is announced as just "button".
+{
+  for (const file of htmlFiles) {
+    const html = readFileSync(file, 'utf8');
+    const buttons = [...html.matchAll(/<button\b([^>]*)>([\s\S]*?)<\/button>/g)];
+    for (const [, attrs, inner] of buttons) {
+      if (/\baria-label=|\baria-labelledby=|\btitle=/.test(attrs)) continue;
+      // Text content with all markup removed — an <svg> alone is not a name.
+      const text = inner.replace(/<[^>]+>/g, '').replace(/&[a-z]+;/gi, ' ').trim();
+      if (!text) {
+        errors.push(`${file.replace(dist, '')}: a <button> has no accessible name`);
+      }
+    }
+  }
+}
+
 // No emitted asset may match more than one Cache-Control rule in _headers.
 // Cloudflare applies every matching rule, so two matches means one file gets two
 // conflicting max-age values and the effective policy is not determinate.

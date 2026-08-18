@@ -1,5 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
-import { hasPublisherEmail } from '../../lib/site.mjs';
+import { hasPublisherEmail, privacyEmail } from '../../lib/site.mjs';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
@@ -20,6 +20,13 @@ export default function privacy(ctx) {
   const contactLink = hasPublisherEmail()
     ? `<a href="mailto:${email}">${email}</a>`
     : '<a href="/contact/">our contact page</a>';
+  // Rights requests get their own published address rather than sharing the
+  // general mailbox: "a precise contact email for access/deletion requests" is
+  // only precise if it is the one advertised for that purpose.
+  const rights = privacyEmail();
+  const rightsLink = rights
+    ? `<a href="mailto:${escapeHtml(rights)}">${escapeHtml(rights)}</a>`
+    : contactLink;
 
   const crumbs = [
     { name: 'Home', path: '/' },
@@ -49,7 +56,9 @@ export default function privacy(ctx) {
     <p>FluTrack is an independent publisher that turns public-domain CDC respiratory surveillance data into a plain-English, state-level threat level for flu, RSV and COVID-19. We are the data controller responsible for the information described in this policy. ${escapeHtml(
       disclaimers.notAffiliated
     )}</p>
-    <p>You can reach us about anything in this policy, including a request to access or delete your information, at ${contactLink}.</p>
+    <p>FluTrack is published by <strong>${escapeHtml(
+    site.publisher.legalName
+  )}</strong>, which is the data controller for the information described in this policy. You can reach us about anything here at ${contactLink}, or send an access or deletion request directly to ${rightsLink}.</p>
 
     <h2>What we collect</h2>
     <p>We collect as little as the site can function on. In practice that falls into three narrow categories.</p>
@@ -58,7 +67,11 @@ export default function privacy(ctx) {
     <p>The only personal information you actively provide is what you submit to the <a href="/alerts/">surge-alert</a> form: your <strong>email address</strong> and the <strong>state</strong> you want alerts for. We use those two fields solely to send the weekly-at-most alert you asked for. We do not require a name, a password, or an account.</p>
 
     <h3>Information collected automatically</h3>
-    <p>Like almost every website, our hosting provider records standard <strong>server logs</strong> when a page is requested — typically your IP address, the time of the request, the page fetched, and your browser's user-agent string. These logs exist for security, abuse prevention, and understanding aggregate traffic. If we enable <strong>analytics</strong>, we use a privacy-respecting service configured to measure visits in aggregate rather than to build a profile of you across sites, and we do not attempt to identify individual visitors from it.</p>
+    <p>Like almost every website, our hosting provider records standard <strong>server logs</strong> when a page is requested — typically your IP address, the time of the request, the page fetched, and your browser's user-agent string. These logs exist for security, abuse prevention, and understanding aggregate traffic.</p>
+
+    <h3>Analytics</h3>
+    <p>We use Cloudflare Web Analytics to measure aggregate site use. It is provided by Cloudflare, Inc. We use it to understand aggregate page performance and visits; it is not used to create cross-site advertising profiles. For its current processing details, see <a href="https://www.cloudflare.com/web-analytics/" rel="noopener nofollow">Cloudflare's privacy documentation</a>. We review this configuration whenever the analytics implementation changes.</p>
+    <p>Two details worth stating plainly, because they are the reason this is not behind a consent prompt: Cloudflare Web Analytics is <strong>cookieless</strong> and <strong>writes nothing to your device</strong>, and we do not attempt to identify individual visitors from it. Every processor we use is listed by legal entity, with its lawful basis and retention, in our <a href="/vendors/">vendor register</a>.</p>
 
     <h3>Approximate location — only when you ask for it</h3>
     <p>The home page offers a “Use my location” button. It does nothing unless you tap it and your browser then grants permission. If you do, your device provides approximate coordinates, which are sent once to the U.S. Federal Communications Commission's public <a href="https://geo.fcc.gov/">Area API geocoder</a> (<code>geo.fcc.gov</code>) purely to resolve which U.S. state you are in. That state is used to pre-select the picker for you and nothing more. <strong>We do not store your coordinates or your resolved location</strong> — the value is discarded as soon as the picker is set. If you never tap the button, no location is ever requested.</p>
@@ -90,9 +103,9 @@ export default function privacy(ctx) {
             <td>A short retention window, then deleted or anonymized</td>
           </tr>
           <tr>
-            <th scope="row">Aggregate analytics (if enabled)</th>
-            <td>To see which pages are useful</td>
-            <td>Kept in aggregate; not tied to your identity</td>
+            <th scope="row">Aggregate analytics (Cloudflare Web Analytics)</th>
+            <td>To see which pages are useful and how they perform</td>
+            <td>Kept in aggregate; not tied to your identity; nothing stored on your device</td>
           </tr>
           <tr>
             <th scope="row">Approximate location</th>
@@ -108,11 +121,15 @@ export default function privacy(ctx) {
     <ul>
       <li><code>flutrack-theme</code> — remembers whether you prefer the light or dark appearance.</li>
       <li><code>flutrack-state</code> — remembers the last state you looked at, so the picker can restore it on your next visit.</li>
+      <li><code>flutrack-consent</code> — written only once you make a choice about non-essential storage, because we cannot honor a decision we do not remember. It records the categories you chose and when.</li>
     </ul>
     <p>Both are conveniences, not trackers. You can clear them at any time through your browser's “clear site data” controls, and the site will simply fall back to its defaults.</p>
 
     <h2>Advertising</h2>
-    <p>FluTrack is free and is intended to be supported in part by advertising. When advertising is enabled, third-party advertising partners that serve ads on the site may set their own cookies or use similar technologies to measure and, in some cases, personalize the ads you see. Where required by law, non-essential advertising and analytics cookies will be gated behind a consent prompt. Those partners operate under their own privacy policies, which we do not control. You can manage or opt out of interest-based advertising from participating companies through the industry choice tools at the <a href="https://optout.aboutads.info/">Digital Advertising Alliance</a>, the <a href="https://optout.networkadvertising.org/">Network Advertising Initiative</a>, and, in Europe, <a href="https://www.youronlinechoices.eu/">Your Online Choices</a>. Most browsers also let you block or delete third-party cookies directly.</p>
+    <p>FluTrack currently serves <strong>no advertising at all</strong>. It is free and is intended to be supported in part by advertising in future, and this section describes the controls that are already in place for when that happens — they are implemented now, not promised.</p>
+    <p><strong>Advertising and analytics storage start in a denied state for every visitor</strong>, not only where a prompt is legally required, and no advertising or analytics tag can load until you have recorded a decision. You can inspect and change that decision at any time on our <a href="/consent/">privacy choices</a> page, where rejecting is offered exactly as prominently as accepting, and withdrawing is as easy as granting. If your browser sends a <strong>Global Privacy Control</strong> signal we treat it as a decision to reject, record it automatically, and never prompt you.</p>
+    <p>When advertising is enabled, third-party advertising partners that serve ads on the site may set their own cookies or use similar technologies to measure and, in some cases, personalize the ads you see — but only after you have allowed it. Those partners operate under their own privacy policies, which we do not control, and each will be named by legal entity in our <a href="/vendors/">vendor register</a> before it is switched on.</p>
+    <p>One limit we place on ourselves regardless of consent: <strong>we do not permit ad targeting based on precise location, alert status, threat level, symptom, diagnosis, pregnancy, age, or inferred vulnerability.</strong> A respiratory data utility must not become a channel for severity-targeted health marketing, and this rule is set out in full in our <a href="/affiliate-disclosure/">advertising disclosure</a>. You can manage or opt out of interest-based advertising from participating companies through the industry choice tools at the <a href="https://optout.aboutads.info/">Digital Advertising Alliance</a>, the <a href="https://optout.networkadvertising.org/">Network Advertising Initiative</a>, and, in Europe, <a href="https://www.youronlinechoices.eu/">Your Online Choices</a>. Most browsers also let you block or delete third-party cookies directly.</p>
 
     <h2>Affiliate links</h2>
     <p>Some pages may contain affiliate links, where we can earn a small commission if you buy something through them, at no extra cost to you. Following such a link may pass standard referral information to the destination merchant, governed by that merchant's own privacy policy. Affiliate revenue never influences the threat levels we report — the index always reflects the CDC's figures alone. We explain these relationships in full on our <a href="/affiliate-disclosure/">affiliate disclosure</a> page.</p>
@@ -122,9 +139,10 @@ export default function privacy(ctx) {
     <ul>
       <li><strong>CDC open data</strong> — the surveillance figures are fetched directly from the CDC's public-domain endpoints on <a href="https://data.cdc.gov/">data.cdc.gov</a> by your own browser. That request goes to the CDC, not through a server of ours that could re-host or reshape it.</li>
       <li><strong>FCC Area API</strong> — used only for the optional “Use my location” lookup described above, and only when you tap it.</li>
-      <li><strong>Our email provider</strong> — surge alerts are delivered through a reputable third-party email service that processes your email address on our behalf, under its own security and privacy commitments, solely to send the messages you requested.</li>
+      <li><strong>Cloudflare, Inc.</strong> — hosts and serves the site, provides its edge security, runs the cookieless Cloudflare Web Analytics described above, and stores surge-alert subscriptions in Workers KV.</li>
+      <li><strong>Resend, Inc.</strong> — the email processor engaged to deliver surge-alert messages. It processes your email address on our behalf, under its own security and privacy commitments, solely to send the messages you requested. <em>No alert email has been sent yet</em>; if you subscribe today your address is held in the subscription store and nothing is dispatched until alerts go live.</li>
     </ul>
-    <p>We describe these providers by role rather than by brand because vendors can change; in every case they are used only for the narrow purpose above and are not permitted to use your information for their own marketing.</p>
+    <p>We name these providers by <strong>legal entity</strong> rather than describing them by role, and keep the full list — with purpose, lawful basis, data categories, retention and deletion route for each — in our <a href="/vendors/">vendor register</a>. That register is generated from the same configuration this policy reads, so the two cannot drift apart. In every case a processor is used only for the narrow purpose stated and is not permitted to use your information for its own marketing. If a processor changes, the register and this policy change together and the change is recorded in our <a href="/changelog/">changelog</a>.</p>
 
     <h2>Surge-alert emails and unsubscribing</h2>
     <p>If you subscribe to surge alerts, we will email you when CDC data shows respiratory activity climbing in your chosen state — at most about once a week, and often less. Every alert email includes a one-click unsubscribe link, and unsubscribing takes effect immediately. You can also ask us to remove you via ${contactLink}. Once you unsubscribe, we delete your email address and state from the alert list.</p>
@@ -133,10 +151,10 @@ export default function privacy(ctx) {
     <p>We keep information only as long as it serves the purpose it was collected for. Subscription details (your email and state) are retained until you unsubscribe. Server logs are kept for a short operational window and then deleted or anonymized. Analytics are retained only in aggregate. Location data from the “Use my location” feature is never retained at all.</p>
 
     <h2>Children's privacy</h2>
-    <p>FluTrack is a general-audience information site and is not directed to children under 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided us an email address through the alert form, contact us at ${contactLink} and we will delete it.</p>
+    <p>FluTrack is a general-audience information site and is not directed to children under 13. We do not knowingly collect personal information from children under 13. If you believe a child has provided us an email address through the alert form, contact us at ${rightsLink} and we will delete it.</p>
 
     <h2>Your privacy rights</h2>
-    <p>Because we hold so little, exercising your rights is simple: contact us via ${contactLink} and tell us what you would like. We will honor requests to <strong>access</strong> the information associated with your email address, to <strong>correct</strong> it, or to <strong>delete</strong> it.</p>
+    <p>Because we hold so little, exercising your rights is simple: email ${rightsLink} and tell us what you would like. We will honor requests to <strong>access</strong> the information associated with your email address, to <strong>correct</strong> it, or to <strong>delete</strong> it. That address is monitored specifically for access and deletion requests, so use it in preference to the general mailbox.</p>
     <p>Depending on where you live, you may have additional rights under laws such as the EU/UK General Data Protection Regulation (GDPR) or the California Consumer Privacy Act (CCPA). In plain terms, that means you can ask us what we hold about you, ask us to delete it, and object to certain uses — and we will not treat you differently for asking. <strong>We do not sell your personal information</strong>, and we do not share it for cross-context behavioral advertising in exchange for payment. Where the GDPR applies, our lawful bases are your consent (for alert emails, which you can withdraw at any time) and our legitimate interest in keeping the site secure and understanding aggregate usage.</p>
 
     <h2>International visitors and data transfers</h2>
@@ -146,14 +164,17 @@ export default function privacy(ctx) {
     <p>We may update this policy as the site evolves or as the law requires. When we do, we will revise the “Last updated” date at the top of this page, and for material changes we will make the update prominent rather than quietly editing it in. Continued use of FluTrack after an update means you accept the revised policy.</p>
 
     <h2>Contact us</h2>
-    <p>Questions, access or deletion requests, and privacy concerns are all welcome at ${contactLink}.</p>
+    <p><strong>Access, correction and deletion requests: ${rightsLink}.</strong> General questions and anything else about this policy: ${contactLink}. Either reaches a real person.</p>
+    <p>FluTrack is published by ${escapeHtml(
+      site.publisher.legalName
+    )}, which is the data controller for the information described here. Who is accountable for the site, and how corrections are recorded, is set out on our <a href="/about/">About page</a>.</p>
 
     <div class="callout callout--warn" role="note">
       <p class="callout__title">${icon('clock')} Not medical advice</p>
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
   `,
-    { updated: 'July 2026' }
+    { updated: 'August 2026' }
   )}
 
   ${signupBand()}
