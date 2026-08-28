@@ -186,6 +186,30 @@ export const processors = [
   },
 ];
 
+/**
+ * The four CDC signals the composite is built from, as one canonical phrase.
+ *
+ * These MUST agree with SIGNAL_WEIGHTS in src/scripts/threat-index.js. Copies of
+ * this list previously drifted across the site: several pages enumerated only
+ * three, silently dropping the Acute Respiratory Illness level (weight 0.25),
+ * so a reader comparing a state page against /methodology/ found the site
+ * disagreeing with itself about what it measures. Both variants live here so a
+ * future signal change is a one-line edit, and build/check.mjs fails the build
+ * if any page enumerates the sources without ARI.
+ *
+ * `withSystems` names the surveillance system behind each signal (use where the
+ * text is about provenance); `plain` is the same list in running prose.
+ */
+export const SIGNALS = {
+  withSystems:
+    'emergency-department visits (NSSP), the Acute Respiratory Illness ' +
+    'activity level (NSSP), wastewater viral activity (NWSS) and laboratory ' +
+    'test positivity (NREVSS)',
+  plain:
+    'emergency-department visits, the Acute Respiratory Illness activity ' +
+    'level, wastewater viral activity and laboratory test positivity',
+};
+
 // The disclaimer text is referenced in many places; keep it centralized so the
 // legal wording stays identical everywhere it appears.
 export const disclaimers = {

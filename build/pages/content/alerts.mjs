@@ -2,6 +2,7 @@ import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
+import { SIGNALS } from '../../lib/site.mjs';
 
 /**
  * /alerts/ — landing page for the free "surge alert" email list (the product's
@@ -63,7 +64,7 @@ export default function alerts(ctx) {
         </div>
         <div class="step">
           <h3>We watch the CDC signals</h3>
-          <p class="text-secondary">Each week we read the CDC's public-domain surveillance — emergency-department visits, lab test positivity and wastewater viral activity — and recompute your state's combined threat level. <a href="/methodology/">See the method →</a></p>
+          <p class="text-secondary">Each week we read the CDC's public-domain surveillance — ${SIGNALS.plain} — and recompute your state's combined threat level. <a href="/methodology/">See the method →</a></p>
         </div>
         <div class="step">
           <h3>You get a heads-up when the trend turns up</h3>

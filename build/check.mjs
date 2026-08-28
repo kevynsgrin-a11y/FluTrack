@@ -10,6 +10,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
+import { decodePng, paintedBounds } from './lib/png.mjs';
 
 const dist = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 const errors = [];
@@ -287,6 +288,117 @@ for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_header
       const extra = [...media].filter((t) => !attr.has(t));
       if (missing.length) errors.push(`dark tokens missing from the media block: ${missing.join(', ')}`);
       if (extra.length) errors.push(`dark tokens only in the media block: ${extra.join(', ')}`);
+    }
+  }
+}
+
+// Emitted images must actually contain their artwork. Nothing in this build
+// ever opened a PNG, which is how six truncated assets — including a favicon
+// with a single painted row — shipped through a green `npm run verify`.
+{
+  const assetsDir = join(dist, 'assets');
+  if (existsSync(assetsDir)) {
+    const pngs = readdirSync(assetsDir).filter((f) => f.endsWith('.png'));
+    if (!pngs.length) errors.push('dist/assets contains no PNGs — did the asset copy run?');
+    for (const name of pngs) {
+      const path = join(assetsDir, name);
+      const bytes = readFileSync(path);
+      let img;
+      try {
+        img = decodePng(bytes);
+      } catch (err) {
+        errors.push(`assets/${name}: not a decodable PNG — ${err.message}`);
+        continue;
+      }
+      const b = paintedBounds(img.rgba, img.width, img.height);
+      // Every source we rasterize paints a full-bleed background, so painted
+      // content must reach the final row. A blank tail is the signature of the
+      // headless-viewport truncation build/lib/rasterize.mjs compensates for.
+      if (b.blankBottomRows > 0) {
+        errors.push(
+          `assets/${name}: ${b.blankBottomRows} blank row(s) at the bottom of a ${img.width}×${img.height} canvas — truncated raster`
+        );
+      }
+      // A canvas that is almost entirely empty is a blank icon, not artwork.
+      const coverage = b.count / (img.width * img.height);
+      if (coverage < 0.25) {
+        errors.push(
+          `assets/${name}: only ${(coverage * 100).toFixed(1)}% of pixels are painted — looks blank`
+        );
+      }
+    }
+
+    // The share card must stay under the ~300 KB thumbnail ceiling some link
+    // preview surfaces (WhatsApp among them) enforce; over it, the rich preview
+    // silently does not render at all.
+    const og = join(assetsDir, 'og-default.png');
+    if (existsSync(og)) {
+      const size = readFileSync(og).length;
+      if (size > 300 * 1024) {
+        errors.push(
+          `assets/og-default.png: ${(size / 1024).toFixed(0)} KB exceeds the 300 KB link-preview ceiling`
+        );
+      }
+    }
+
+    // A maskable icon that is a copy of the standard icon is not maskable: it
+    // keeps its rounded corners and its glyph outside Android's 40% safe
+    // radius, so the OS mask crops the artwork.
+    const std = join(assetsDir, 'icon-512.png');
+    const mask = join(assetsDir, 'icon-maskable-512.png');
+    if (existsSync(std) && existsSync(mask)) {
+      if (readFileSync(std).equals(readFileSync(mask))) {
+        errors.push(
+          'assets/icon-maskable-512.png is byte-identical to icon-512.png — no maskable variant was generated'
+        );
+      }
+      const mi = decodePng(readFileSync(mask));
+      let transparent = 0;
+      for (let p = 0; p < mi.width * mi.height; p += 1) {
+        if (mi.rgba[p * 4 + 3] !== 255) transparent += 1;
+      }
+      if (transparent > 0) {
+        errors.push(
+          `assets/icon-maskable-512.png has ${transparent} non-opaque pixel(s) — a maskable icon must be full-bleed opaque`
+        );
+      }
+    }
+  }
+}
+
+// No page may enumerate the CDC source signals while omitting the Acute
+// Respiratory Illness level. Copies of that list drifted across the site and 54
+// of 69 pages ended up naming three signals while /methodology/ weighted four,
+// so the site contradicted itself about its own inputs. build/lib/site.mjs owns
+// the canonical phrasing; this is the backstop against a fresh hand-written copy.
+{
+  // Match a SOURCE LIST specifically: three signal names strung together by
+  // pure list separators (", ", " and ", an optional "(NSSP)"-style tag). That
+  // deliberately does not match prose reporting measured values — "4.3% of
+  // emergency-department visits were for respiratory illness, wastewater
+  // viral activity was moderate" has verbs between the terms, not separators.
+  const TERM =
+    '(?:emergency[- ]department visits|wastewater viral activity|(?:lab(?:oratory)? )?test positivity)';
+  const SEP = '(?:\\s*\\([A-Z]+\\))?\\s*(?:,\\s*(?:and\\s+)?|and\\s+|&\\s*)';
+  const ENUM = new RegExp(`${TERM}${SEP}${TERM}${SEP}${TERM}`, 'gi');
+  const ARI = /acute[- ]respiratory[- ]illness|\bARI\b/i;
+
+  for (const file of htmlFiles) {
+    const text = readFileSync(file, 'utf8')
+      .replace(/<script[\s\S]*?<\/script>/g, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&[a-z]+;/gi, ' ')
+      .replace(/\s+/g, ' ');
+    for (const m of text.matchAll(ENUM)) {
+      const near = text.slice(Math.max(0, m.index - 110), m.index + m[0].length + 110);
+      if (!ARI.test(near)) {
+        errors.push(
+          `${file.replace(dist, '')}: enumerates the CDC signals without the Acute Respiratory Illness level — "${m[0].slice(
+            0,
+            110
+          )}…"`
+        );
+      }
     }
   }
 }

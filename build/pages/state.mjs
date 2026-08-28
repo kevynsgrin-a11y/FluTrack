@@ -2,6 +2,7 @@ import { escapeHtml, formatDate, formatChange } from '../../src/scripts/util.js'
 import { threatCard, pathogenTiles, signalRows, stateSummary, stateEvidence } from '../../src/scripts/render.js';
 import { signupBand, trendDisclaimer, breadcrumbs } from '../lib/partials.mjs';
 import { breadcrumbLd, statePageLd, faqLd } from '../lib/seo.mjs';
+import { SIGNALS } from '../lib/site.mjs';
 
 /**
  * Build a per-state report page.
@@ -145,13 +146,20 @@ export function statePage(ctx, state) {
  */
 function stateIntro(state, neighbors) {
   const names = neighbors.slice(0, 4).map((s) => s.name);
+  // NOT "nearby states". `neighborsFor` groups by HHS administrative region,
+  // which is not geography: Region 9 puts Hawaii beside Arizona and Nevada, and
+  // Region 10 puts Alaska beside Idaho. Calling those "nearby" asserted
+  // something plainly false on all 51 pages. The region is the honest name for
+  // what the grouping actually is, and it stays true whichever members the
+  // slice happens to keep.
   const neighborText = names.length
-    ? ` You can also compare nearby states such as ${listJoin(names)}.`
+    ? ` You can also compare other states in the same HHS surveillance region, such as ${listJoin(
+        names
+      )}.`
     : '';
   return (
     `FluTrack blends four public CDC surveillance signals for ${state.name} — ` +
-    `emergency-department visits, wastewater viral activity, laboratory test positivity, ` +
-    `and the Acute Respiratory Illness (ARI) activity level — into the single, ` +
+    `${SIGNALS.plain} — into the single, ` +
     `plain-English threat level shown here, refreshed every week.${neighborText}`
   );
 }
@@ -178,7 +186,7 @@ function stateFaqs(state) {
     },
     {
       q: `Where does this ${escapeHtml(state.name)} data come from?`,
-      a: `<p>From the CDC's public-domain surveillance systems — emergency-department visits (NSSP), wastewater viral activity (NWSS) and laboratory test positivity (NREVSS). See our <a href="/methodology/">methodology</a> and <a href="/data-sources/">data sources</a>.</p>`,
+      a: `<p>From the CDC's public-domain surveillance systems — ${SIGNALS.withSystems}. See our <a href="/methodology/">methodology</a> and <a href="/data-sources/">data sources</a>.</p>`,
     },
     {
       q: `How often is the ${escapeHtml(state.name)} threat level updated?`,

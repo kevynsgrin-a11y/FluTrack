@@ -2,6 +2,7 @@ import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
+import { SIGNALS } from '../../lib/site.mjs';
 
 /**
  * /medical-disclaimer/ — the single most important compliance page for a YMYL
@@ -34,7 +35,7 @@ export default function medicalDisclaimer(ctx) {
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
 
-    <p>FluTrack combines the CDC's weekly respiratory surveillance signals — emergency-department visits, laboratory test positivity and wastewater viral activity — into a single 0–4 threat level and a rising-or-falling trend for each state. That number describes how much flu, RSV and COVID-19 activity the CDC's data indicates across a whole population. It is background context for everyday decisions, and nothing on this page, or anywhere on this site, is intended to diagnose, treat, cure, or prevent any illness.</p>
+    <p>FluTrack combines the CDC's weekly respiratory surveillance signals — ${SIGNALS.plain} — into a single 0–4 threat level and a rising-or-falling trend for each state. That number describes how much flu, RSV and COVID-19 activity the CDC's data indicates across a whole population. It is background context for everyday decisions, and nothing on this page, or anywhere on this site, is intended to diagnose, treat, cure, or prevent any illness.</p>
 
     <div class="callout callout--warn" role="note">
       <p class="callout__title">${icon('plus')} In a medical emergency, call 911</p>

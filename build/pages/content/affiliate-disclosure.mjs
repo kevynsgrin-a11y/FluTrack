@@ -2,6 +2,7 @@ import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand, affiliateLink } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
+import { SIGNALS } from '../../lib/site.mjs';
 
 /**
  * /affiliate-disclosure/ — Affiliate & Advertising Disclosure. Required for
@@ -53,7 +54,7 @@ export default function affiliateDisclosure(ctx) {
     <p>Listing a category is not a recommendation that you buy anything in it. FluTrack describes what the CDC's data shows; it does not tell you what to purchase, and the presence of an affiliate link says nothing about whether a product is right for you.</p>
 
     <h2>Advertising and affiliate revenue never influence the data</h2>
-    <p>This is the part that matters most, so we will be unambiguous about it. <strong>No advertiser and no affiliate partner can influence the threat level, the trend, or anything else FluTrack reports about respiratory activity.</strong> The index is computed purely from public-domain CDC surveillance signals — emergency-department visits, laboratory test positivity and wastewater viral activity — using the same published method for every state, regardless of who advertises or which links a page carries.</p>
+    <p>This is the part that matters most, so we will be unambiguous about it. <strong>No advertiser and no affiliate partner can influence the threat level, the trend, or anything else FluTrack reports about respiratory activity.</strong> The index is computed purely from public-domain CDC surveillance signals — ${SIGNALS.plain} — using the same published method for every state, regardless of who advertises or which links a page carries.</p>
     <div class="callout callout--warn" role="note">
       <p class="callout__title">${icon('alert')} The threat level is not for sale</p>
       <p>A state's reading is never sold, sponsored, promoted, or adjusted for any commercial reason. No payment can raise or lower a threat level, feature a state, or change how the data is described. If it could, the number would be worthless — so it cannot.</p>

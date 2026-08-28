@@ -10,18 +10,39 @@ const BRAND = '#0b7285';
 const BRAND_DEEP = '#073f4a';
 const SEV = ['#2f9e63', '#8bc34a', '#f4b400', '#ef6c00', '#c62828'];
 
-/** The FluTrack glyph: a rounded shield with a vitals "pulse" line. */
-export function iconSvg({ size = 512, bg = true } = {}) {
-  const r = size * 0.22;
+/**
+ * The FluTrack glyph: a rounded shield with a vitals "pulse" line.
+ *
+ * @param idns    suffix for this instance's element ids. SVG ids are
+ *                document-global, so when this glyph is inlined into another
+ *                SVG (see ogSvg) an un-suffixed `bg` collides with the host's
+ *                own gradient and `url(#bg)` silently resolves to whichever is
+ *                declared first. Pass a namespace whenever inlining.
+ * @param maskable emit the Android maskable variant: full-bleed square (no
+ *                corner radius, so the OS mask has opaque pixels to cut) with
+ *                the glyph scaled to stay inside the 40%-radius safe zone. The
+ *                default shield's shoulders reach ~43.8% of the canvas from
+ *                centre, which Android crops.
+ */
+export function iconSvg({ size = 512, bg = true, idns = '', maskable = false } = {}) {
+  const r = maskable ? 0 : size * 0.22;
   const pad = size * 0.16;
+  const gid = `bg${idns}`;
+  const c = size / 2;
+  const k = maskable ? 0.86 : 1;
+  const open = maskable
+    ? `<g transform="translate(${c} ${c}) scale(${k}) translate(${-c} ${-c})">`
+    : '';
+  const close = maskable ? '</g>' : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  ${bg ? `<rect width="${size}" height="${size}" rx="${r}" fill="url(#bg)"/>` : ''}
+  ${bg ? `<rect width="${size}" height="${size}" rx="${r}" fill="url(#${gid})"/>` : ''}
   <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="${BRAND}"/>
       <stop offset="1" stop-color="${BRAND_DEEP}"/>
     </linearGradient>
   </defs>
+  ${open}
   <path d="M${size / 2} ${pad}
     L${size - pad} ${pad + size * 0.1}
     L${size - pad} ${size * 0.52}
@@ -36,6 +57,7 @@ export function iconSvg({ size = 512, bg = true } = {}) {
     l${size * 0.07} -${size * 0.14}
     h${size * 0.14}"
     fill="none" stroke="#ffffff" stroke-width="${size * 0.05}" stroke-linecap="round" stroke-linejoin="round"/>
+  ${close}
 </svg>`;
 }
 
@@ -79,7 +101,7 @@ export function ogSvg(site) {
   </defs>
   <rect width="1200" height="630" fill="url(#bg)"/>
   <rect width="1200" height="630" fill="url(#aura)"/>
-  <g transform="translate(72,58)">${iconSvg({ size: 84 }).replace('<svg', '<svg x="0" y="0"')}</g>
+  <g transform="translate(72,58)">${iconSvg({ size: 84, idns: '-mark' }).replace('<svg', '<svg x="0" y="0"')}</g>
   <text x="172" y="112" font-family="${FONT}" font-size="38" font-weight="700" fill="#0b7285">FluTrack</text>
   <text x="72" y="250" font-family="${FONT}" font-size="60" font-weight="800" fill="#141a20">Flu, RSV &amp; COVID-19,</text>
   <text x="72" y="322" font-family="${FONT}" font-size="60" font-weight="800" fill="#141a20">for your state —</text>
