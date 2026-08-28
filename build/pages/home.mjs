@@ -4,6 +4,7 @@ import { usMap } from '../../src/scripts/map-render.js';
 import { icon } from '../../src/scripts/icons.js';
 import { signupBand, trendDisclaimer } from '../lib/partials.mjs';
 import { websiteLd, organizationLd, datasetLd } from '../lib/seo.mjs';
+import { SIGNALS } from '../lib/site.mjs';
 
 export default function home(ctx) {
   const { site, states, national, weekEnding, provenance } = ctx;
@@ -85,7 +86,7 @@ export default function home(ctx) {
       <div class="steps">
         <div class="step">
           <h3>We read the CDC</h3>
-          <p class="text-secondary">Every week we pull the CDC's public-domain surveillance feeds — emergency-department visits, lab positivity and wastewater viral activity.</p>
+          <p class="text-secondary">Every week we pull the CDC's public-domain surveillance feeds — ${SIGNALS.plain}.</p>
         </div>
         <div class="step">
           <h3>We combine the signals</h3>

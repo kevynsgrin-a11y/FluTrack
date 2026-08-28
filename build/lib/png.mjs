@@ -53,6 +53,7 @@ export function decodePng(buf) {
   let pos = 8;
   let ihdr = null;
   let plte = null;
+  let trns = null;
   const idat = [];
   while (pos < buf.length) {
     const len = buf.readUInt32BE(pos);
@@ -68,6 +69,8 @@ export function decodePng(buf) {
       };
     } else if (type === 'PLTE') {
       plte = Buffer.from(data);
+    } else if (type === 'tRNS') {
+      trns = Buffer.from(data);
     } else if (type === 'IDAT') {
       idat.push(data);
     } else if (type === 'IEND') {
@@ -77,13 +80,19 @@ export function decodePng(buf) {
   }
   if (!ihdr) throw new Error('PNG has no IHDR');
   const { width, height, bitDepth, colorType, interlace } = ihdr;
-  if (bitDepth !== 8) throw new Error(`unsupported PNG bit depth ${bitDepth} (need 8)`);
+  if (bitDepth !== 8 && bitDepth !== 16) {
+    throw new Error(`unsupported PNG bit depth ${bitDepth} (need 8 or 16)`);
+  }
   if (interlace !== 0) throw new Error('unsupported interlaced PNG');
   const ch = CHANNELS[colorType];
   if (!ch) throw new Error(`unsupported PNG colour type ${colorType}`);
 
   const raw = inflateSync(Buffer.concat(idat));
-  const stride = width * ch;
+  // Filtering operates on whole pixels, so the filter offset is bytes-per-pixel,
+  // not channels — that distinction is what makes 16-bit decode correctly.
+  const sampleBytes = bitDepth === 16 ? 2 : 1;
+  const bpp = ch * sampleBytes;
+  const stride = width * bpp;
   const expected = height * (stride + 1);
   if (raw.length < expected) {
     throw new Error(`truncated PNG data: got ${raw.length} bytes, need ${expected}`);
@@ -98,9 +107,9 @@ export function decodePng(buf) {
     const cur = lines.subarray(y * stride, (y + 1) * stride);
     src.copy(cur);
     for (let i = 0; i < stride; i += 1) {
-      const a = i >= ch ? cur[i - ch] : 0;
+      const a = i >= bpp ? cur[i - bpp] : 0;
       const b = prev[i];
-      const c = i >= ch ? prev[i - ch] : 0;
+      const c = i >= bpp ? prev[i - bpp] : 0;
       if (ft === 1) cur[i] = (cur[i] + a) & 0xff;
       else if (ft === 2) cur[i] = (cur[i] + b) & 0xff;
       else if (ft === 3) cur[i] = (cur[i] + ((a + b) >> 1)) & 0xff;
@@ -110,27 +119,36 @@ export function decodePng(buf) {
     prev = cur;
   }
 
-  // Normalise to RGBA.
+  // Normalise to RGBA. 16-bit samples are reduced to their high byte, which is
+  // the correct 16->8 narrowing for inspection purposes.
   const rgba = Buffer.alloc(width * height * 4);
   for (let i = 0, px = 0; px < width * height; px += 1) {
-    const s = px * ch;
+    const s = px * bpp;
+    const at = (n) => lines[s + n * sampleBytes];
     let r;
     let g;
     let b;
     let a = 255;
     if (colorType === 3) {
       if (!plte) throw new Error('indexed PNG has no PLTE chunk');
-      const o = lines[s] * 3;
+      const idx = at(0);
+      const o = idx * 3;
+      if (o + 2 >= plte.length) {
+        throw new Error(`indexed PNG references palette entry ${idx} but PLTE holds ${plte.length / 3}`);
+      }
       [r, g, b] = [plte[o], plte[o + 1], plte[o + 2]];
+      // tRNS on an indexed image gives per-entry alpha; entries past its end
+      // are opaque. Ignoring it made transparent artwork decode as opaque.
+      if (trns) a = idx < trns.length ? trns[idx] : 255;
     } else if (colorType === 0) {
-      r = g = b = lines[s];
+      r = g = b = at(0);
     } else if (colorType === 4) {
-      r = g = b = lines[s];
-      a = lines[s + 1];
+      r = g = b = at(0);
+      a = at(1);
     } else if (colorType === 2) {
-      [r, g, b] = [lines[s], lines[s + 1], lines[s + 2]];
+      [r, g, b] = [at(0), at(1), at(2)];
     } else {
-      [r, g, b, a] = [lines[s], lines[s + 1], lines[s + 2], lines[s + 3]];
+      [r, g, b, a] = [at(0), at(1), at(2), at(3)];
     }
     rgba[i] = r;
     rgba[i + 1] = g;
@@ -241,7 +259,7 @@ export function encodePng(rgba, width, height, opts = {}) {
  * OG card is — carries far fewer than 256 perceptually distinct colours, but
  * truecolour PNG still spends 3 bytes a pixel on it. Indexing costs 1.
  */
-function quantize(rgba, width, height, maxColors) {
+function quantize(rgba, width, height, maxColors, reserve = []) {
   const hist = new Map();
   for (let p = 0; p < width * height; p += 1) {
     const s = p * 4;
@@ -255,8 +273,14 @@ function quantize(rgba, width, height, maxColors) {
     count,
   }));
 
+  // Reserved colours get their own palette slots up front. An area-weighted
+  // median cut drops any colour with a small footprint, which silently deleted
+  // the "Very High" severity swatch from the share card's legend in weeks when
+  // no state was at that level — a brand colour disappearing as a function of
+  // the data.
+  const budget = Math.max(2, maxColors - reserve.length);
   let boxes = [entries];
-  while (boxes.length < maxColors) {
+  while (boxes.length < budget) {
     // Split the box with the largest weighted spread; stop when none can split.
     let bi = -1;
     let bestScore = 0;
@@ -299,19 +323,22 @@ function quantize(rgba, width, height, maxColors) {
     boxes.splice(bi, 1, box.slice(0, cut), box.slice(cut));
   }
 
-  const palette = boxes.map((box) => {
-    let n = 0;
-    let r = 0;
-    let g = 0;
-    let b = 0;
-    for (const c of box) {
-      n += c.count;
-      r += c.r * c.count;
-      g += c.g * c.count;
-      b += c.b * c.count;
-    }
-    return [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
-  });
+  const palette = [
+    ...reserve.map((c) => [...c]),
+    ...boxes.map((box) => {
+      let n = 0;
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      for (const c of box) {
+        n += c.count;
+        r += c.r * c.count;
+        g += c.g * c.count;
+        b += c.b * c.count;
+      }
+      return [Math.round(r / n), Math.round(g / n), Math.round(b / n)];
+    }),
+  ];
 
   const nearest = (r, g, b) => {
     let best = 0;
@@ -368,8 +395,8 @@ function quantize(rgba, width, height, maxColors) {
  * Encode RGBA as an indexed (colour type 3) PNG. Alpha is discarded — indexed
  * output here is for fully opaque art only.
  */
-export function encodePngIndexed(rgba, width, height, maxColors = 256) {
-  const { palette, indices } = quantize(rgba, width, height, maxColors);
+export function encodePngIndexed(rgba, width, height, maxColors = 256, reserve = []) {
+  const { palette, indices } = quantize(rgba, width, height, maxColors, reserve);
   const stride = width;
   const out = Buffer.alloc(height * (stride + 1));
   // Filtering an index plane is usually counter-productive (indices are not a
@@ -453,4 +480,84 @@ export function paintedBounds(rgba, width, height) {
     paintedHeight: bottom === -1 ? 0 : bottom + 1,
     blankBottomRows: bottom === -1 ? height : height - 1 - bottom,
   };
+}
+
+/**
+ * Trailing rows that are FLAT — every pixel in the row identical, and identical
+ * to the row below it.
+ *
+ * paintedBounds keys on alpha, so it is structurally blind on an opaque image:
+ * for colour types 0/2/3 every pixel decodes a=255 and blankBottomRows is
+ * always 0. That made the truncation guard vacuous on exactly the two assets
+ * that were made opaque. Real artwork here is a diagonal gradient, so its rows
+ * vary across x; a dead band left by a short capture is uniform, whatever
+ * colour it was flattened to. This measures that instead of alpha.
+ */
+export function flatTrailingRows(rgba, width, height) {
+  const rowFlat = (y) => {
+    const o = y * width * 4;
+    for (let x = 1; x < width; x += 1) {
+      const p = o + x * 4;
+      if (
+        rgba[p] !== rgba[o] ||
+        rgba[p + 1] !== rgba[o + 1] ||
+        rgba[p + 2] !== rgba[o + 2] ||
+        rgba[p + 3] !== rgba[o + 3]
+      ) {
+        return false;
+      }
+    }
+    return true;
+  };
+  // Each candidate row is already flat, so comparing two rows is comparing
+  // their first pixel.
+  const rowsEqual = (y1, y2) => {
+    const a = y1 * width * 4;
+    const b = y2 * width * 4;
+    for (let i = 0; i < 4; i += 1) if (rgba[a + i] !== rgba[b + i]) return false;
+    return true;
+  };
+  let n = 0;
+  for (let y = height - 1; y >= 0; y -= 1) {
+    if (!rowFlat(y)) break;
+    if (n > 0 && !rowsEqual(y, y + 1)) break;
+    n += 1;
+  }
+  return n;
+}
+
+/**
+ * Bounding box of "bright" pixels — the white glyph on a dark icon.
+ * Used to measure a maskable icon's artwork against Android's safe radius.
+ */
+export function brightBounds(rgba, width, height, threshold = 200) {
+  let top = -1;
+  let bottom = -1;
+  let left = width;
+  let right = -1;
+  let maxRadius = 0;
+  const cx = (width - 1) / 2;
+  const cy = (height - 1) / 2;
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const p = (y * width + x) * 4;
+      if (rgba[p + 3] === 0) continue;
+      // Rec. 601 luma is close enough for "is this the white stroke".
+      const lum = 0.299 * rgba[p] + 0.587 * rgba[p + 1] + 0.114 * rgba[p + 2];
+      if (lum >= threshold) {
+        if (top === -1) top = y;
+        bottom = y;
+        if (x < left) left = x;
+        if (x > right) right = x;
+        // Measure over PAINTED pixels. Taking the bounding box's corners
+        // instead over-estimates badly for a non-rectangular glyph: a shield's
+        // bbox corners are empty background, so a compliant icon reads as
+        // ~225px when its farthest actual pixel is ~193px.
+        const d = Math.hypot(x - cx, y - cy);
+        if (d > maxRadius) maxRadius = d;
+      }
+    }
+  }
+  if (right === -1) return null;
+  return { top, bottom, left, right, maxRadius };
 }

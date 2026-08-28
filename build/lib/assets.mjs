@@ -63,6 +63,25 @@ export function iconSvg({ size = 512, bg = true, idns = '', maskable = false } =
 
 const MAP_FILLS = ['#1c6b41', '#467019', '#795e00', '#a04a00', '#9b1c1c'];
 
+/**
+ * Colours that must survive colour quantisation of the OG card exactly: the
+ * five severity steps (they carry meaning, and the legend prints a swatch of
+ * each), plus white for the wordmark and glyph strokes.
+ *
+ * An area-weighted quantiser allocates slots by pixel count, so a severity
+ * colour used by no state that week gets dropped and its legend swatch renders
+ * as a mottled approximation — a brand colour whose fidelity depends on the
+ * data. Reserving the slots removes that coupling.
+ */
+export const OG_RESERVED_COLORS = [
+  ...MAP_FILLS.map((hex) => [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ]),
+  [255, 255, 255],
+];
+
 /** Deterministic plausible severity per state for static art (summer-ish skew). */
 function ogLevel(abbr) {
   let h = 0;

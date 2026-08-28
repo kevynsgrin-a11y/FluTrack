@@ -10,7 +10,7 @@ import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
-import { decodePng, paintedBounds } from './lib/png.mjs';
+import { decodePng, paintedBounds, flatTrailingRows, brightBounds } from './lib/png.mjs';
 
 const dist = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 const errors = [];
@@ -297,71 +297,136 @@ for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_header
 // with a single painted row — shipped through a green `npm run verify`.
 {
   const assetsDir = join(dist, 'assets');
-  if (existsSync(assetsDir)) {
-    const pngs = readdirSync(assetsDir).filter((f) => f.endsWith('.png'));
-    if (!pngs.length) errors.push('dist/assets contains no PNGs — did the asset copy run?');
-    for (const name of pngs) {
-      const path = join(assetsDir, name);
-      const bytes = readFileSync(path);
-      let img;
-      try {
-        img = decodePng(bytes);
-      } catch (err) {
-        errors.push(`assets/${name}: not a decodable PNG — ${err.message}`);
-        continue;
-      }
-      const b = paintedBounds(img.rgba, img.width, img.height);
-      // Every source we rasterize paints a full-bleed background, so painted
-      // content must reach the final row. A blank tail is the signature of the
-      // headless-viewport truncation build/lib/rasterize.mjs compensates for.
-      if (b.blankBottomRows > 0) {
-        errors.push(
-          `assets/${name}: ${b.blankBottomRows} blank row(s) at the bottom of a ${img.width}×${img.height} canvas — truncated raster`
-        );
-      }
-      // A canvas that is almost entirely empty is a blank icon, not artwork.
-      const coverage = b.count / (img.width * img.height);
-      if (coverage < 0.25) {
-        errors.push(
-          `assets/${name}: only ${(coverage * 100).toFixed(1)}% of pixels are painted — looks blank`
-        );
-      }
+
+  // Scoped DELIBERATELY to the assets build/lib/rasterize.mjs generates. These
+  // guards encode properties of that pipeline (full-bleed background, exact
+  // canvas, opaque where required) which are NOT true of images in general — a
+  // logo with transparent margins or a diagram would fail them for no reason,
+  // and a guard that blocks legitimate work gets deleted rather than fixed.
+  const GENERATED = {
+    'favicon-32.png': { w: 32, h: 32 },
+    'apple-touch-icon.png': { w: 180, h: 180 },
+    'icon-192.png': { w: 192, h: 192 },
+    'icon-512.png': { w: 512, h: 512 },
+    'icon-maskable-512.png': { w: 512, h: 512, opaque: true },
+    'og-default.png': { w: 1200, h: 630, opaque: true, maxBytes: 300 * 1024 },
+  };
+
+  const decoded = new Map();
+  for (const [name, spec] of Object.entries(GENERATED)) {
+    const path = join(assetsDir, name);
+    if (!existsSync(path)) {
+      errors.push(`assets/${name}: missing — the rasterizer output was not copied into dist`);
+      continue;
+    }
+    const bytes = readFileSync(path);
+    let img;
+    try {
+      img = decodePng(bytes);
+    } catch (err) {
+      // Never let a decode failure escape: an uncaught throw here would abort
+      // the whole script and swallow every error accumulated so far.
+      errors.push(`assets/${name}: not a decodable PNG — ${err.message}`);
+      continue;
+    }
+    decoded.set(name, img);
+
+    if (img.width !== spec.w || img.height !== spec.h) {
+      errors.push(
+        `assets/${name}: expected a ${spec.w}×${spec.h} canvas, got ${img.width}×${img.height}`
+      );
+    }
+    if (spec.maxBytes && bytes.length > spec.maxBytes) {
+      errors.push(
+        `assets/${name}: ${(bytes.length / 1024).toFixed(0)} KB exceeds the ${(
+          spec.maxBytes / 1024
+        ).toFixed(0)} KB link-preview ceiling`
+      );
     }
 
-    // The share card must stay under the ~300 KB thumbnail ceiling some link
-    // preview surfaces (WhatsApp among them) enforce; over it, the rich preview
-    // silently does not render at all.
-    const og = join(assetsDir, 'og-default.png');
-    if (existsSync(og)) {
-      const size = readFileSync(og).length;
-      if (size > 300 * 1024) {
-        errors.push(
-          `assets/og-default.png: ${(size / 1024).toFixed(0)} KB exceeds the 300 KB link-preview ceiling`
-        );
-      }
+    // Truncation. Two complementary measures, because neither alone covers
+    // both encodings: alpha-based for images that have alpha, flat-row-based
+    // for opaque ones (where every pixel decodes a=255 and the alpha measure
+    // is structurally incapable of firing).
+    const b = paintedBounds(img.rgba, img.width, img.height);
+    if (b.blankBottomRows > 0) {
+      errors.push(
+        `assets/${name}: ${b.blankBottomRows} transparent row(s) at the bottom of a ${img.width}×${img.height} canvas — truncated raster`
+      );
+    }
+    const flat = flatTrailingRows(img.rgba, img.width, img.height);
+    if (flat > 8) {
+      errors.push(
+        `assets/${name}: ${flat} uniform row(s) at the bottom — the artwork does not reach the canvas edge (truncated raster)`
+      );
+    }
+    if (b.count === 0) {
+      errors.push(`assets/${name}: no pixels are painted at all — blank asset`);
     }
 
-    // A maskable icon that is a copy of the standard icon is not maskable: it
-    // keeps its rounded corners and its glyph outside Android's 40% safe
-    // radius, so the OS mask crops the artwork.
-    const std = join(assetsDir, 'icon-512.png');
-    const mask = join(assetsDir, 'icon-maskable-512.png');
-    if (existsSync(std) && existsSync(mask)) {
-      if (readFileSync(std).equals(readFileSync(mask))) {
-        errors.push(
-          'assets/icon-maskable-512.png is byte-identical to icon-512.png — no maskable variant was generated'
-        );
-      }
-      const mi = decodePng(readFileSync(mask));
+    if (spec.opaque) {
       let transparent = 0;
-      for (let p = 0; p < mi.width * mi.height; p += 1) {
-        if (mi.rgba[p * 4 + 3] !== 255) transparent += 1;
+      for (let p = 0; p < img.width * img.height; p += 1) {
+        if (img.rgba[p * 4 + 3] !== 255) transparent += 1;
       }
       if (transparent > 0) {
         errors.push(
-          `assets/icon-maskable-512.png has ${transparent} non-opaque pixel(s) — a maskable icon must be full-bleed opaque`
+          `assets/${name}: ${transparent} non-opaque pixel(s) — this asset must be full-bleed opaque`
         );
       }
+    }
+  }
+
+  // A maskable icon that is a copy of the standard icon is not maskable.
+  const std = join(assetsDir, 'icon-512.png');
+  const mask = join(assetsDir, 'icon-maskable-512.png');
+  if (existsSync(std) && existsSync(mask) && readFileSync(std).equals(readFileSync(mask))) {
+    errors.push(
+      'assets/icon-maskable-512.png is byte-identical to icon-512.png — no maskable variant was generated'
+    );
+  }
+
+  // Measure the property that actually matters for a maskable icon, rather
+  // than inferring it from the file differing: Android guarantees only a
+  // centred circle of 40% radius is visible, so the artwork must fit inside it.
+  const mi = decoded.get('icon-maskable-512.png');
+  if (mi) {
+    const g = brightBounds(mi.rgba, mi.width, mi.height);
+    if (!g) {
+      errors.push('assets/icon-maskable-512.png: no glyph found — the icon looks empty');
+    } else {
+      const safe = 0.4 * mi.width;
+      if (g.maxRadius > safe) {
+        errors.push(
+          `assets/icon-maskable-512.png: glyph reaches ${g.maxRadius.toFixed(1)}px from centre, outside Android's ${safe.toFixed(1)}px maskable safe radius — the OS mask will crop it`
+        );
+      }
+    }
+  }
+
+  // The share card's brand mark sits at translate(72,58) at 84x84. Both OG
+  // rendering defects this pipeline had (an unscoped svg{} rule inflating the
+  // nested mark to full canvas, and a duplicate gradient id filling it with the
+  // pale page background) leave that box empty of brand-dark pixels while
+  // changing neither file size nor row coverage — so nothing else here sees
+  // them. Assert the mark is actually present and dark.
+  const og = decoded.get('og-default.png');
+  if (og) {
+    let dark = 0;
+    for (let y = 58; y < 142; y += 1) {
+      for (let x = 72; x < 156; x += 1) {
+        const p = (y * og.width + x) * 4;
+        const lum = 0.299 * og.rgba[p] + 0.587 * og.rgba[p + 1] + 0.114 * og.rgba[p + 2];
+        if (lum < 140) dark += 1;
+      }
+    }
+    const frac = dark / (84 * 84);
+    if (frac < 0.35) {
+      errors.push(
+        `assets/og-default.png: the brand mark at (72,58)–(156,142) is only ${(frac * 100).toFixed(
+          1
+        )}% brand-dark — the nested mark is missing or filled with the page gradient`
+      );
     }
   }
 }
@@ -372,16 +437,32 @@ for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_header
 // so the site contradicted itself about its own inputs. build/lib/site.mjs owns
 // the canonical phrasing; this is the backstop against a fresh hand-written copy.
 {
-  // Match a SOURCE LIST specifically: three signal names strung together by
-  // pure list separators (", ", " and ", an optional "(NSSP)"-style tag). That
-  // deliberately does not match prose reporting measured values — "4.3% of
-  // emergency-department visits were for respiratory illness, wastewater
-  // viral activity was moderate" has verbs between the terms, not separators.
+  // Match a SOURCE LIST: three signal names strung together by list separators.
+  // This deliberately does NOT match prose reporting measured values —
+  // "4.3% of emergency-department visits were for respiratory illness,
+  // wastewater viral activity was moderate" has verbs between the terms.
+  //
+  // The term alternation is deliberately wider than the phrasings that were
+  // fixed. An earlier version required the literal word "test" before
+  // "positivity", which meant the live home-page copy ("lab positivity") sailed
+  // straight through: the guard had been fitted to the strings that were
+  // removed rather than to the invariant.
   const TERM =
-    '(?:emergency[- ]department visits|wastewater viral activity|(?:lab(?:oratory)? )?test positivity)';
-  const SEP = '(?:\\s*\\([A-Z]+\\))?\\s*(?:,\\s*(?:and\\s+)?|and\\s+|&\\s*)';
+    '(?:(?:emergency[- ]department|ED|ER)\\s+visits' +
+    '|wastewater(?:\\s+viral)?\\s+(?:activity|concentrations?)' +
+    '|(?:lab(?:oratory)?\\s+)?(?:test\\s+)?positivity)';
+  // Separators only: commas, "and", ampersands, dashes, bullets, semicolons,
+  // and "(NSSP)"-style tags. Markup between list items becomes whitespace after
+  // tag-stripping, so allow that too — a hand-written <ul> is at least as
+  // likely as prose.
+  const SEP = '(?:\\s*\\([A-Z]+\\))?\\s*(?:[,;]|and|&|—|–|\\||•)+\\s*(?:and\\s+)?';
   const ENUM = new RegExp(`${TERM}${SEP}${TERM}${SEP}${TERM}`, 'gi');
-  const ARI = /acute[- ]respiratory[- ]illness|\bARI\b/i;
+  const ARI = /acute[- ]respiratory[- ]illness|\bARI\b|activity (?:level|label)/i;
+  // render.js legitimately emits "This reading is based on 3 of the four CDC
+  // signals — ..." when a state genuinely did not report one. That sentence is
+  // TRUE and must not fail the build; it is self-labelling, so key on the
+  // label rather than trying to infer intent.
+  const PARTIAL = /\b(?:all four|\d+ of the four)\s+CDC signals\b/i;
 
   for (const file of htmlFiles) {
     const text = readFileSync(file, 'utf8')
@@ -389,9 +470,13 @@ for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_header
       .replace(/<[^>]+>/g, ' ')
       .replace(/&[a-z]+;/gi, ' ')
       .replace(/\s+/g, ' ');
-    for (const m of text.matchAll(ENUM)) {
-      const near = text.slice(Math.max(0, m.index - 110), m.index + m[0].length + 110);
-      if (!ARI.test(near)) {
+    // Sentence scope, not a character window: a ±110-char window both let a
+    // stray "ARI" elsewhere on the page mask a genuinely wrong list, and failed
+    // a correct one whose qualifier sat just outside the window.
+    for (const sentence of text.split(/(?<=[.!?])\s+/)) {
+      if (ARI.test(sentence) || PARTIAL.test(sentence)) continue;
+      const m = sentence.match(ENUM);
+      if (m) {
         errors.push(
           `${file.replace(dist, '')}: enumerates the CDC signals without the Acute Respiratory Illness level — "${m[0].slice(
             0,

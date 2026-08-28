@@ -2,6 +2,7 @@ import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, signupBand, breadcrumbs } from '../../lib/partials.mjs';
 import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
+import { SIGNALS } from '../../lib/site.mjs';
 
 /**
  * /faq/ — a comprehensive, plain-English FAQ.
@@ -113,7 +114,7 @@ function faqGroups(disclaimers) {
         },
         {
           q: 'How is the threat level calculated?',
-          a: `<p>Four public-domain CDC signals — wastewater viral activity, emergency-department visits, an acute-respiratory-illness activity label, and laboratory test positivity — are each scored from 0 to 100, blended by fixed weights into one composite score, and mapped to one of five levels. A separate rule compares the latest week against the prior few to set the trend. Every weight, threshold and cut point is published on our <a href="/methodology/">methodology</a> page, so the calculation can be checked rather than taken on faith.</p>`,
+          a: `<p>Four public-domain CDC signals — ${SIGNALS.plain} — are each scored from 0 to 100, blended by fixed weights into one composite score, and mapped to one of five levels. A separate rule compares the latest week against the prior few to set the trend. Every weight, threshold and cut point is published on our <a href="/methodology/">methodology</a> page, so the calculation can be checked rather than taken on faith.</p>`,
         },
         {
           q: 'How do surge alerts work?',
@@ -132,7 +133,7 @@ function faqGroups(disclaimers) {
         },
         {
           q: "Why don't you show exact case counts?",
-          a: `<p>Because a precise, real-time case count does not exist in this data. Modern respiratory surveillance measures activity through proxies — the share of ER visits, test positivity, wastewater concentrations — rather than a confirmed tally of every infection, and each figure carries a reporting lag and later revisions. A single hard number would imply a precision the data cannot support, so FluTrack reports a directional level and trend instead. ${escapeHtml(
+          a: `<p>Because a precise, real-time case count does not exist in this data. Modern respiratory surveillance measures activity through proxies — the share of ER visits, test positivity, wastewater concentrations and categorical activity levels — rather than a confirmed tally of every infection, and each figure carries a reporting lag and later revisions. A single hard number would imply a precision the data cannot support, so FluTrack reports a directional level and trend instead. ${escapeHtml(
             disclaimers.trendNotLive
           )}</p>`,
         },

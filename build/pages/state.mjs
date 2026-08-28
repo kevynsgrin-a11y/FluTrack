@@ -97,7 +97,7 @@ export function statePage(ctx, state) {
             <a class="btn btn--primary btn--block" href="/alerts/?state=${escapeHtml(state.abbr)}">Set up surge alerts</a>
           </div>
           <div class="card">
-            <h2 style="font-size: var(--step-1)">Nearby states</h2>
+            <h2 style="font-size: var(--step-1)">Same HHS surveillance region</h2>
             <div class="state-index" style="grid-template-columns: 1fr; margin-top: var(--space-sm)">
               ${others.map((s) => ctx.render.stateChip(s, ctx.models.get(s.abbr).model)).join('')}
             </div>

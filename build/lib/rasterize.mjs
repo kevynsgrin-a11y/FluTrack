@@ -27,7 +27,7 @@ import { execFileSync } from 'node:child_process';
 import { writeFileSync, readFileSync, mkdirSync, readdirSync, rmSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
-import { iconSvg, ogSvg } from './assets.mjs';
+import { iconSvg, ogSvg, OG_RESERVED_COLORS } from './assets.mjs';
 import { site } from './site.mjs';
 import { decodePng, encodePng, encodePngIndexed, cropTop, paintedBounds } from './png.mjs';
 
@@ -99,7 +99,7 @@ body>svg{display:block;width:${w}px;height:${h}px}</style>${sized}`;
  *               OG card is never composited over a page, so its alpha is pure
  *               weight (and was hiding the truncation band).
  */
-function render(chrome, svg, w, h, outName, { opaque = false, indexed = false } = {}) {
+function render(chrome, svg, w, h, outName, { opaque = false, indexed = false, reserve = [] } = {}) {
   mkdirSync(tmp, { recursive: true });
   const htmlPath = join(tmp, `${outName}.html`);
   writeFileSync(htmlPath, htmlFor(svg, w, h));
@@ -140,7 +140,7 @@ function render(chrome, svg, w, h, outName, { opaque = false, indexed = false } 
   if (indexed) {
     // Flat vector art indexes far smaller than truecolour. Keep whichever
     // actually wins rather than assuming.
-    const alt = encodePngIndexed(rgba, w, h, 256);
+    const alt = encodePngIndexed(rgba, w, h, 256, reserve);
     if (alt.length < png.length) {
       png = alt;
       mode = 'indexed';
@@ -173,7 +173,11 @@ function main() {
   // Indexed: the card must stay under the ~300 KB link-preview thumbnail
   // ceiling that WhatsApp and some other share surfaces enforce, or it silently
   // degrades to no rich preview at all.
-  render(chrome, ogSvg(site), 1200, 630, 'og-default.png', { opaque: true, indexed: true });
+  render(chrome, ogSvg(site), 1200, 630, 'og-default.png', {
+    opaque: true,
+    indexed: true,
+    reserve: OG_RESERVED_COLORS,
+  });
 
   rmSync(tmp, { recursive: true, force: true });
   console.log('✓ Rasterized icons + OG card → src/assets/');
