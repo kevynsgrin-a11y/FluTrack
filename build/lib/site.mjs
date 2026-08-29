@@ -66,7 +66,7 @@ export const site = {
   // The CDC data cadence, surfaced in the UI to set expectations honestly.
   dataCadence: 'Weekly (CDC surveillance systems publish on Fridays)',
   // Content/legal-page revision date (for sitemap <lastmod>). Bump when copy changes.
-  contentUpdated: '2026-08-18',
+  contentUpdated: '2026-08-29',
   // First-publication date for the state reports. Fixed on purpose: JSON-LD
   // datePublished must not move with the CDC data week, or every rebuild claims
   // the pages are newly published rather than newly updated.
@@ -80,15 +80,6 @@ export const site = {
 };
 
 /**
- * True only when a real, routable publisher mailbox is configured.
- * RFC-2606 reserved TLDs (.example / .invalid / .test / .localhost) never resolve.
- *
- * This started life as a guard against shipping `hello@flutrack.example`. The
- * addresses are real now, but the guard stays: it is what stops a future config
- * edit from quietly publishing a dead contact route on a health site, and
- * build/check.mjs fails the build on any reserved-TLD address in the output.
- */
-/**
  * The publisher's postal address as a single line, for prose and for the
  * CAN-SPAM footer of any commercial email. Returns null when not configured, so
  * nothing ever renders a half-built address.
@@ -99,6 +90,15 @@ export function postalAddressLine() {
   return `${a.street}, ${a.locality}, ${a.region} ${a.postalCode}`;
 }
 
+/**
+ * True only when a real, routable publisher mailbox is configured.
+ * RFC-2606 reserved TLDs (.example / .invalid / .test / .localhost) never resolve.
+ *
+ * This started life as a guard against shipping `hello@flutrack.example`. The
+ * addresses are real now, but the guard stays: it is what stops a future config
+ * edit from quietly publishing a dead contact route on a health site, and
+ * build/check.mjs fails the build on any reserved-TLD address in the output.
+ */
 export function hasPublisherEmail() {
   const e = site.publisher.email;
   return Boolean(e) && !/\.(example|invalid|test|localhost)$/i.test(e);

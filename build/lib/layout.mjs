@@ -42,6 +42,7 @@ const FOOTER = {
     ['/data-sources/', 'Data sources'],
     ['/methodology/', 'Methodology'],
     ['/changelog/', 'Corrections & changelog'],
+    ['/editorial-policy/', 'Editorial policy'],
     ['https://data.cdc.gov/', 'CDC Open Data ↗'],
   ],
   Company: [
