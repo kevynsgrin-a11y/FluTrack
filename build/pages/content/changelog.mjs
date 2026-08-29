@@ -17,6 +17,22 @@ import { site, privacyEmail } from '../../lib/site.mjs';
  */
 const ENTRIES = [
   {
+    date: '2026-08-29',
+    kind: 'Accountability',
+    title: 'Corrected the publisher’s registered legal name, and published its address',
+    body:
+      'The publisher was recorded here as “Oak & Main LLC”. That is not the entity’s registered legal name: the publisher is Oak and Main Developers LLC, a California limited liability company. Every page that names the publisher now carries the correct name, and the registered mailing address is published on /about/, /contact/ and /privacy/ and in the site’s structured data. The 2026-08-18 entry below is left as written, because this record is append-only and that entry is an accurate account of what the site said at the time. Publishing a verifiable address also removes the obstacle to any commercial email: the law requires a valid physical postal address in one, and until now there was none to give.',
+    affectsReadings: false,
+  },
+  {
+    date: '2026-08-29',
+    kind: 'Privacy',
+    title: 'Set out the California privacy position explicitly',
+    body:
+      'The policy previously referred to the CCPA in passing, alongside the GDPR, without stating this site’s position under it. FluTrack is published from California, so the policy now names the single category of personal information collected (an email address and a chosen state, only if you submit the alert form), states plainly that it has never been sold or shared for cross-context behavioral advertising, describes how a request is verified and how long a response takes, and records that Global Privacy Control is honored automatically. The governing-law clause in the Terms of Use, previously left as “the state in which FluTrack is operated”, now names California.',
+    affectsReadings: false,
+  },
+  {
     date: '2026-08-28',
     kind: 'Correction',
     title: 'Pages disagreed with the methodology about which signals are measured',

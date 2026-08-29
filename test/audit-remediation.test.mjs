@@ -8,7 +8,14 @@ import { cachedNotice, stateEvidence } from '../src/scripts/render.js';
 import { computeModel } from '../src/scripts/model.js';
 import { datasetLd } from '../build/lib/seo.mjs';
 import { affiliateLink } from '../build/lib/partials.mjs';
-import { processors, privacyEmail, hasPublisherEmail, site, disclaimers } from '../build/lib/site.mjs';
+import {
+  processors,
+  privacyEmail,
+  hasPublisherEmail,
+  postalAddressLine,
+  site,
+  disclaimers,
+} from '../build/lib/site.mjs';
 
 // ---------------------------------------------------------------------------
 // Regression cover for the portfolio-audit remediation (findings 8–17).
@@ -195,12 +202,44 @@ test('the deployed analytics provider is in the register', () => {
 });
 
 test('the publisher is an accountable entity with live contact routes', () => {
-  assert.equal(site.publisher.legalName, 'Oak & Main LLC');
+  // Assert the invariant, not the literal name: a legal entity distinct from
+  // the brand must be configured. Pinning the exact string made a legitimate
+  // correction of the registered name look like a regression.
+  assert.ok(site.publisher.legalName, 'a legal entity must be named');
+  assert.notEqual(
+    site.publisher.legalName,
+    site.name,
+    'the legal entity must be distinct from the brand'
+  );
   assert.ok(hasPublisherEmail(), 'the publisher mailbox must be routable');
   assert.equal(privacyEmail(), 'privacy@flufollower.com');
   for (const addr of [site.publisher.email, site.publisher.privacyEmail, site.publisher.securityEmail]) {
     assert.doesNotMatch(addr, /\.(example|invalid|test|localhost)$/i);
   }
+});
+
+test('the publisher address is complete or absent — never half-built', () => {
+  // A partial address is worse than none: it looks like a real one. Either
+  // every component is present and postalAddressLine() renders, or nothing is
+  // published at all.
+  const a = site.publisher.address;
+  const line = postalAddressLine();
+  if (line) {
+    for (const part of ['street', 'locality', 'region', 'postalCode', 'country']) {
+      assert.ok(a && a[part], `address.${part} must be set when an address is published`);
+    }
+    assert.ok(line.includes(a.street) && line.includes(a.postalCode));
+  } else {
+    assert.ok(!a || !a.street, 'no address line should render from a configured street');
+  }
+});
+
+test('CAN-SPAM prerequisites hold for any commercial email', () => {
+  // Commercial email requires a valid physical postal address. Without one the
+  // surge-alert programme cannot carry promotional content at all, so this is a
+  // hard precondition rather than a nicety.
+  assert.ok(postalAddressLine(), 'a postal address is required before any commercial email is sent');
+  assert.ok(site.publisher.jurisdiction, 'an operating jurisdiction must be recorded');
 });
 
 test('the site never claims medical review it does not have', () => {

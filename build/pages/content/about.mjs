@@ -1,5 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
-import { privacyEmail } from '../../lib/site.mjs';
+import { privacyEmail, postalAddressLine } from '../../lib/site.mjs';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { organizationLd, breadcrumbLd } from '../../lib/seo.mjs';
@@ -27,6 +27,13 @@ export default function about(ctx) {
         <h2 style="font-size: var(--step-1)">${icon('shield-check')} Who publishes this, and who is accountable</h2>
         <dl class="accountability__list">
           <div><dt>Publisher</dt><dd><strong>${escapeHtml(site.publisher.legalName)}</strong></dd></div>
+          ${
+            postalAddressLine()
+              ? `<div><dt>Registered address</dt><dd>${escapeHtml(
+                  postalAddressLine()
+                )}, United States</dd></div>`
+              : ''
+          }
           <div><dt>Index method maintained by</dt><dd>The ${escapeHtml(
             site.publisher.editorRole
           )} at ${escapeHtml(site.publisher.legalName)}</dd></div>

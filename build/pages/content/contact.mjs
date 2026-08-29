@@ -1,5 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
-import { hasPublisherEmail } from '../../lib/site.mjs';
+import { hasPublisherEmail, postalAddressLine } from '../../lib/site.mjs';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd, organizationLd } from '../../lib/seo.mjs';
@@ -78,6 +78,15 @@ export default function contact(ctx) {
       <div class="grid-2" style="margin-top: var(--space-xl)">
       ${routeCards}
       </div>
+      ${
+        postalAddressLine()
+          ? `<p class="text-secondary" style="margin-top: var(--space-xl)">Postal mail reaches ${escapeHtml(
+              site.publisher.legalName
+            )} at <strong>${escapeHtml(
+              postalAddressLine()
+            )}, United States</strong>. Email is far faster for anything time-sensitive, including corrections.</p>`
+          : ''
+      }
     </div>
   </section>
 

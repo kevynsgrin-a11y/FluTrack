@@ -33,6 +33,21 @@ export function organizationLd() {
       '@type': 'Organization',
       '@id': `${site.origin}/#publisher`,
       name: site.publisher.legalName,
+      // A locatable registered entity is the E-E-A-T signal a health-adjacent
+      // publisher is actually assessed on. Emitted only when every component is
+      // configured, so a partial address is never published.
+      ...(site.publisher.address && site.publisher.address.street
+        ? {
+            address: {
+              '@type': 'PostalAddress',
+              streetAddress: site.publisher.address.street,
+              addressLocality: site.publisher.address.locality,
+              addressRegion: site.publisher.address.region,
+              postalCode: site.publisher.address.postalCode,
+              addressCountry: site.publisher.address.country,
+            },
+          }
+        : {}),
     };
   }
   // The brand and the domain differ (FluTrack vs flufollower.com). Declaring the

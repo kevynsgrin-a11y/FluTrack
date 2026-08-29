@@ -26,7 +26,24 @@ export const site = {
   // /about/ accountability block and in the Organization JSON-LD.
   publisher: {
     name: 'FluTrack',
-    legalName: 'Oak & Main LLC',
+    // The registered entity that answers for this content. Previously recorded
+    // here as "Oak & Main LLC", which is not the entity's legal name.
+    legalName: 'Oak and Main Developers LLC',
+    // A verifiable postal address is not decoration on a health-adjacent,
+    // ad-supported site. It is what makes the publisher a real, locatable
+    // entity for an E-E-A-T assessment, and CAN-SPAM requires a valid physical
+    // address in any commercial email — so the surge-alert programme could not
+    // carry promotional content at all until this existed.
+    address: {
+      street: '2108 N St.',
+      locality: 'Sacramento',
+      region: 'CA',
+      postalCode: '95816',
+      country: 'US',
+    },
+    // Operating jurisdiction, used for the governing-law clause in /terms/ and
+    // for the California-specific privacy rights in /privacy/.
+    jurisdiction: 'California',
     // A named ROLE, deliberately not an individual. It must stay reachable:
     // whoever holds it answers mail at `email` below.
     editorRole: 'responsible editor',
@@ -71,6 +88,17 @@ export const site = {
  * edit from quietly publishing a dead contact route on a health site, and
  * build/check.mjs fails the build on any reserved-TLD address in the output.
  */
+/**
+ * The publisher's postal address as a single line, for prose and for the
+ * CAN-SPAM footer of any commercial email. Returns null when not configured, so
+ * nothing ever renders a half-built address.
+ */
+export function postalAddressLine() {
+  const a = site.publisher.address;
+  if (!a || !a.street || !a.locality || !a.region || !a.postalCode) return null;
+  return `${a.street}, ${a.locality}, ${a.region} ${a.postalCode}`;
+}
+
 export function hasPublisherEmail() {
   const e = site.publisher.email;
   return Boolean(e) && !/\.(example|invalid|test|localhost)$/i.test(e);

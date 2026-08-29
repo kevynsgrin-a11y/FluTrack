@@ -2,7 +2,7 @@ import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
-import { SIGNALS } from '../../lib/site.mjs';
+import { SIGNALS, postalAddressLine } from '../../lib/site.mjs';
 
 /**
  * /alerts/ — landing page for the free "surge alert" email list (the product's
@@ -85,6 +85,16 @@ export default function alerts(ctx) {
 
     <h2>Your email, and nothing more</h2>
     <p>Signing up asks for exactly two things — your email address and the state you want to watch — and we use them for exactly one purpose: sending your surge alerts. We do not sell or share your address, and every email carries a one-click unsubscribe, so you can leave the list at any time. The full detail lives in our <a href="/privacy/">Privacy Policy</a>.</p>
+
+    <h2>What every alert email carries</h2>
+    <p>An alert is sent because you asked for it, and each one identifies who sent it and how to stop it. Every email includes the sender's name and registered postal address, a one-click unsubscribe that we honor promptly and without asking why, and a link back to the state page the alert refers to so you can check the underlying figures yourself.${
+      postalAddressLine()
+        ? ` The postal address that appears in that footer is ${escapeHtml(
+            postalAddressLine()
+          )}, United States.`
+        : ''
+    }</p>
+    <p>Unsubscribing removes your address from the list entirely rather than merely pausing it. If you would prefer it also erased from our records, ask and we will delete it — see <a href="/privacy/">the privacy policy</a>.</p>
 
     <h2>Independent, not official</h2>
     <p>Surge alerts are built entirely on the CDC's open, public-domain data, but FluTrack is an independent project with no affiliation, funding relationship, or special access.</p>

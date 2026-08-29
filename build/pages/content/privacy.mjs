@@ -1,5 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
-import { hasPublisherEmail, privacyEmail } from '../../lib/site.mjs';
+import { hasPublisherEmail, privacyEmail, postalAddressLine } from '../../lib/site.mjs';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
@@ -58,7 +58,11 @@ export default function privacy(ctx) {
     )}</p>
     <p>FluTrack is published by <strong>${escapeHtml(
     site.publisher.legalName
-  )}</strong>, which is the data controller for the information described in this policy. You can reach us about anything here at ${contactLink}, or send an access or deletion request directly to ${rightsLink}.</p>
+  )}</strong>, which is the data controller for the information described in this policy.${
+    postalAddressLine()
+      ? ` Our registered mailing address is ${escapeHtml(postalAddressLine())}, United States.`
+      : ''
+  } You can reach us about anything here at ${contactLink}, or send an access or deletion request directly to ${rightsLink}.</p>
 
     <h2>What we collect</h2>
     <p>We collect as little as the site can function on. In practice that falls into three narrow categories.</p>
@@ -155,7 +159,22 @@ export default function privacy(ctx) {
 
     <h2>Your privacy rights</h2>
     <p>Because we hold so little, exercising your rights is simple: email ${rightsLink} and tell us what you would like. We will honor requests to <strong>access</strong> the information associated with your email address, to <strong>correct</strong> it, or to <strong>delete</strong> it. That address is monitored specifically for access and deletion requests, so use it in preference to the general mailbox.</p>
-    <p>Depending on where you live, you may have additional rights under laws such as the EU/UK General Data Protection Regulation (GDPR) or the California Consumer Privacy Act (CCPA). In plain terms, that means you can ask us what we hold about you, ask us to delete it, and object to certain uses — and we will not treat you differently for asking. <strong>We do not sell your personal information</strong>, and we do not share it for cross-context behavioral advertising in exchange for payment. Where the GDPR applies, our lawful bases are your consent (for alert emails, which you can withdraw at any time) and our legitimate interest in keeping the site secure and understanding aggregate usage.</p>
+    <p>Depending on where you live, you may have additional rights under laws such as the EU/UK General Data Protection Regulation (GDPR) or the California Consumer Privacy Act as amended by the California Privacy Rights Act (CCPA/CPRA). In plain terms, that means you can ask us what we hold about you, ask us to delete it, and object to certain uses — and we will not treat you differently for asking. <strong>We do not sell your personal information</strong>, and we do not share it for cross-context behavioral advertising in exchange for payment. Where the GDPR applies, our lawful bases are your consent (for alert emails, which you can withdraw at any time) and our legitimate interest in keeping the site secure and understanding aggregate usage.</p>
+
+    <h3>California residents</h3>
+    <p>FluTrack is published from ${escapeHtml(
+      site.publisher.jurisdiction
+    )}, so this section sets out the CCPA/CPRA position explicitly rather than by reference. In the preceding twelve months we have collected one category of personal information as that term is defined by the CCPA: <strong>identifiers</strong> — specifically an email address, and the state you choose, only if you submit the surge-alert form. We collect it directly from you, for the sole purpose of sending the alerts you asked for, and we retain it until you unsubscribe or ask us to delete it.</p>
+    <ul>
+      <li><strong>We have not sold personal information, and we do not sell it.</strong> We have never sold or shared personal information of any consumer, including anyone under 16.</li>
+      <li><strong>We do not share personal information for cross-context behavioral advertising.</strong></li>
+      <li><strong>We do not use or disclose sensitive personal information</strong> for any purpose that would trigger a right to limit its use. We do not collect any.</li>
+      <li>You may exercise your rights to know, access, correct, delete, and opt out by emailing ${rightsLink}. You may use an authorized agent; we will ask for proof of authorization.</li>
+      <li>We verify a request by confirming control of the email address the request concerns, which is the only identifier we hold. We aim to respond within 45 days.</li>
+      <li><strong>We will not discriminate against you</strong> for exercising any of these rights. The site is free, and nothing about it changes if you ask us to delete your information.</li>
+      <li>We honor Global Privacy Control as a valid opt-out signal. It is respected automatically, with no action needed from you — see <a href="/consent/">your privacy choices</a>.</li>
+    </ul>
+    <p>If you are a California resident and we deny a request, you may appeal by replying to our response; we will explain the decision in writing. You may also contact the California Privacy Protection Agency or the California Attorney General.</p>
 
     <h2>International visitors and data transfers</h2>
     <p>FluTrack covers U.S. respiratory surveillance and is operated from, and hosted in, the United States. If you access the site from outside the United States, the limited information described here — for example, an email address you submit for alerts — will be processed in the United States, which may have different data-protection rules than your home country. By using the site or subscribing to alerts, you understand that this transfer takes place.</p>
