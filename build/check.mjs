@@ -428,6 +428,38 @@ for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_header
         )}% brand-dark — the nested mark is missing or filled with the page gradient`
       );
     }
+
+    // The cartogram must not encode severity. It once coloured each state by a
+    // hash of its own abbreviation, under a real-looking legend — fabricated
+    // per-state health data on the site's most-distributed asset, seen stripped
+    // of every disclaimer. The site has no real per-state data at build time,
+    // so the tiles carry a uniform brand tint and claim only coverage. Any
+    // severity-ramp colour appearing in the map area means that regressed.
+    const SEVERITY = [
+      [28, 107, 65],
+      [70, 112, 25],
+      [121, 94, 0],
+      [160, 74, 0],
+      [155, 28, 28],
+    ];
+    let severityPixels = 0;
+    for (let y = 0; y < og.height; y += 1) {
+      for (let x = 660; x < og.width; x += 1) {
+        const p = (y * og.width + x) * 4;
+        for (const [r, g, b] of SEVERITY) {
+          const d = Math.abs(og.rgba[p] - r) + Math.abs(og.rgba[p + 1] - g) + Math.abs(og.rgba[p + 2] - b);
+          if (d <= 12) {
+            severityPixels += 1;
+            break;
+          }
+        }
+      }
+    }
+    if (severityPixels > 200) {
+      errors.push(
+        `assets/og-default.png: ${severityPixels} severity-ramp pixel(s) in the map area — the share card appears to encode per-state severity, which would be fabricated data`
+      );
+    }
   }
 }
 

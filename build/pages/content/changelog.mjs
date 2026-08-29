@@ -17,6 +17,38 @@ import { site, privacyEmail } from '../../lib/site.mjs';
  */
 const ENTRIES = [
   {
+    date: '2026-08-28',
+    kind: 'Correction',
+    title: 'Pages disagreed with the methodology about which signals are measured',
+    body:
+      'The state-page FAQ, /alerts/, /medical-disclaimer/, /affiliate-disclosure/ and the home page each named three CDC surveillance signals and omitted the Acute Respiratory Illness activity level, which carries a weight of 0.25 — while /methodology/ and /data-sources/ correctly documented four. Across the site 54 of 69 pages contradicted the published method about what the index actually measures. The wording now comes from one shared definition, and the build fails if any page enumerates the sources without the ARI level. No reading was computed incorrectly: the scoring model always used four signals. What was wrong was the description of it.',
+    affectsReadings: false,
+  },
+  {
+    date: '2026-08-28',
+    kind: 'Correction',
+    title: '“Nearby states” named states that are not nearby',
+    body:
+      'Every state page offered a list headed “Nearby states”, built by grouping states that share an HHS administrative region. HHS regions are administrative, not geographic, so California was told it could compare with Hawaii, Alaska with Idaho, and genuine bordering states such as Oregon were left out. The heading and the sentence now say what the grouping actually is — the HHS surveillance region — which is true whichever members are shown.',
+    affectsReadings: false,
+  },
+  {
+    date: '2026-08-28',
+    kind: 'Correction',
+    title: 'The social share card showed invented per-state severity',
+    body:
+      'The image used for link previews coloured each state on its map by a hash of that state’s own abbreviation, beneath a “Minimal → Very High” legend and with no indication the colours were not data. Anyone who saw FluTrack shared on social media saw fabricated severity for their state, with the site’s disclaimers stripped away by the preview. The map on that card now carries a single brand colour and claims only which places FluTrack covers and what scale it reports. The build fails if any severity colour reappears in the map area.',
+    affectsReadings: false,
+  },
+  {
+    date: '2026-08-28',
+    kind: 'Interface',
+    title: 'Every icon was cropped, and the favicon was blank',
+    body:
+      'The tool that renders the site’s icons and share card asked the browser for a window of a given size, but the browser reserved part of that height for its own interface, so each image was captured taller than it was drawn and lost its bottom rows. The favicon was reduced to a single painted row — an empty browser tab — and the app icons, home-screen icon and share card were all cut off. The renderer now measures that reservation rather than assuming it, and the build fails on any icon whose artwork does not reach the edge of its canvas. The Android home-screen icon, which had been an exact copy of the standard icon and was cropped by the system, is now a proper full-bleed variant.',
+    affectsReadings: false,
+  },
+  {
     date: '2026-08-18',
     kind: 'Privacy',
     title: 'Named the analytics provider and every processor by legal entity',

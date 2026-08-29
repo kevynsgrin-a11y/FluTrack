@@ -22,6 +22,17 @@ jobs:
       - name: Build site
         run: node build/build.mjs
 
+      # The release gate runs here too, not only in CI. Deploying was previously
+      # build-only, so the checks that block a bad release — dead links, missing
+      # SEO tags, a dropped security header, an affiliate link that lost its
+      # disclosure, a truncated icon — gated the CI run but not the thing that
+      # actually publishes.
+      - name: QA — links, assets, SEO tags
+        run: node build/check.mjs
+
+      - name: Unit + integration tests
+        run: node --test test/*.test.mjs
+
       - name: Deploy to Cloudflare Pages
         run: npx wrangler pages deploy dist --project-name=flufollower
         env:
