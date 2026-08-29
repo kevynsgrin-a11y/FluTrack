@@ -242,9 +242,9 @@ export function cachedNotice({ weekEnding, retry = true } = {}) {
   const stamp = weekEnding ? formatDate(weekEnding) : 'not recorded';
   return `<div class="callout callout--warn cache-notice" role="status">
     <p class="callout__title">Cached data — may not be current</p>
-    <p>You are viewing a cached FluTrack page. Data may not be current. Last verified snapshot: ${escapeHtml(
+    <p>You are viewing a cached FluTrack page, so the reading shown may be the bundled sample data rather than a live CDC figure, and may not be current. Snapshot bundled with this page: ${escapeHtml(
       stamp
-    )}. Reconnect and refresh for the latest CDC-derived update.</p>
+    )}. Reconnect and refresh to load the latest CDC-derived update.</p>
     ${
       retry
         ? `<div class="cache-notice__actions"><button class="btn btn--secondary" type="button" data-action="retry-refresh">Retry refresh</button></div>`

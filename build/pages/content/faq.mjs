@@ -55,7 +55,7 @@ export default function faq(ctx) {
   <section class="section" style="padding-top: 0">
     <div class="container container--narrow">
       ${breadcrumbs(crumbs)}
-      <p class="muted">Last updated: July 2026</p>
+      <p class="muted">Last updated: August 2026</p>
       <p class="text-secondary">For the full computation behind every rating, see our
       <a href="/methodology/">methodology</a>; for each dataset that feeds it, see our
       <a href="/data-sources/">data sources</a>. Everything below describes what the surveillance
@@ -118,7 +118,7 @@ function faqGroups(disclaimers) {
         },
         {
           q: 'How do surge alerts work?',
-          a: `<p>A surge alert is an optional email that flags when CDC data shows respiratory activity climbing in a state you follow. You pick a state, and FluTrack emails you when the trend for that state turns upward — at most about once a week, and never more often than the data warrants. You can set one up on the <a href="/alerts/">surge alerts</a> page and unsubscribe at any time. The alert reports what the data shows; it does not advise a course of action.</p>`,
+          a: `<p>A surge alert is an optional email that flags when CDC data shows respiratory activity climbing in a state you follow. You pick a state, and FluTrack will email you when the trend for that state turns upward — at most about once a week, and never more often than the data warrants. <strong>No alert has been sent yet:</strong> the list is open, but sending has not started. You can join on the <a href="/alerts/">surge alerts</a> page and unsubscribe at any time. The alert reports what the data shows; it does not advise a course of action.</p>`,
         },
       ],
     },
@@ -129,7 +129,7 @@ function faqGroups(disclaimers) {
       items: [
         {
           q: 'Where does the data come from?',
-          a: `<p>Entirely from the CDC's own public-domain surveillance systems: NSSP for emergency-department visits and the acute-respiratory-illness activity level, NWSS for wastewater viral activity, and NREVSS for laboratory test positivity. All of it is downloadable by anyone from <a href="https://data.cdc.gov/" rel="noopener">data.cdc.gov</a>. Our <a href="/data-sources/">data sources</a> page documents each feed, and our <a href="/methodology/">methodology</a> explains how they are combined.</p>`,
+          a: `<p>Entirely from the CDC's own public-domain surveillance systems: NSSP for emergency-department visits and the acute-respiratory-illness activity level, NWSS for wastewater viral activity, and NREVSS for laboratory test positivity. All of it is downloadable by anyone from <a href="https://data.cdc.gov/" rel="noopener">data.cdc.gov</a>. Three of those four are queried live today; laboratory test positivity has no live feed yet, so where it is missing its weight is renormalised across the rest and the state page reports how many signals it actually had. Our <a href="/data-sources/">data sources</a> page documents each feed, and our <a href="/methodology/">methodology</a> explains how they are combined.</p>`,
         },
         {
           q: "Why don't you show exact case counts?",
@@ -143,7 +143,7 @@ function faqGroups(disclaimers) {
         },
         {
           q: 'Why did you exclude some wastewater data?',
-          a: `<p>Some widely cited wastewater networks — WastewaterSCAN, also referenced as SCAN or Verily — publish under a <strong>CC BY-NC 4.0</strong> license, which permits non-commercial use only. FluTrack is supported by advertising and affiliate links, which makes it a commercial use, so incorporating that data would breach the license terms. FluTrack therefore ingests only the CDC's own public-domain NWSS product and filters the non-commercial networks out in code. Our <a href="/data-sources/">data sources</a> page explains the exclusion in full.</p>`,
+          a: `<p>Some widely cited wastewater networks — WastewaterSCAN, also referenced as SCAN or Verily — publish under a <strong>CC BY-NC 4.0</strong> license, which permits non-commercial use only. FluTrack is operated as a commercial, advertising-supported project, which makes this a commercial use regardless of whether an advertisement is being served on a given day, so incorporating that data would breach the license terms. FluTrack therefore ingests only the CDC's own public-domain NWSS product and filters the non-commercial networks out in code. Our <a href="/data-sources/">data sources</a> page explains the exclusion in full.</p>`,
         },
         {
           q: 'Can I use FluTrack data?',
@@ -170,7 +170,7 @@ function faqGroups(disclaimers) {
         },
         {
           q: 'How does FluTrack make money?',
-          a: `<p>FluTrack is free to use and is supported by advertising and clearly disclosed affiliate links, where we may earn a commission on qualifying purchases at no extra cost to you. That revenue never influences the threat levels we report: the index is computed the same way regardless of who advertises, and it always reflects the CDC's figures alone. Our <a href="/affiliate-disclosure/">affiliate disclosure</a> explains the arrangement in full.</p>`,
+          a: `<p>FluTrack is free to use. It carries no advertising today, and is intended to be supported by advertising and clearly disclosed affiliate links, where we may earn a commission on qualifying purchases at no extra cost to you. That revenue never influences the threat levels we report: the index is computed the same way regardless of who advertises, and it always reflects the CDC's figures alone. Our <a href="/affiliate-disclosure/">affiliate disclosure</a> explains the arrangement in full.</p>`,
         },
         {
           q: 'Is my data private?',

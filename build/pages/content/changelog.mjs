@@ -18,6 +18,14 @@ import { site, privacyEmail } from '../../lib/site.mjs';
 const ENTRIES = [
   {
     date: '2026-08-29',
+    kind: 'Correction',
+    title: 'Corrected several claims the site made about itself',
+    body:
+      'A sweep for statements that no longer matched the code found a cluster of them, all now fixed. The surge-alert pages described a weekly email service in the present tense although no alert has ever been sent — those pages now say so plainly, and the sign-up form states that joining reserves a place rather than starting a subscription. Seven pages said the site is supported by advertising while two others correctly said it serves none; all now say the same thing, which is that no advertising runs today. The offline notice called the bundled sample file the “last verified snapshot”, the one place on the site that described that file as real surveillance. Laboratory test positivity was listed among the feeds without noting that it has no live adapter, so a reading can rest on three signals rather than four. The privacy policy said the site stores two entries in your browser and then listed three. Structured data on all 51 state pages reported a modification date eight days before the publication date, which is not a possible state, and the methodology page carried three inconsistent dates. Three legal pages still showed “Last updated: July 2026” after being edited in August. None of these changed a reading; each was a description that had drifted from what the site actually does.',
+    affectsReadings: false,
+  },
+  {
+    date: '2026-08-29',
     kind: 'Accountability',
     title: 'Corrected the publisher’s registered legal name, and published its address',
     body:

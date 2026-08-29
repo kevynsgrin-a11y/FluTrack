@@ -214,7 +214,13 @@ export function statePageLd(state, weekEnding) {
     // week — advancing it on every rebuild claims the page is newly published
     // rather than newly updated.
     datePublished: site.contentPublished,
-    ...(weekEnding ? { dateModified: weekEnding } : {}),
+    // The data week can precede first publication — the bundled snapshot covers
+    // an earlier week than the day these pages went live — which emitted
+    // dateModified BEFORE datePublished on all 51 pages, a state that cannot
+    // exist. Never report a modification earlier than publication.
+    ...(weekEnding
+      ? { dateModified: weekEnding < site.contentPublished ? site.contentPublished : weekEnding }
+      : {}),
   };
 }
 

@@ -293,9 +293,15 @@ function securityTxt() {
   // Expires ~1 year out from the season anchor (stable, avoids build-time Date).
   // Contact MUST be reachable — a security.txt pointing at a dead mailbox is
   // worse than none, so fall back to the contact page when no real mailbox is set.
-  const contact = hasPublisherEmail()
-    ? `mailto:${site.publisher.email}`
-    : `${site.origin}/contact/`;
+  // Prefer the dedicated security mailbox when one is configured — it exists
+  // precisely so a vulnerability report does not land in the general inbox.
+  // Same reserved-TLD guard as everywhere else: never advertise a dead route.
+  const routable = (a) => Boolean(a) && !/\.(example|invalid|test|localhost)$/i.test(a);
+  const contact = routable(site.publisher.securityEmail)
+    ? `mailto:${site.publisher.securityEmail}`
+    : hasPublisherEmail()
+      ? `mailto:${site.publisher.email}`
+      : `${site.origin}/contact/`;
   return `# ${site.name} security contact
 Contact: ${contact}
 Expires: ${site.season.endsISO}T00:00:00Z

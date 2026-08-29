@@ -59,11 +59,24 @@ test('the Dataset node carries provenance sourced from the artifact itself', () 
 
 // --- Finding 17: the cached/offline freshness boundary -------------------- //
 
-test('the cached notice states the boundary verbatim and names the snapshot', () => {
+test('the cached notice states the freshness boundary and names the snapshot', () => {
+  // Assert the invariants, not the prose. Pinning the exact sentence meant a
+  // correction to that sentence read as a regression — and the sentence needed
+  // correcting, because it called the bundled artifact the "last verified
+  // snapshot" when it is deterministic sample data, not surveillance.
   const html = cachedNotice({ weekEnding: '2026-07-11' });
-  assert.match(html, /You are viewing a cached FluTrack page\. Data may not be current\./);
-  assert.match(html, /Reconnect and refresh for the latest CDC-derived update\./);
-  assert.match(html, /Last verified snapshot: Jul 11, 2026/);
+  assert.match(html, /cached FluTrack page/i, 'says the page is cached');
+  assert.match(html, /may not be current/i, 'states the freshness boundary');
+  assert.match(html, /reconnect and refresh/i, 'tells the reader how to get a live figure');
+  assert.match(html, /Jul 11, 2026/, 'names the snapshot it is showing');
+});
+
+test('the cached notice never presents the bundled sample as verified surveillance', () => {
+  // The offline page was the one place on the site describing the PRNG sample
+  // artifact as real, verified data.
+  const html = cachedNotice({ weekEnding: '2026-07-11' });
+  assert.match(html, /sample data/i, 'names the artifact as sample data');
+  assert.doesNotMatch(html, /verified snapshot/i, 'must not call sample data verified');
 });
 
 test('the cached notice offers a visible retry control', () => {
@@ -76,7 +89,8 @@ test('the cached notice offers a visible retry control', () => {
 
 test('a missing snapshot date is reported as such, never as a plausible date', () => {
   const html = cachedNotice({});
-  assert.match(html, /Last verified snapshot: not recorded/);
+  assert.match(html, /not recorded/, 'an absent date is stated, not invented');
+  assert.doesNotMatch(html, /\b(19|20)\d\d\b/, 'no year may be fabricated when none is known');
 });
 
 test('no severity may be announced as current while offline', () => {

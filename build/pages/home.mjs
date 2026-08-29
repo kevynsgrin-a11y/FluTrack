@@ -121,7 +121,7 @@ export default function home(ctx) {
         ${sourceCard(
           'Laboratory test positivity',
           'NREVSS',
-          'The percentage of respiratory tests coming back positive.'
+          'The percentage of respiratory tests coming back positive. No live feed yet — where it is missing, its weight is shared across the other three.'
         )}
         ${sourceCard(
           'Acute Respiratory Illness level',
@@ -131,7 +131,7 @@ export default function home(ctx) {
       </div>
       <div class="callout" style="margin-top: var(--space-lg)">
         <p class="callout__title">${icon('shield-check')} Licensing note</p>
-        <p class="text-secondary">FluTrack deliberately uses only public-domain CDC feeds. We exclude non-commercially licensed datasets (such as WastewaterSCAN, CC BY-NC 4.0) so this free, ad-supported utility stays fully within its rights. <a href="/data-sources/">More on our sources →</a></p>
+        <p class="text-secondary">FluTrack deliberately uses only public-domain CDC feeds. We exclude non-commercially licensed datasets (such as WastewaterSCAN, CC BY-NC 4.0) so this free utility stays fully within its rights as a commercial project. <a href="/data-sources/">More on our sources →</a></p>
       </div>
       <div class="callout callout--warn" role="note" style="margin-top: var(--space-md)">
         <p class="callout__title">${icon('info')} The bundled file is an example, not a data product</p>

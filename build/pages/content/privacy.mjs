@@ -131,13 +131,13 @@ export default function privacy(ctx) {
     </div>
 
     <h2>Cookies and browser storage</h2>
-    <p>FluTrack itself sets <strong>no cross-site tracking cookies</strong>. The only data the site keeps on your device is two small entries in your browser's <code>localStorage</code>, which stay on your machine and are never transmitted to us:</p>
+    <p>FluTrack itself sets <strong>no cross-site tracking cookies</strong>. The only data the site keeps on your device is three small entries in your browser's <code>localStorage</code>, which stay on your machine and are never transmitted to us:</p>
     <ul>
       <li><code>flutrack-theme</code> — remembers whether you prefer the light or dark appearance.</li>
       <li><code>flutrack-state</code> — remembers the last state you looked at, so the picker can restore it on your next visit.</li>
       <li><code>flutrack-consent</code> — written only once you make a choice about non-essential storage, because we cannot honor a decision we do not remember. It records the categories you chose and when.</li>
     </ul>
-    <p>Both are conveniences, not trackers. You can clear them at any time through your browser's “clear site data” controls, and the site will simply fall back to its defaults.</p>
+    <p>All three stay on your device, and none is a tracker. You can clear them at any time through your browser's “clear site data” controls, and the site will simply fall back to its defaults.</p>
 
     <h2>Advertising</h2>
     <p>FluTrack currently serves <strong>no advertising at all</strong>. It is free and is intended to be supported in part by advertising in future, and this section describes the controls that are already in place for when that happens — they are implemented now, not promised.</p>

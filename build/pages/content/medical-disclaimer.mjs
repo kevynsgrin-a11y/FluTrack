@@ -78,7 +78,7 @@ export default function medicalDisclaimer(ctx) {
       )} In an emergency, call 911, and for guidance about your health, consult a qualified provider.</p>
     </div>
   `,
-    { updated: 'July 2026' }
+    { updated: 'August 2026' }
   )}
 
   ${signupBand()}

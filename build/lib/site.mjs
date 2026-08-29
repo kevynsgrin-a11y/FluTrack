@@ -261,8 +261,9 @@ export const disclaimers = {
     'content.',
   // The cached/offline freshness boundary. Verbatim from the audit; the
   // `[timestamp]` slot is filled at render time with the real snapshot date.
-  cachedData:
-    'You are viewing a cached FluTrack page. Data may not be current. Last ' +
-    'verified snapshot: {timestamp}. Reconnect and refresh for the latest ' +
-    'CDC-derived update.',
+  // The cached/offline freshness notice lives in src/scripts/render.js
+  // (cachedNotice), because that function is shared by the build and the
+  // browser and cannot import this module. A second copy used to sit here,
+  // unused, and drifted: it called the bundled artifact the "last verified
+  // snapshot", which described deterministic sample data as real surveillance.
 };

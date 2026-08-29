@@ -23,6 +23,10 @@ export default function alerts(ctx) {
   // Trust-focused Q&A — answers describe what the alert is, never what to do.
   const faqs = [
     {
+      q: 'Have alerts started going out yet?',
+      a: `<p>Not yet. No surge alert has been sent to anyone. Signing up adds you to the list so you are included when sending begins; until then nothing arrives. When the first alert goes out, this page changes and the change is recorded in our <a href="/changelog/">changelog</a>.</p>`,
+    },
+    {
       q: 'How often will I hear from you?',
       a: `<p>At most about once a week, and only when CDC data shows your state's respiratory trend turning upward. When activity is flat or easing, we stay quiet — there is no weekly newsletter and no digest to wade through.</p>`,
     },
@@ -36,7 +40,7 @@ export default function alerts(ctx) {
     },
     {
       q: 'Is it really free?',
-      a: `<p>Yes. FluTrack is a free, ad-supported utility, and the surge alert is part of that — no account, no payment, no catch.</p>`,
+      a: `<p>Yes. FluTrack is free, and the surge alert is part of that — no account, no payment, no catch. The site carries no advertising today and is intended to be supported by advertising and disclosed affiliate links in future; neither will ever affect a reading.</p>`,
     },
   ];
 
@@ -45,30 +49,39 @@ export default function alerts(ctx) {
     eyebrow: 'Surge alerts',
     title: 'Know when respiratory illness starts climbing near you',
     lede:
-      "FluTrack's free surge alert watches the CDC's weekly surveillance data for your state and emails you when flu, RSV or COVID-19 activity turns upward — at most about once a week, no spam, and only when the trend actually changes.",
+      "Join the list now and FluTrack will email you when CDC data shows flu, RSV or COVID-19 activity turning upward in your state — at most about once a week, no spam, and only when the trend actually changes. Alerts have not started going out yet; signing up reserves your place.",
   })}
 
   ${signupBand()}
+
+  <section class="section" style="padding-bottom: 0">
+    <div class="container container--narrow">
+      <div class="callout" role="note">
+        <p class="callout__title">${icon('clock')} Alerts have not started yet</p>
+        <p class="text-secondary">No surge alert has been sent to anyone. The list is open and your address is stored so you are on it when sending begins, but nothing is dispatched today. This page describes what the alert will do, not a service already running — and it will be updated, and the change recorded in the <a href="/changelog/">changelog</a>, when the first alert goes out.</p>
+      </div>
+    </div>
+  </section>
 
   <section class="section" style="background: var(--bg-elevated); border-block: 1px solid var(--border)">
     <div class="container">
       <div class="section-head">
         <p class="eyebrow">How it works</p>
         <h2>Set it once — then we watch for you</h2>
-        <p class="text-secondary">We read the CDC every week so you don't have to. No account, no login.</p>
+        <p class="text-secondary">Here is what the alert will do once it starts. No account, no login.</p>
       </div>
       <div class="steps">
         <div class="step">
           <h3>Pick your state</h3>
-          <p class="text-secondary">Tell us which state to watch and where to send the email. There is nothing to install and no account to create.</p>
+          <p class="text-secondary">Tell us which state to watch and where to send the email. There is nothing to install and no account to create. This part works today.</p>
         </div>
         <div class="step">
           <h3>We watch the CDC signals</h3>
-          <p class="text-secondary">Each week we read the CDC's public-domain surveillance — ${SIGNALS.plain} — and recompute your state's combined threat level. <a href="/methodology/">See the method →</a></p>
+          <p class="text-secondary">Every week the CDC's public-domain surveillance — ${SIGNALS.plain} — is read and your state's combined threat level recomputed. That is the same figure already published on every state page. <a href="/methodology/">See the method →</a></p>
         </div>
         <div class="step">
           <h3>You get a heads-up when the trend turns up</h3>
-          <p class="text-secondary">When the data shows activity climbing, we send a short, plain-English summary of what changed. When it is flat or falling, your inbox stays quiet.</p>
+          <p class="text-secondary">When the data shows activity climbing, you will get a short, plain-English summary of what changed. When it is flat or falling, your inbox stays quiet.</p>
         </div>
       </div>
     </div>
@@ -84,7 +97,7 @@ export default function alerts(ctx) {
     </div>
 
     <h2>Your email, and nothing more</h2>
-    <p>Signing up asks for exactly two things — your email address and the state you want to watch — and we use them for exactly one purpose: sending your surge alerts. We do not sell or share your address, and every email carries a one-click unsubscribe, so you can leave the list at any time. The full detail lives in our <a href="/privacy/">Privacy Policy</a>.</p>
+    <p>Signing up asks for exactly two things — your email address and the state you want to watch — and they will be used for exactly one purpose: sending your surge alerts. We do not sell or share your address, and every email carries a one-click unsubscribe, so you can leave the list at any time. The full detail lives in our <a href="/privacy/">Privacy Policy</a>.</p>
 
     <h2>What every alert email carries</h2>
     <p>An alert is sent because you asked for it, and each one identifies who sent it and how to stop it. Every email includes the sender's name and registered postal address, a one-click unsubscribe that we honor promptly and without asking why, and a link back to the state page the alert refers to so you can check the underlying figures yourself.${
@@ -121,7 +134,7 @@ export default function alerts(ctx) {
   return {
     title: 'Free flu, RSV & COVID surge alerts by state',
     description:
-      'Free FluTrack surge alerts email you when CDC data shows flu, RSV or COVID-19 activity climbing in your state — at most weekly, no spam, not medical advice.',
+      'Join the free FluTrack surge-alert list: an email when CDC data shows flu, RSV or COVID-19 activity climbing in your state. Not yet sending — no spam, not medical advice.',
     path: '/alerts/',
     body,
     changefreq: 'monthly',

@@ -116,7 +116,7 @@ export default function terms(ctx) {
     <h2>14. Contact</h2>
     <p>Questions about these Terms are welcome. You can reach us at ${contactLink}, and a real person will read it.</p>
   `,
-    { updated: 'July 2026' }
+    { updated: 'August 2026' }
   )}
 
   ${signupBand()}

@@ -2,6 +2,7 @@ import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand, breadcrumbs } from '../../lib/partials.mjs';
 import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
+import { site } from '../../lib/site.mjs';
 
 /**
  * /methodology/ — the primary trust page.
@@ -257,7 +258,7 @@ export default function methodology(ctx) {
       'trend rule, exactly as the code applies them.',
   })}
 
-  ${prose(content, { updated: 'July 2026' })}
+  ${prose(content, { updated: 'August 2026' })}
 
   <section class="section" style="background: var(--bg-elevated); border-block: 1px solid var(--border)">
     <div class="container container--narrow">
@@ -305,8 +306,10 @@ function techArticleLd(site) {
       'score, and the trend rule.',
     url: `${site.origin}/methodology/`,
     inLanguage: 'en-US',
-    datePublished: '2026-07-01',
-    dateModified: '2026-07-19',
+    // Must not precede site.contentPublished — the index itself was first
+    // published on 2026-07-19, so documentation of it cannot be older.
+    datePublished: site.contentPublished,
+    dateModified: site.contentUpdated,
     author: { '@type': 'Organization', name: site.name },
     publisher: { '@type': 'Organization', name: site.name, url: site.origin },
     isBasedOn: 'https://data.cdc.gov/',
