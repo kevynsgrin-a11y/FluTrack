@@ -1,5 +1,15 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
-import { hasPublisherEmail, privacyEmail, postalAddressLine } from '../../lib/site.mjs';
+// `processors` is imported, not restated. Both this page and /vendors/ tell the
+// reader the two "cannot drift apart" — but this page used to hardcode its
+// vendor list in prose while only /vendors/ rendered from the register, so that
+// guarantee was published without being true. Rendering from the same array is
+// what makes the claim honest.
+import {
+  hasPublisherEmail,
+  privacyEmail,
+  postalAddressLine,
+  processors,
+} from '../../lib/site.mjs';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
@@ -141,10 +151,18 @@ export default function privacy(ctx) {
     <h2>Third-party services</h2>
     <p>FluTrack is a static site, and we keep external dependencies deliberately few:</p>
     <ul>
-      <li><strong>CDC open data</strong> — the surveillance figures are fetched directly from the CDC's public-domain endpoints on <a href="https://data.cdc.gov/">data.cdc.gov</a> by your own browser. That request goes to the CDC, not through a server of ours that could re-host or reshape it.</li>
-      <li><strong>FCC Area API</strong> — used only for the optional “Use my location” lookup described above, and only when you tap it.</li>
-      <li><strong>Cloudflare, Inc.</strong> — hosts and serves the site, provides its edge security, runs the cookieless Cloudflare Web Analytics described above, and stores surge-alert subscriptions in Workers KV.</li>
-      <li><strong>Resend, Inc.</strong> — the email processor engaged to deliver surge-alert messages. It processes your email address on our behalf, under its own security and privacy commitments, solely to send the messages you requested. <em>No alert email has been sent yet</em>; if you subscribe today your address is held in the subscription store and nothing is dispatched until alerts go live.</li>
+      ${processors
+        .map(
+          (p) =>
+            `<li><strong>${escapeHtml(p.vendor)}</strong> — ${escapeHtml(
+              p.service
+            )}. ${escapeHtml(p.purpose)}. Lawful basis: ${escapeHtml(
+              p.basis
+            )}. Retention: ${escapeHtml(p.retention)}.${
+              /^Live$/i.test(p.status) ? '' : ` <em>Status: ${escapeHtml(p.status)}.</em>`
+            }</li>`
+        )
+        .join('\n      ')}
     </ul>
     <p>We name these providers by <strong>legal entity</strong> rather than describing them by role, and keep the full list — with purpose, lawful basis, data categories, retention and deletion route for each — in our <a href="/vendors/">vendor register</a>. That register is generated from the same configuration this policy reads, so the two cannot drift apart. In every case a processor is used only for the narrow purpose stated and is not permitted to use your information for its own marketing. If a processor changes, the register and this policy change together and the change is recorded in our <a href="/changelog/">changelog</a>.</p>
 

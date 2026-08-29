@@ -11,6 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 import { decodePng, paintedBounds, flatTrailingRows, brightBounds } from './lib/png.mjs';
+import { processors } from './lib/site.mjs';
 
 const dist = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 const errors = [];
@@ -514,6 +515,32 @@ for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_header
             0,
             110
           )}…"`
+        );
+      }
+    }
+  }
+}
+
+// /privacy/ and /vendors/ both tell the reader the two documents "cannot drift
+// apart" because they are generated from the same register. That was published
+// while /privacy/ hardcoded its vendor list in prose and only /vendors/ read the
+// register — a verifiability guarantee the site did not actually have. Both must
+// name every processor, or the claim has to come down.
+{
+  const pages = [join(dist, 'privacy', 'index.html'), join(dist, 'vendors', 'index.html')];
+  for (const page of pages) {
+    if (!existsSync(page)) {
+      errors.push(`${page.replace(dist, '')}: missing — cannot verify the processor register claim`);
+      continue;
+    }
+    const text = readFileSync(page, 'utf8')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/\s+/g, ' ');
+    for (const p of processors) {
+      if (!text.includes(p.vendor)) {
+        errors.push(
+          `${page.replace(dist, '')}: does not name the processor "${p.vendor}", but the page claims the register and the policy cannot disagree`
         );
       }
     }
