@@ -15,7 +15,7 @@
 import { loadSnapshot, fetchLiveSignals } from './data-sources.js';
 import { computeModel } from './model.js';
 import { nationalSignals } from './aggregate.js';
-import { threatCard, pathogenTiles, signalRows } from './render.js';
+import { threatCard, pathogenTiles, signalRows, levelToken, trendChip } from './render.js';
 import { states, stateByAbbr } from './states-data.js';
 import { formatDate, formatChange } from './util.js';
 
@@ -43,15 +43,15 @@ async function boot() {
 
   // Determine initial selection.
   let selection = isStatePage ? pinnedAbbr : readSavedSelection();
-  render(store, selection);
-  if (!isStatePage) wirePicker(store, (abbr) => (selection = abbr));
+  render(store, selection, { heading: !isStatePage });
+  if (!isStatePage) wirePicker(store, (abbr) => (selection = abbr), { heading: true });
 
   // --- 2. Live refresh (progressive enhancement) -------------------------
   try {
     const live = await fetchLiveSignals();
     ingestLive(store, live);
     store.provenance = { live: true, sources: live.sources };
-    render(store, selection);
+    render(store, selection, { heading: !isStatePage });
     announceLive(live);
   } catch (e) {
     console.info('[FluTrack] live CDC feed unavailable, showing sample data', e?.message || e);
@@ -86,12 +86,12 @@ function resolveState(abbr) {
   return stateByAbbr(abbr) || US;
 }
 
-function render(store, abbr) {
+function render(store, abbr, { heading = false } = {}) {
   const st = resolveState(abbr);
   const signals = store.signals.get(st.abbr) || store.signals.get('US');
   if (!signals) return;
   const model = computeModel(signals);
-  const opts = { weekEnding: store.weekEnding, provenance: store.provenance };
+  const opts = { weekEnding: store.weekEnding, provenance: store.provenance, heading };
 
   setRegion('threat-card', threatCard(st, model, opts));
   setRegion('pathogen-tiles', pathogenTiles(model));
@@ -111,6 +111,10 @@ function render(store, abbr) {
       : escapeText(model.trend.label)
   );
   setText('glance-week', formatDate(store.weekEnding));
+  setRegion('sticky-level', levelToken(model.level, model.label));
+  setRegion('sticky-trend', trendChip(model.trend));
+  const stickyLevel = document.querySelector('[data-region="sticky-level"]');
+  if (stickyLevel && Number.isFinite(model.level)) stickyLevel.setAttribute('data-sev', String(model.level));
   const heroBg = document.querySelector('.hero__bg');
   if (heroBg && Number.isFinite(model.level)) heroBg.setAttribute('data-sev', String(model.level));
   repaintMap(store, st.abbr);
@@ -177,7 +181,7 @@ function saveSelection(abbr) {
   }
 }
 
-function wirePicker(store, onChange) {
+function wirePicker(store, onChange, renderOptions = {}) {
   const form = document.getElementById('state-picker');
   const select = document.getElementById('state-select');
   const geoBtn = document.getElementById('geo-btn');
@@ -190,7 +194,7 @@ function wirePicker(store, onChange) {
   const apply = (abbr) => {
     onChange(abbr);
     saveSelection(abbr);
-    const r = render(store, abbr);
+    const r = render(store, abbr, renderOptions);
     if (r) announceSelection(r.st, r.model);
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     document.getElementById('breakdown')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
@@ -203,7 +207,7 @@ function wirePicker(store, onChange) {
   select.addEventListener('change', () => {
     onChange(select.value);
     saveSelection(select.value);
-    const r = render(store, select.value);
+    const r = render(store, select.value, renderOptions);
     if (r) announceSelection(r.st, r.model);
   });
 

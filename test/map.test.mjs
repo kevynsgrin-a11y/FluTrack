@@ -43,8 +43,14 @@ test('usMap renders one keyboard-navigable link per state with a severity fill',
   for (const s of states) {
     assert.ok(html.includes(`href="/state/${s.slug}/"`), `${s.abbr} links to its report`);
     assert.ok(html.includes(`data-abbr="${s.abbr}"`), `${s.abbr} tagged for hydration`);
+    assert.ok(html.includes(`data-row="${TILE[s.abbr][0]}"`), `${s.abbr} exposes its row for keyboard movement`);
+    assert.ok(html.includes(`data-col="${TILE[s.abbr][1]}"`), `${s.abbr} exposes its column for keyboard movement`);
   }
   assert.ok(html.includes('is-selected'), 'selected state is marked');
+  assert.ok(html.includes('role="region"'), 'map has a meaningful region role');
+  assert.ok(!html.includes('role="presentation"'), 'interactive map is not hidden as presentation');
+  assert.ok(html.includes('map-pattern-0') && html.includes('map-pattern-4'), 'all pattern definitions are present');
+  assert.ok(html.includes('level 0') && html.includes('level 4'), 'legend exposes numeric severity ranks');
 });
 
 test('usMap tolerates a missing/no-data state without crashing', () => {

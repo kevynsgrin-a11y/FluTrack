@@ -36,7 +36,7 @@ import { threatCard, pathogenTiles, stateChip, signalRows } from '../src/scripts
 import * as seo from './lib/seo.mjs';
 import * as partials from './lib/partials.mjs';
 import { generateSnapshot } from './lib/snapshot.mjs';
-import { assetFiles, manifest, icoFromPng } from './lib/assets.mjs';
+import { assetFiles, manifest, icoFromPng, stateOgSvg } from './lib/assets.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
@@ -153,6 +153,9 @@ function writeAssets() {
     for (const f of readdirSync(srcAssets)) {
       if (/\.(png|ico|webp|jpg|jpeg)$/i.test(f)) cpSync(join(srcAssets, f), join(outDir, f));
     }
+    // Font assets stay same-origin to satisfy the production CSP.
+    const fonts = join(srcAssets, 'fonts');
+    if (existsSync(fonts)) cpSync(fonts, join(outDir, 'fonts'), { recursive: true });
   }
   // Copy the bundled snapshot into the served tree, minified (the source copy
   // stays pretty-printed for readable diffs).
@@ -298,6 +301,9 @@ async function main() {
   // Per-state pages
   const { statePage } = await import('./pages/state.mjs');
   for (const st of states) {
+    const socialDir = join(dist, 'assets', 'og');
+    mkdirSync(socialDir, { recursive: true });
+    writeFileSync(join(socialDir, `${st.slug}.svg`), stateOgSvg(site, st, ctx.models.get(st.abbr).model));
     written.push(writePage(statePage(ctx, st)));
     sitemap.push({ path: `/state/${st.slug}/`, changefreq: 'weekly', priority: 0.8, lastmod: snapshot.weekEnding });
   }
