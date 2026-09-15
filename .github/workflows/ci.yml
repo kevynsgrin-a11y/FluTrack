@@ -1,10 +1,20 @@
 name: CI
 
 on:
-  # Every branch, not just main. The branch Cloudflare Pages builds production
-  # from is the repository default, which is not main — so the release gate has
-  # never run on a push to the branch that actually ships.
+  # Both branches that can ship, not just main. Cloudflare Pages builds
+  # production from the repository default branch, which is NOT main, so a push
+  # straight there used to run no build, no QA and no tests.
+  #
+  # Listed explicitly rather than left unfiltered: an unfiltered `push` fires a
+  # second, identical run alongside `pull_request` for every branch that has a
+  # PR open, doubling CI for no extra coverage. Feature branches are covered by
+  # `pull_request`; these two are covered because a push to them deploys.
+  #
+  # Renaming the default branch means updating this list — it is the one place
+  # in the tree that names a branch (see docs/PORT-FORWARD-PLAN.md and the
+  # hygiene notes on PR #10).
   push:
+    branches: [main, claude/respiratory-tracker-feasibility-sykoxq]
   pull_request:
 
 jobs:
