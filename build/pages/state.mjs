@@ -1,6 +1,6 @@
 import { escapeHtml, formatDate, formatChange } from '../../src/scripts/util.js';
 import { threatCard, pathogenTiles, signalRows, levelToken, trendChip } from '../../src/scripts/render.js';
-import { signupBand, trendDisclaimer, breadcrumbs, adSlot } from '../lib/partials.mjs';
+import { signupBand, trendDisclaimer, breadcrumbs, adSlot, seasonKitModule } from '../lib/partials.mjs';
 import { breadcrumbLd, statePageLd, faqLd } from '../lib/seo.mjs';
 
 /** Build a per-state report without changing its data or URL contract. */
@@ -57,14 +57,7 @@ export function statePage(ctx, state) {
             <div class="section-head section-rule"><h2 style="font-size: var(--step-2)">Nearby states</h2></div>
             <div class="comparison-strip">${others.map((s) => ctx.render.stateChip(s, ctx.models.get(s.abbr).model)).join('')}</div>
           </div>
-          <aside class="season-kit" aria-label="Affiliate content">
-            <div class="season-kit__head"><span class="season-kit__label">Affiliate content</span><span class="copy-slot">[COPY NEEDED: season kit module title, max 8 words]</span></div>
-            <div class="season-kit__grid">
-              <div class="season-kit__slot"><span class="copy-slot">[COPY NEEDED: affiliate product one, max 18 words]</span></div>
-              <div class="season-kit__slot"><span class="copy-slot">[COPY NEEDED: affiliate product two, max 18 words]</span></div>
-              <div class="season-kit__slot"><span class="copy-slot">[COPY NEEDED: affiliate product three, max 18 words]</span></div>
-            </div>
-          </aside>
+          ${seasonKitModule()}
         </div>
 
         <aside class="state-rail" aria-label="More about ${escapeHtml(state.name)}">

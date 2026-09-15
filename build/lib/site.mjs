@@ -42,6 +42,19 @@ export const site = {
   },
 };
 
+// Season-kit affiliate module — the ONLY copy it needs, shared by all 51 state
+// pages. Four strings total, not four per page.
+//
+// The module is all-or-nothing: partials.seasonKitModule() renders it only when
+// the title and all three products are non-empty. With any one blank it emits
+// nothing at all — no container, no heading, no reserved space — so an unfilled
+// slot can never reach a visitor. build/check.mjs independently fails the build
+// on any placeholder token that does reach the emitted HTML.
+export const seasonKit = {
+  title: '',
+  products: ['', '', ''],
+};
+
 // The disclaimer text is referenced in many places; keep it centralized so the
 // legal wording stays identical everywhere it appears.
 export const disclaimers = {

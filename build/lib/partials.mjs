@@ -3,7 +3,7 @@
 // deliberately preserved while the visual wrapper changes to bulletin form.
 // ===========================================================================
 
-import { site, disclaimers } from './site.mjs';
+import { site, disclaimers, seasonKit } from './site.mjs';
 import { states } from './states.mjs';
 import { escapeHtml } from '../../src/scripts/util.js';
 import { icon } from '../../src/scripts/icons.js';
@@ -64,4 +64,25 @@ export function breadcrumbs(crumbs) {
 /** Reserved integration boundary: 970×90 desktop and 320×100 mobile. */
 export function adSlot(slot) {
   return `<aside class="ad-slot" data-ad-slot="${escapeHtml(slot)}" aria-label="Advertisement"><span class="ad-slot__label">Advertisement</span></aside>`;
+}
+
+/**
+ * Season-kit affiliate module. Renders only when every slot has real copy;
+ * otherwise it emits the empty string, so no empty container, reserved height
+ * or margin reaches the page. `.stack > * + *` supplies the spacing, so an
+ * absent element also removes its own gap — nothing shifts.
+ * Copy lives in one place: `seasonKit` in build/lib/site.mjs.
+ */
+export function seasonKitModule() {
+  const title = (seasonKit?.title || '').trim();
+  const products = (seasonKit?.products || []).map((t) => (t || '').trim());
+  const complete = title && products.length === 3 && products.every(Boolean);
+  if (!complete) return '';
+  const slots = products
+    .map((t) => `<div class="season-kit__slot"><span>${escapeHtml(t)}</span></div>`)
+    .join('');
+  return `<aside class="season-kit" aria-label="Affiliate content">
+            <div class="season-kit__head"><span class="season-kit__label">Affiliate content</span><span>${escapeHtml(title)}</span></div>
+            <div class="season-kit__grid">${slots}</div>
+          </aside>`;
 }

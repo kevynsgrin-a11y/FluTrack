@@ -70,6 +70,70 @@ for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_header
   if (!existsSync(join(dist, req))) errors.push(`missing required artifact: ${req}`);
 }
 
+// --- No placeholder copy may ever reach a visitor ---------------------- //
+// The season-kit module shipped 204 visible "[COPY NEEDED: …]" strings across
+// 51 state pages, rendered rather than hidden. partials.seasonKitModule() now
+// refuses to render until its copy is filled, but that is one component's
+// discipline; this is the backstop that covers every template.
+//
+// Scanned surfaces are the two a visitor or a crawler can actually read: the
+// visible text with tags stripped, and the values of human-facing attributes.
+// Raw HTML is deliberately NOT scanned — `placeholder="you@example.com"` is a
+// legitimate attribute appearing 64 times, and a guard that cries wolf on it
+// would be switched off within a week.
+{
+  const PLACEHOLDER_TOKENS = [
+    { name: 'COPY NEEDED', re: /\[?\s*COPY\s+NEEDED/i },
+    { name: 'TODO', re: /\bTODO\b/ },
+    { name: 'FIXME', re: /\bFIXME\b/i },
+    { name: 'Lorem', re: /\bLOREM\b/i },
+    { name: 'TBD', re: /\bTBD\b/ },
+    { name: 'XXX', re: /\bXXX\b/ },
+  ];
+  // Attributes a person or a crawler consumes as prose.
+  const PROSE_ATTRS = /\b(?:alt|title|aria-label|placeholder|content)\s*=\s*"([^"]*)"/gi;
+
+  const decode = (t) =>
+    t
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&');
+
+  let scanned = 0;
+  for (const file of htmlFiles) {
+    const rel = file.replace(dist, '');
+    const html = readFileSync(file, 'utf8');
+    scanned += 1;
+
+    // Visible text: drop script/style wholesale, then all tags (which also
+    // drops every attribute), then decode entities.
+    const visible = decode(
+      html
+        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+    ).replace(/\s+/g, ' ');
+
+    const attrValues = [...html.matchAll(PROSE_ATTRS)].map((m) => decode(m[1]));
+
+    for (const { name, re } of PLACEHOLDER_TOKENS) {
+      const hitText = visible.match(re);
+      if (hitText) {
+        const at = visible.indexOf(hitText[0]);
+        errors.push(
+          `${rel}: placeholder "${name}" is visible to readers → "${visible.slice(Math.max(0, at - 30), at + 60).trim()}"`
+        );
+      }
+      const hitAttr = attrValues.find((v) => re.test(v));
+      if (hitAttr) errors.push(`${rel}: placeholder "${name}" in a reader-facing attribute → "${hitAttr.slice(0, 90)}"`);
+    }
+  }
+  console.log(`Placeholders: ${scanned} page(s) scanned for ${PLACEHOLDER_TOKENS.map((t) => t.name).join(', ')}.`);
+}
+
 // --- CSP integrity: the inline script must be allowlisted on EVERY page --- //
 // The theme-boot script is permitted by its SHA-256 alone. If that script ever
 // changes by a byte and the policy is not regenerated, the browser silently
