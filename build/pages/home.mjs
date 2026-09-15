@@ -20,11 +20,11 @@ export default function home(ctx) {
     <div class="container">
       <div class="hero__grid">
         <div class="home-readout" data-region="threat-card" data-week="${escapeHtml(weekEnding)}">
-          ${threatCard(def.state, def.model, { weekEnding, provenance, heading: true })}
+          ${threatCard(def.state, def.model, { weekEnding, provenance })}
         </div>
         <div class="hero__lead">
           <p class="hero__label">Flu <span aria-hidden="true">/</span> RSV <span aria-hidden="true">/</span> COVID-19 <span aria-hidden="true">/</span> United States</p>
-          <p class="hero__question">How bad is it near you, in plain English?</p>
+          <h1 class="hero__question">How bad is it near you, in plain English?</h1>
           <p class="lede hero__lede">FluTrack turns the CDC's own surveillance data into one simple answer for your state — a combined flu, RSV and COVID-19 threat level, and which way it's heading.</p>
           <div class="prov" style="margin-top: var(--space-lg)">${provenanceStrip(provenance)}</div>
         </div>

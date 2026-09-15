@@ -43,15 +43,15 @@ async function boot() {
 
   // Determine initial selection.
   let selection = isStatePage ? pinnedAbbr : readSavedSelection();
-  render(store, selection, { heading: !isStatePage });
-  if (!isStatePage) wirePicker(store, (abbr) => (selection = abbr), { heading: true });
+  render(store, selection);
+  if (!isStatePage) wirePicker(store, (abbr) => (selection = abbr));
 
   // --- 2. Live refresh (progressive enhancement) -------------------------
   try {
     const live = await fetchLiveSignals();
     ingestLive(store, live);
     store.provenance = { live: true, sources: live.sources };
-    render(store, selection, { heading: !isStatePage });
+    render(store, selection);
     announceLive(live);
   } catch (e) {
     console.info('[FluTrack] live CDC feed unavailable, showing sample data', e?.message || e);
@@ -86,12 +86,12 @@ function resolveState(abbr) {
   return stateByAbbr(abbr) || US;
 }
 
-function render(store, abbr, { heading = false } = {}) {
+function render(store, abbr) {
   const st = resolveState(abbr);
   const signals = store.signals.get(st.abbr) || store.signals.get('US');
   if (!signals) return;
   const model = computeModel(signals);
-  const opts = { weekEnding: store.weekEnding, provenance: store.provenance, heading };
+  const opts = { weekEnding: store.weekEnding, provenance: store.provenance };
 
   setRegion('threat-card', threatCard(st, model, opts));
   setRegion('pathogen-tiles', pathogenTiles(model));
@@ -181,7 +181,7 @@ function saveSelection(abbr) {
   }
 }
 
-function wirePicker(store, onChange, renderOptions = {}) {
+function wirePicker(store, onChange) {
   const form = document.getElementById('state-picker');
   const select = document.getElementById('state-select');
   const geoBtn = document.getElementById('geo-btn');
@@ -194,7 +194,7 @@ function wirePicker(store, onChange, renderOptions = {}) {
   const apply = (abbr) => {
     onChange(abbr);
     saveSelection(abbr);
-    const r = render(store, abbr, renderOptions);
+    const r = render(store, abbr);
     if (r) announceSelection(r.st, r.model);
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     document.getElementById('breakdown')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
@@ -207,7 +207,7 @@ function wirePicker(store, onChange, renderOptions = {}) {
   select.addEventListener('change', () => {
     onChange(select.value);
     saveSelection(select.value);
-    const r = render(store, select.value, renderOptions);
+    const r = render(store, select.value);
     if (r) announceSelection(r.st, r.model);
   });
 

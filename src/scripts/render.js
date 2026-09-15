@@ -125,10 +125,9 @@ export function threatCard(state, model, opts = {}) {
   const level = Number.isFinite(model.level) ? model.level : 0;
   const noData = !Number.isFinite(model.level);
   const asOf = opts.weekEnding ? formatDate(opts.weekEnding) : '';
-  const Tag = opts.heading ? 'h1' : 'h2';
   return `<article class="threat" data-sev="${level}" aria-labelledby="threat-level">
     <div class="threat__head">
-      <${Tag} class="threat__label" id="threat-level"><span>Respiratory threat level</span><span aria-hidden="true">/</span><span>${escapeHtml(state.name)}</span></${Tag}>
+      <h2 class="threat__label" id="threat-level"><span>Respiratory threat level</span><span aria-hidden="true">/</span><span>${escapeHtml(state.name)}</span></h2>
       ${provenanceBadge(opts.provenance)}
     </div>
     <div class="threat__body">

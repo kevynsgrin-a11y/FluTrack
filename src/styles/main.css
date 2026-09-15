@@ -21,7 +21,7 @@
 .hero__grid { position: relative; display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr); gap: clamp(var(--space-xl), 5vw, var(--space-4xl)); align-items: start; }
 .hero__lead { position: relative; }
 .hero__label { color: var(--text-secondary); font-size: var(--step--1); font-weight: var(--weight-semibold); }
-.hero__question { max-width: 22ch; margin-top: var(--space-sm); font-family: var(--font-display); font-size: var(--step-3); font-weight: var(--weight-semibold); line-height: 1.02; letter-spacing: var(--tracking-tight); }
+.hero__question { text-wrap: pretty; max-width: 22ch; margin-top: var(--space-sm); font-family: var(--font-display); font-size: var(--step-3); font-weight: var(--weight-semibold); line-height: 1.02; letter-spacing: var(--tracking-tight); }
 .hero__lede { max-width: 37rem; margin-top: var(--space-md); }
 .hero__cta { margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--border-strong); }
 .hero__map { align-self: stretch; padding-top: var(--space-lg); }
