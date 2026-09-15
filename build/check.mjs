@@ -7,6 +7,7 @@
 // ===========================================================================
 
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 
@@ -67,6 +68,117 @@ for (const file of htmlFiles) {
 // Required top-level artifacts.
 for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_headers', '404.html', 'data/snapshot.json']) {
   if (!existsSync(join(dist, req))) errors.push(`missing required artifact: ${req}`);
+}
+
+// --- CSP integrity: the inline script must be allowlisted on EVERY page --- //
+// The theme-boot script is permitted by its SHA-256 alone. If that script ever
+// changes by a byte and the policy is not regenerated, the browser silently
+// blocks it: the theme toggle dies and the stylesheet is never promoted from
+// media="print", leaving an unstyled page. Nothing else in the build catches
+// that, so it is asserted here against the ACTUAL emitted bytes of every page.
+{
+  const headersText = existsSync(join(dist, '_headers')) ? readFileSync(join(dist, '_headers'), 'utf8') : '';
+  const cspLine = (headersText.match(/^\s*Content-Security-Policy:\s*(.+)$/m) || [])[1] || '';
+  const scriptSrc = (cspLine.match(/script-src([^;]*)/) || [])[1] || '';
+  const allowed = new Set((scriptSrc.match(/'sha256-[A-Za-z0-9+/=]+'/g) || []).map((h) => h.slice(1, -1)));
+
+  if (!cspLine) {
+    errors.push('_headers: no Content-Security-Policy found');
+  } else if (!allowed.size) {
+    errors.push('_headers: CSP script-src carries no sha256- hash for the inline boot script');
+  }
+
+  let inlineTotal = 0;
+  for (const file of htmlFiles) {
+    const rel = file.replace(dist, '');
+    const html = readFileSync(file, 'utf8');
+    // Inline <script> blocks, excluding JSON-LD and anything with a src=.
+    for (const m of html.matchAll(/<script(?![^>]*\bsrc=)([^>]*)>([\s\S]*?)<\/script>/g)) {
+      const attrs = m[1] || '';
+      if (/type\s*=\s*"application\/ld\+json"/.test(attrs)) continue;
+      inlineTotal += 1;
+      const digest = `sha256-${createHash('sha256').update(m[2]).digest('base64')}`;
+      if (!allowed.has(digest)) {
+        errors.push(
+          `${rel}: inline <script> is not allowlisted by the CSP (${digest} absent from script-src). ` +
+            `The policy and the emitted script have drifted apart.`
+        );
+      }
+    }
+    // Inline event handlers would need 'unsafe-inline'/'unsafe-hashes', which
+    // this policy does not grant, so they would be dead code in production.
+    const handler = html.match(/<[^>]+\son[a-z]+\s*=\s*"/i);
+    if (handler) errors.push(`${rel}: inline event handler would be blocked by the CSP → ${handler[0].slice(0, 60)}`);
+  }
+  if (!errors.length && !inlineTotal) warnings.push('no inline <script> found in any page — is the theme boot script still emitted?');
+  console.log(`CSP: ${inlineTotal} inline script(s) across ${htmlFiles.length} pages checked against ${allowed.size} allowlisted hash(es).`);
+}
+
+// --- Cache-Control rules must not overlap -------------------------------- //
+// Cloudflare joins duplicate header values with a comma, and a splat matches
+// greedily across "/", so two matching rules give one file a spliced
+// Cache-Control. Every emitted asset must match exactly one rule.
+{
+  const headersText = existsSync(join(dist, '_headers')) ? readFileSync(join(dist, '_headers'), 'utf8') : '';
+  const rules = [];
+  let current = null;
+  for (const line of headersText.split('\n')) {
+    if (/^\S/.test(line) && line.trim()) {
+      current = { pattern: line.trim(), cache: false };
+      rules.push(current);
+    } else if (current && /^\s+Cache-Control:/i.test(line)) {
+      current.cache = true;
+    }
+  }
+  const cacheRules = rules.filter((r) => r.cache);
+  // A splat matches any characters (including "/"); a :placeholder matches any
+  // run of characters except "/".
+  const toRegExp = (pattern) => {
+    let out = '';
+    for (const part of pattern.split(/(\*|:[A-Za-z]\w*)/)) {
+      if (part === '*') out += '.*';
+      else if (/^:[A-Za-z]\w*$/.test(part)) out += '[^/]+';
+      else out += part.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+    return new RegExp(`^${out}$`);
+  };
+  const compiled = cacheRules.map((r) => ({ ...r, re: toRegExp(r.pattern) }));
+
+  const served = [];
+  const walkAll = (dir, prefix = '') => {
+    for (const name of readdirSync(dir)) {
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) walkAll(p, `${prefix}/${name}`);
+      else served.push(`${prefix}/${name}`);
+    }
+  };
+  walkAll(dist);
+
+  let overlaps = 0;
+  for (const f of served) {
+    if (f === '/_headers' || f === '/_redirects') continue;
+    // Directory URLs are what Cloudflare actually serves for index.html.
+    const url = f.endsWith('/index.html') ? f.slice(0, -'index.html'.length) : f;
+    const hits = compiled.filter((r) => r.re.test(url));
+    if (hits.length > 1) {
+      overlaps += 1;
+      errors.push(
+        `_headers: ${url} matches ${hits.length} Cache-Control rules (${hits.map((h) => h.pattern).join(', ')}); ` +
+          `Cloudflare would join them into one spliced value`
+      );
+    }
+  }
+  const unmatched = served
+    .filter((f) => f !== '/_headers' && f !== '/_redirects') // parsed by Pages, never served
+    .map((f) => (f.endsWith('/index.html') ? f.slice(0, -'index.html'.length) : f))
+    .filter((url) => !compiled.some((r) => r.re.test(url)));
+  if (unmatched.length) {
+    warnings.push(`_headers: ${unmatched.length} file(s) match no Cache-Control rule, e.g. ${unmatched.slice(0, 5).join(', ')}`);
+  }
+  console.log(
+    `Cache rules: ${cacheRules.length} pattern(s), ${served.length} emitted file(s), ` +
+      `${overlaps === 0 ? 'no overlaps' : `${overlaps} OVERLAP(S)`}.`
+  );
 }
 
 console.log(`Checked ${htmlFiles.length} HTML pages.`);

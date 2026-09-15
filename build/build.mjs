@@ -243,6 +243,24 @@ function headers() {
     "object-src 'none'",
     'upgrade-insecure-requests',
   ].join('; ');
+  // Cache-Control rules must be MUTUALLY EXCLUSIVE. Cloudflare's _headers spec:
+  // "If a header is applied twice in the _headers file, the values are joined
+  // with a comma separator" — and a splat "will greedily match all characters",
+  // including "/". So /assets/* would also match /assets/js/app.js, and a file
+  // matching two rules ends up with a spliced, meaningless Cache-Control.
+  // build/check.mjs asserts no emitted file matches more than one rule.
+  //
+  // Only the stylesheet carries a content hash, so only it (and the fonts,
+  // whose bytes are pinned by their own filenames) may be immutable. The ES
+  // modules under /assets/js/ are served at stable names: marking those
+  // immutable would strand a returning visitor on a year-old app.js.
+  const HTML_CACHE = 'public, max-age=0, must-revalidate, s-maxage=300, stale-while-revalidate=600';
+  // Directory URLs never collide with the asset rules below: a placeholder
+  // matches everything except "/", and each of these ends in "/".
+  const htmlRules = ['/', '/:page/', '/:section/:page/', '/404.html', '/offline.html']
+    .map((pattern) => `${pattern}\n  Cache-Control: ${HTML_CACHE}\n`)
+    .join('\n');
+
   return `/*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
@@ -251,11 +269,21 @@ function headers() {
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   Content-Security-Policy: ${csp}
 
-/assets/*
+${htmlRules}
+/assets/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/${site.assets.css}
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/js/*
+  Cache-Control: public, max-age=300, stale-while-revalidate=86400
+
+/assets/*.png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
-/assets/styles.*.css
-  Cache-Control: public, max-age=31536000, immutable
+/assets/*.svg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 /data/*
   Cache-Control: public, max-age=3600
