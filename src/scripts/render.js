@@ -166,7 +166,7 @@ function pathogenTile(key, p) {
     <p class="pathogen__name">${escapeHtml(meta.name)}</p>
     <div class="pathogen__level">${levelToken(level, label)}</div>
     <div class="pathogen__spark">${spark}</div>
-    <p class="pathogen__foot">${p?.trend ? trendChip(p.trend) : 'Awaiting data'}${p?.trend && p.trend.direction !== 'flat' ? ` <span>${escapeHtml(formatChange(p.trend.changePct))}</span>` : ''}</p>
+    <p class="pathogen__foot">${p?.trend ? trendChip(p.trend) : 'Awaiting data'}</p>
   </div>`;
 }
 
