@@ -254,7 +254,13 @@ function headers() {
   // whose bytes are pinned by their own filenames) may be immutable. The ES
   // modules under /assets/js/ are served at stable names: marking those
   // immutable would strand a returning visitor on a year-old app.js.
-  const HTML_CACHE = 'public, max-age=0, must-revalidate, s-maxage=300, stale-while-revalidate=600';
+  // No stale-while-revalidate here, deliberately. Cloudflare disables SWR
+  // whenever s-maxage, must-revalidate or proxy-revalidate is present (RFC 9111
+  // 4.2.4) — and this value needs both: max-age=0 + must-revalidate keeps the
+  // browser revalidating, s-maxage gives the shared cache a short freshness
+  // window. An SWR directive alongside them is inert, and advertising a
+  // stale-serving window that can never happen is worse than omitting it.
+  const HTML_CACHE = 'public, max-age=0, must-revalidate, s-maxage=300';
   // Directory URLs never collide with the asset rules below: a placeholder
   // matches everything except "/", and each of these ends in "/".
   const htmlRules = ['/', '/:page/', '/:section/:page/', '/404.html', '/offline.html']
