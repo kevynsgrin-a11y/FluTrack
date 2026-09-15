@@ -6,10 +6,21 @@ import { site, disclaimers } from './site.mjs';
 import { escapeHtml } from '../../src/scripts/util.js';
 import { icon } from '../../src/scripts/icons.js';
 
+// One inline script, allowlisted by its own SHA-256 in the CSP (build/build.mjs
+// derives the hash from this exact string, and build/check.mjs asserts that the
+// hash in the emitted policy matches the script in every emitted page).
+// It does two things before first paint: applies the stored theme so the page
+// never flashes the wrong one, and promotes the non-render-blocking stylesheet
+// to media="all" once it has loaded. The stylesheet ships as media="print" so
+// it does not block the first paint; the inline critical CSS covers the header
+// and the hero readout until it lands, and a <noscript> copy keeps the page
+// styled when scripting is off.
 export const BOOT_SCRIPT =
   `(function(){try{var t=localStorage.getItem('flutrack-theme');` +
   `if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);` +
-  `else if(t==='system')document.documentElement.removeAttribute('data-theme');}catch(e){}})();`;
+  `else if(t==='system')document.documentElement.removeAttribute('data-theme');}catch(e){}` +
+  `var l=document.querySelector('link[data-main-css]');` +
+  `if(l){var f=function(){l.media='all';};if(l.sheet)f();else l.addEventListener('load',f);}})();`;
 
 export const NAV = [
   { href: '/', label: 'Home', match: (p) => p === '/' },
@@ -75,7 +86,10 @@ function head(page) {
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preload" href="/assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/public-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/assets/${cssHref}">
+  <link rel="preload" href="/assets/fonts/ibm-plex-mono-numerals.woff2" as="font" type="font/woff2" crossorigin>
+  <style>${site.assets?.critical || ''}</style>
+  <link rel="stylesheet" href="/assets/${cssHref}" media="print" data-main-css>
+  <noscript><link rel="stylesheet" href="/assets/${cssHref}"></noscript>
   ${jsonld ? '\n  ' + jsonld : ''}
   <script>${BOOT_SCRIPT}</script>`;
 }

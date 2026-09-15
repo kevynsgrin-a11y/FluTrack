@@ -9,7 +9,10 @@
   src: url('/assets/fonts/newsreader-latin.woff2') format('woff2');
   font-style: normal;
   font-weight: 300 800;
-  font-display: block;
+  /* swap, not block: 'Newsreader Fallback' below is metric-matched (Georgia,
+     size-adjust 96%), so the swap costs no layout shift but removes the
+     invisible-text window on slow connections. */
+  font-display: swap;
 }
 @font-face {
   font-family: 'Public Sans';

@@ -37,6 +37,7 @@ import * as seo from './lib/seo.mjs';
 import * as partials from './lib/partials.mjs';
 import { generateSnapshot } from './lib/snapshot.mjs';
 import { assetFiles, manifest, icoFromPng, stateOgSvg } from './lib/assets.mjs';
+import { extractCritical } from './lib/critical.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
@@ -113,7 +114,8 @@ function minifyCss(css) {
 
 function bundleCss() {
   const order = ['tokens.css', 'base.css', 'components.css', 'main.css'];
-  const css = order.map((f) => readFileSync(join(srcStyles, f), 'utf8')).join('\n');
+  const sources = Object.fromEntries(order.map((f) => [f, readFileSync(join(srcStyles, f), 'utf8')]));
+  const css = order.map((f) => sources[f]).join('\n');
   const min = minifyCss(css);
   // Content-hash the filename so the immutable cache header is always safe.
   const hash = createHash('sha256').update(min).digest('hex').slice(0, 10);
@@ -121,7 +123,21 @@ function bundleCss() {
   const out = join(dist, 'assets', name);
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, `/* FluTrack — bundled stylesheet */\n${min}`);
-  site.assets = { ...(site.assets || {}), css: name };
+
+  // Critical CSS for the header and the hero readout, cut from the same
+  // sources so it can never drift from the sheet it is a subset of. The token
+  // and reset layers go in whole: every above-the-fold rule resolves custom
+  // properties against them, and @font-face must be inline for the preloaded
+  // fonts to be used.
+  const critical = minifyCss(
+    [
+      extractCritical(sources['tokens.css'], { all: true }),
+      extractCritical(sources['base.css'], { all: true }),
+      extractCritical(sources['components.css']),
+      extractCritical(sources['main.css']),
+    ].join('\n')
+  );
+  site.assets = { ...(site.assets || {}), css: name, critical };
 }
 
 function copyScripts() {
