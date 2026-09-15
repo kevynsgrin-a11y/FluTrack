@@ -85,7 +85,9 @@
 .status-strip {
   position: fixed;
   z-index: calc(var(--z-header) - 1);
-  top: var(--header-height);
+  /* The header is --header-height plus its 1px bottom border; clearing both
+     keeps the strip from tucking under the rule. */
+  top: calc(var(--header-height) + 1px);
   left: 0;
   right: 0;
   display: grid;
@@ -98,9 +100,17 @@
   color: var(--text);
   font-size: var(--step--1);
   transform: translateY(-130%);
-  transition: transform var(--dur-med) var(--ease-out);
+  /* At rest the strip still sits inside the header band, and the header is
+     only 94% opaque, so it showed through. visibility also takes it out of
+     hit-testing and the accessibility tree while it is stowed. */
+  visibility: hidden;
+  transition: transform var(--dur-med) var(--ease-out), visibility 0s linear var(--dur-med);
 }
-.status-strip.is-visible { transform: translateY(0); }
+.status-strip.is-visible {
+  transform: translateY(0);
+  visibility: visible;
+  transition: transform var(--dur-med) var(--ease-out), visibility 0s;
+}
 .status-strip__state { font-weight: var(--weight-semibold); }
 .status-strip__level { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--sev-ink); font-weight: var(--weight-semibold); }
 
@@ -162,6 +172,10 @@
   .status-strip .trend { grid-column: 1 / -1; }
   .season-kit__grid { grid-template-columns: 1fr; }
   .season-kit__slot { min-height: 6rem; border-right: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-strip,
+  .status-strip.is-visible { transition: none; }
 }
 @media (forced-colors: active) {
   .ad-slot::after,
