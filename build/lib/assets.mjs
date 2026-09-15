@@ -95,7 +95,7 @@ export function ogSvg(site) {
  * State-specific social card. It uses only the existing state report values and
  * authored SVG geometry—no stock art, remote fonts, or new health copy.
  */
-export function stateOgSvg(site, state, model) {
+export function stateOgSvg(site, state, model, provenance = {}) {
   const level = Number.isFinite(model?.level) ? model.level : 0;
   const label = model?.label || 'No data';
   const score = Number.isFinite(model?.composite) ? model.composite : '—';
@@ -108,6 +108,12 @@ export function stateOgSvg(site, state, model) {
     '<path d="M0 14 14 0M0 28 28 0M0 42 42 0M0 56 56 0M0 70 70 0M0 0 72 72M-14 0 72 86" stroke="#fff" stroke-opacity=".52" stroke-width="3"/>',
   ][level];
   const color = SEV[level];
+  // A share card is stripped of the page's badge and disclaimer, so it has to
+  // carry its own. Until the build input is verified live this is fixture data,
+  // and the card says so in the same words the page uses.
+  const sample = provenance.live
+    ? ''
+    : '<text x="82" y="112" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#8a6d1f">Sample data</text>';
   const safeState = String(state.name).replace(/&/g, '&amp;');
   const safeLabel = String(label).replace(/&/g, '&amp;');
   const safeTrend = String(trend).replace(/&/g, '&amp;');
@@ -118,6 +124,7 @@ export function stateOgSvg(site, state, model) {
   <rect x="746" width="454" height="630" fill="url(#density)"/>
   <path d="M82 108h510" stroke="#18272b" stroke-width="4"/>
   <text x="82" y="78" font-family="Arial, sans-serif" font-size="29" font-weight="700" fill="#127c74">FluTrack</text>
+  ${sample}
   <text x="82" y="184" font-family="Georgia, serif" font-size="66" font-weight="700" fill="#18272b">${safeState}</text>
   <text x="82" y="252" font-family="Georgia, serif" font-size="49" font-weight="700" fill="#18272b">Respiratory threat level</text>
   <text x="82" y="458" font-family="Georgia, serif" font-size="132" font-weight="700" fill="${color}">${safeLabel}</text>

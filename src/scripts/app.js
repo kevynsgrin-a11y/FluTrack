@@ -136,7 +136,12 @@ function repaintMap(store, selectedAbbr) {
       const title = tile.querySelector('title');
       if (title) title.textContent = `${stateByAbbr(abbr)?.name || abbr} — ${m.label}`;
       const st = stateByAbbr(abbr);
-      if (st) tile.setAttribute('aria-label', `${st.name}: ${m.label}. View ${st.name} report.`);
+      // Mirror map-render.js exactly, rank included — hydration used to drop
+      // the ", level N" the server-rendered label carries.
+      if (st) {
+        const rank = Number.isFinite(m.level) ? `, level ${m.level}` : '';
+        tile.setAttribute('aria-label', `${st.name}: ${m.label}${rank}. View ${st.name} report.`);
+      }
     }
     tile.classList.toggle('is-selected', abbr === selectedAbbr);
   });

@@ -125,14 +125,18 @@ export function threatCard(state, model, opts = {}) {
   const level = Number.isFinite(model.level) ? model.level : 0;
   const noData = !Number.isFinite(model.level);
   const asOf = opts.weekEnding ? formatDate(opts.weekEnding) : '';
-  return `<article class="threat" data-sev="${level}" aria-labelledby="threat-level">
+  // The region is named by its label AND its reading. Production put
+  // id="threat-level" on the level readout; the overhaul moved it to the label,
+  // which left assistive tech announcing "Respiratory threat level / Florida"
+  // and omitting "Moderate" — the one word the card exists to say.
+  return `<article class="threat" data-sev="${level}" aria-labelledby="threat-level threat-reading">
     <div class="threat__head">
       <h2 class="threat__label" id="threat-level"><span>Respiratory threat level</span><span aria-hidden="true">/</span><span>${escapeHtml(state.name)}</span></h2>
       ${provenanceBadge(opts.provenance)}
     </div>
     <div class="threat__body">
       <div class="threat__readout">
-        <p class="threat__level">${noData ? 'No data' : escapeHtml(model.label)}</p>
+        <p class="threat__level" id="threat-reading">${noData ? 'No data' : escapeHtml(model.label)}</p>
         <p class="threat__meta">${escapeHtml(threatSentence(state, model))}${asOf ? ` <span class="muted">as of ${escapeHtml(asOf)}</span>` : ''}</p>
         <div class="cluster">
           ${trendChip(model.trend)}

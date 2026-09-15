@@ -360,7 +360,7 @@ async function main() {
   for (const st of states) {
     const socialDir = join(dist, 'assets', 'og');
     mkdirSync(socialDir, { recursive: true });
-    writeFileSync(join(socialDir, `${st.slug}.svg`), stateOgSvg(site, st, ctx.models.get(st.abbr).model));
+    writeFileSync(join(socialDir, `${st.slug}.svg`), stateOgSvg(site, st, ctx.models.get(st.abbr).model, ctx.provenance));
     written.push(writePage(statePage(ctx, st)));
     sitemap.push({ path: `/state/${st.slug}/`, changefreq: 'weekly', priority: 0.8, lastmod: snapshot.weekEnding });
   }

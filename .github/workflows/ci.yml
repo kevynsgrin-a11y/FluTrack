@@ -1,8 +1,10 @@
 name: CI
 
 on:
+  # Every branch, not just main. The branch Cloudflare Pages builds production
+  # from is the repository default, which is not main — so the release gate has
+  # never run on a push to the branch that actually ships.
   push:
-    branches: [main]
   pull_request:
 
 jobs:
