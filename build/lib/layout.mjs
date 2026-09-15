@@ -86,7 +86,9 @@ function head(page) {
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="preload" href="/assets/fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/assets/fonts/public-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/assets/fonts/ibm-plex-mono-numerals.woff2" as="font" type="font/woff2" crossorigin>
+  ${page.body && page.body.includes('class="gauge"')
+    ? '<link rel="preload" href="/assets/fonts/ibm-plex-mono-numerals.woff2" as="font" type="font/woff2" crossorigin>'
+    : ''}
   <style>${site.assets?.critical || ''}</style>
   <link rel="stylesheet" href="/assets/${cssHref}" media="print" data-main-css>
   <noscript><link rel="stylesheet" href="/assets/${cssHref}"></noscript>

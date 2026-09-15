@@ -194,5 +194,5 @@ export function signalRows(signals = {}) {
 }
 
 function row(name, value, hint) {
-  return `<div class="signal-row"><span class="signal-row__name">${escapeHtml(name)}<span class="field__hint">${escapeHtml(hint)}</span></span><span class="signal-row__val">${escapeHtml(value)}</span></div>`;
+  return `<div class="signal-row"><span class="signal-row__name">${escapeHtml(name)}<br><span class="field__hint">${escapeHtml(hint)}</span></span><span class="signal-row__val">${escapeHtml(value)}</span></div>`;
 }

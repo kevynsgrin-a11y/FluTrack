@@ -253,10 +253,14 @@ function headers() {
   // matching two rules ends up with a spliced, meaningless Cache-Control.
   // build/check.mjs asserts no emitted file matches more than one rule.
   //
-  // Only the stylesheet carries a content hash, so only it (and the fonts,
-  // whose bytes are pinned by their own filenames) may be immutable. The ES
-  // modules under /assets/js/ are served at stable names: marking those
-  // immutable would strand a returning visitor on a year-old app.js.
+  // Only the stylesheet carries a content hash, so only it may be immutable.
+  // Everything else is served at a stable name that pins no bytes — including
+  // the fonts: `newsreader-latin.woff2` does not change when the face does, so
+  // a year of `immutable` would strand a replacement in returning visitors'
+  // caches exactly as it would for app.js. Fonts get a long TTL with a long
+  // stale-while-revalidate window instead: near-immutable in practice, but
+  // recoverable. SWR is live here because no revalidating directive accompanies
+  // it (see the HTML rule below for the case where it would be inert).
   // No stale-while-revalidate here, deliberately. Cloudflare disables SWR
   // whenever s-maxage, must-revalidate or proxy-revalidate is present (RFC 9111
   // 4.2.4) — and this value needs both: max-age=0 + must-revalidate keeps the
@@ -280,7 +284,7 @@ function headers() {
 
 ${htmlRules}
 /assets/fonts/*
-  Cache-Control: public, max-age=31536000, immutable
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=31536000
 
 /assets/${site.assets.css}
   Cache-Control: public, max-age=31536000, immutable
