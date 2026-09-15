@@ -237,7 +237,10 @@ function headers() {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    "connect-src 'self' https://data.cdc.gov https://geo.fcc.gov",
+    // ingest.oakandmain.dev is the TrueAPI ingest Worker that data-sources.js
+    // has fetched from since b817d55; that commit repointed the host without
+    // updating this policy, so every live refresh has been blocked ever since.
+    "connect-src 'self' https://data.cdc.gov https://geo.fcc.gov https://ingest.oakandmain.dev",
     "form-action 'self'",
     "frame-ancestors 'none'",
     "object-src 'none'",
