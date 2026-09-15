@@ -6,9 +6,9 @@
 
 import { TILE } from '../../src/scripts/us-tilegrid.js';
 
-const BRAND = '#0b7285';
-const BRAND_DEEP = '#073f4a';
-const SEV = ['#2f9e63', '#8bc34a', '#f4b400', '#ef6c00', '#c62828'];
+const BRAND = '#127c74';
+const BRAND_DEEP = '#083d39';
+const SEV = ['#127c74', '#3e8fb0', '#e8b21f', '#d4541e', '#8c1d33'];
 
 /** The FluTrack glyph: a rounded shield with a vitals "pulse" line. */
 export function iconSvg({ size = 512, bg = true } = {}) {
@@ -39,7 +39,7 @@ export function iconSvg({ size = 512, bg = true } = {}) {
 </svg>`;
 }
 
-const MAP_FILLS = ['#1c6b41', '#467019', '#795e00', '#a04a00', '#9b1c1c'];
+const MAP_FILLS = SEV;
 
 /** Deterministic plausible severity per state for static art (summer-ish skew). */
 function ogLevel(abbr) {
@@ -88,6 +88,49 @@ export function ogSvg(site) {
   ${legend}
   <text x="${72 + 5 * 30 + 12}" y="496" font-family="${FONT}" font-size="20" font-weight="600" fill="#5b6773">Minimal → Very High</text>
   ${tiles}
+</svg>`;
+}
+
+/**
+ * State-specific social card. It uses only the existing state report values and
+ * authored SVG geometry—no stock art, remote fonts, or new health copy.
+ */
+export function stateOgSvg(site, state, model, provenance = {}) {
+  const level = Number.isFinite(model?.level) ? model.level : 0;
+  const label = model?.label || 'No data';
+  const score = Number.isFinite(model?.composite) ? model.composite : '—';
+  const trend = model?.trend?.label || 'Holding steady';
+  const pattern = [
+    '<path d="M0 34 34 0M0 68 68 0" stroke="#fff" stroke-opacity=".22" stroke-width="3"/>',
+    '<circle cx="12" cy="12" r="3" fill="#fff" fill-opacity=".35"/>',
+    '<path d="M0 24 24 0M0 48 48 0M24 72 72 24" stroke="#fff" stroke-opacity=".4" stroke-width="3"/>',
+    '<path d="M0 18 18 0M0 36 36 0M0 54 54 0M0 72 72 0M0 0 72 72" stroke="#fff" stroke-opacity=".44" stroke-width="3"/>',
+    '<path d="M0 14 14 0M0 28 28 0M0 42 42 0M0 56 56 0M0 70 70 0M0 0 72 72M-14 0 72 86" stroke="#fff" stroke-opacity=".52" stroke-width="3"/>',
+  ][level];
+  const color = SEV[level];
+  // A share card is stripped of the page's badge and disclaimer, so it has to
+  // carry its own. Until the build input is verified live this is fixture data,
+  // and the card says so in the same words the page uses.
+  const sample = provenance.live
+    ? ''
+    : '<text x="82" y="112" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#8a6d1f">Sample data</text>';
+  const safeState = String(state.name).replace(/&/g, '&amp;');
+  const safeLabel = String(label).replace(/&/g, '&amp;');
+  const safeTrend = String(trend).replace(/&/g, '&amp;');
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs><pattern id="density" width="72" height="72" patternUnits="userSpaceOnUse"><rect width="72" height="72" fill="${color}"/>${pattern}</pattern></defs>
+  <rect width="1200" height="630" fill="#f5f0e6"/>
+  <rect x="0" width="18" height="630" fill="${color}"/>
+  <rect x="746" width="454" height="630" fill="url(#density)"/>
+  <path d="M82 108h510" stroke="#18272b" stroke-width="4"/>
+  <text x="82" y="78" font-family="Arial, sans-serif" font-size="29" font-weight="700" fill="#127c74">FluTrack</text>
+  ${sample}
+  <text x="82" y="184" font-family="Georgia, serif" font-size="66" font-weight="700" fill="#18272b">${safeState}</text>
+  <text x="82" y="252" font-family="Georgia, serif" font-size="49" font-weight="700" fill="#18272b">Respiratory threat level</text>
+  <text x="82" y="458" font-family="Georgia, serif" font-size="132" font-weight="700" fill="${color}">${safeLabel}</text>
+  <text x="82" y="532" font-family="Arial, sans-serif" font-size="32" font-weight="600" fill="#4f5450">${safeTrend}</text>
+  <text x="1035" y="292" text-anchor="middle" font-family="monospace" font-size="148" font-weight="700" fill="#fff">${score}</text>
+  <text x="1035" y="348" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#fff">ACTIVITY INDEX / 100</text>
 </svg>`;
 }
 

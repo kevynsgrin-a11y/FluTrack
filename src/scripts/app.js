@@ -15,7 +15,7 @@
 import { loadSnapshot, fetchLiveSignals } from './data-sources.js';
 import { computeModel } from './model.js';
 import { nationalSignals } from './aggregate.js';
-import { threatCard, pathogenTiles, signalRows } from './render.js';
+import { threatCard, pathogenTiles, signalRows, levelToken, trendChip } from './render.js';
 import { states, stateByAbbr } from './states-data.js';
 import { formatDate, formatChange } from './util.js';
 
@@ -111,6 +111,10 @@ function render(store, abbr) {
       : escapeText(model.trend.label)
   );
   setText('glance-week', formatDate(store.weekEnding));
+  setRegion('sticky-level', levelToken(model.level, model.label));
+  setRegion('sticky-trend', trendChip(model.trend));
+  const stickyLevel = document.querySelector('[data-region="sticky-level"]');
+  if (stickyLevel && Number.isFinite(model.level)) stickyLevel.setAttribute('data-sev', String(model.level));
   const heroBg = document.querySelector('.hero__bg');
   if (heroBg && Number.isFinite(model.level)) heroBg.setAttribute('data-sev', String(model.level));
   repaintMap(store, st.abbr);
@@ -132,7 +136,12 @@ function repaintMap(store, selectedAbbr) {
       const title = tile.querySelector('title');
       if (title) title.textContent = `${stateByAbbr(abbr)?.name || abbr} — ${m.label}`;
       const st = stateByAbbr(abbr);
-      if (st) tile.setAttribute('aria-label', `${st.name}: ${m.label}. View ${st.name} report.`);
+      // Mirror map-render.js exactly, rank included — hydration used to drop
+      // the ", level N" the server-rendered label carries.
+      if (st) {
+        const rank = Number.isFinite(m.level) ? `, level ${m.level}` : '';
+        tile.setAttribute('aria-label', `${st.name}: ${m.label}${rank}. View ${st.name} report.`);
+      }
     }
     tile.classList.toggle('is-selected', abbr === selectedAbbr);
   });

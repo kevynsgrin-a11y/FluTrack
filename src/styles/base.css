@@ -1,6 +1,6 @@
-/* ==========================================================================
-   Base — modern reset + element defaults
-   ========================================================================== */
+/* ===========================================================================
+   Base — public-health bulletin reset and accessibility defaults
+   =========================================================================== */
 
 *,
 *::before,
@@ -8,9 +8,7 @@
   box-sizing: border-box;
 }
 
-* {
-  margin: 0;
-}
+* { margin: 0; }
 
 html {
   -webkit-text-size-adjust: 100%;
@@ -20,9 +18,7 @@ html {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
+  html { scroll-behavior: auto; }
   *,
   *::before,
   *::after {
@@ -38,7 +34,7 @@ body {
   font-size: var(--step-0);
   line-height: var(--leading-normal);
   color: var(--text);
-  background-color: var(--bg);
+  background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -72,68 +68,46 @@ button {
   border: none;
 }
 
+button:disabled { cursor: not-allowed; }
+
 a {
   color: var(--link);
-  text-decoration: none;
-  text-underline-offset: 0.15em;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
 }
 
-a:hover {
-  color: var(--link-hover);
-  text-decoration: underline;
-}
+a:hover { color: var(--link-hover); }
 
 h1,
 h2,
 h3,
 h4 {
+  font-family: var(--font-display);
   line-height: var(--leading-tight);
-  font-weight: var(--weight-bold);
+  font-weight: var(--weight-semibold);
   letter-spacing: var(--tracking-tight);
   text-wrap: balance;
 }
 
-h1 {
-  font-size: var(--step-4);
-}
-h2 {
-  font-size: var(--step-3);
-}
-h3 {
-  font-size: var(--step-2);
-}
-h4 {
-  font-size: var(--step-1);
-}
+h1 { font-size: var(--step-4); }
+h2 { font-size: var(--step-3); }
+h3 { font-size: var(--step-2); }
+h4 { font-size: var(--step-1); }
 
-p {
-  text-wrap: pretty;
-}
-
+p { text-wrap: pretty; }
 ul,
-ol {
-  padding-left: 1.25em;
-}
+ol { padding-left: 1.25em; }
+:target { scroll-margin-top: calc(var(--header-height) + var(--space-lg)); }
 
-:target {
-  scroll-margin-top: calc(var(--header-height) + var(--space-lg));
-}
-
-/* Visible, consistent focus for keyboard users. */
 :focus-visible {
   outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline-offset: 3px;
   border-radius: var(--radius-xs);
 }
 
-:focus:not(:focus-visible) {
-  outline: none;
-}
-
-/* The skip-link target is programmatically focusable but shouldn't show a ring. */
-main:focus {
-  outline: none;
-}
+:focus:not(:focus-visible) { outline: none; }
+main:focus { outline: none; }
 
 ::selection {
   background: var(--brand-200);
@@ -142,7 +116,7 @@ main:focus {
 
 hr {
   border: none;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--border-strong);
   margin: var(--space-xl) 0;
 }
 
@@ -171,10 +145,10 @@ samp {
   left: var(--space-md);
   top: -100%;
   z-index: var(--z-toast);
-  background: var(--brand-600);
+  background: var(--brand-700);
   color: #fff;
   padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-sm);
+  border: 2px solid currentColor;
   box-shadow: var(--shadow-md);
   transition: top var(--dur-fast) var(--ease-out);
 }
@@ -183,4 +157,21 @@ samp {
   top: var(--space-md);
   color: #fff;
   text-decoration: none;
+}
+
+@media (forced-colors: active) {
+  * { forced-color-adjust: auto; }
+  :focus-visible {
+    outline-color: Highlight;
+    outline-width: 3px;
+  }
+  .us-tile rect,
+  .level-token__swatch,
+  .map-legend__swatch,
+  .state-chip__mark {
+    forced-color-adjust: none;
+    fill: CanvasText;
+    background: CanvasText;
+    border-color: Canvas;
+  }
 }

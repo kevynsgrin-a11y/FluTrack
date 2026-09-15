@@ -36,7 +36,8 @@ import { threatCard, pathogenTiles, stateChip, signalRows } from '../src/scripts
 import * as seo from './lib/seo.mjs';
 import * as partials from './lib/partials.mjs';
 import { generateSnapshot } from './lib/snapshot.mjs';
-import { assetFiles, manifest, icoFromPng } from './lib/assets.mjs';
+import { assetFiles, manifest, icoFromPng, stateOgSvg } from './lib/assets.mjs';
+import { extractCritical } from './lib/critical.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
@@ -113,7 +114,8 @@ function minifyCss(css) {
 
 function bundleCss() {
   const order = ['tokens.css', 'base.css', 'components.css', 'main.css'];
-  const css = order.map((f) => readFileSync(join(srcStyles, f), 'utf8')).join('\n');
+  const sources = Object.fromEntries(order.map((f) => [f, readFileSync(join(srcStyles, f), 'utf8')]));
+  const css = order.map((f) => sources[f]).join('\n');
   const min = minifyCss(css);
   // Content-hash the filename so the immutable cache header is always safe.
   const hash = createHash('sha256').update(min).digest('hex').slice(0, 10);
@@ -121,7 +123,21 @@ function bundleCss() {
   const out = join(dist, 'assets', name);
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, `/* FluTrack — bundled stylesheet */\n${min}`);
-  site.assets = { ...(site.assets || {}), css: name };
+
+  // Critical CSS for the header and the hero readout, cut from the same
+  // sources so it can never drift from the sheet it is a subset of. The token
+  // and reset layers go in whole: every above-the-fold rule resolves custom
+  // properties against them, and @font-face must be inline for the preloaded
+  // fonts to be used.
+  const critical = minifyCss(
+    [
+      extractCritical(sources['tokens.css'], { all: true }),
+      extractCritical(sources['base.css'], { all: true }),
+      extractCritical(sources['components.css']),
+      extractCritical(sources['main.css']),
+    ].join('\n')
+  );
+  site.assets = { ...(site.assets || {}), css: name, critical };
 }
 
 function copyScripts() {
@@ -153,6 +169,9 @@ function writeAssets() {
     for (const f of readdirSync(srcAssets)) {
       if (/\.(png|ico|webp|jpg|jpeg)$/i.test(f)) cpSync(join(srcAssets, f), join(outDir, f));
     }
+    // Font assets stay same-origin to satisfy the production CSP.
+    const fonts = join(srcAssets, 'fonts');
+    if (existsSync(fonts)) cpSync(fonts, join(outDir, 'fonts'), { recursive: true });
   }
   // Copy the bundled snapshot into the served tree, minified (the source copy
   // stays pretty-printed for readable diffs).
@@ -218,12 +237,43 @@ function headers() {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    "connect-src 'self' https://data.cdc.gov https://geo.fcc.gov",
+    // ingest.oakandmain.dev is the TrueAPI ingest Worker that data-sources.js
+    // has fetched from since b817d55; that commit repointed the host without
+    // updating this policy, so every live refresh has been blocked ever since.
+    "connect-src 'self' https://data.cdc.gov https://geo.fcc.gov https://ingest.oakandmain.dev",
     "form-action 'self'",
     "frame-ancestors 'none'",
     "object-src 'none'",
     'upgrade-insecure-requests',
   ].join('; ');
+  // Cache-Control rules must be MUTUALLY EXCLUSIVE. Cloudflare's _headers spec:
+  // "If a header is applied twice in the _headers file, the values are joined
+  // with a comma separator" — and a splat "will greedily match all characters",
+  // including "/". So /assets/* would also match /assets/js/app.js, and a file
+  // matching two rules ends up with a spliced, meaningless Cache-Control.
+  // build/check.mjs asserts no emitted file matches more than one rule.
+  //
+  // Only the stylesheet carries a content hash, so only it may be immutable.
+  // Everything else is served at a stable name that pins no bytes — including
+  // the fonts: `newsreader-latin.woff2` does not change when the face does, so
+  // a year of `immutable` would strand a replacement in returning visitors'
+  // caches exactly as it would for app.js. Fonts get a long TTL with a long
+  // stale-while-revalidate window instead: near-immutable in practice, but
+  // recoverable. SWR is live here because no revalidating directive accompanies
+  // it (see the HTML rule below for the case where it would be inert).
+  // No stale-while-revalidate here, deliberately. Cloudflare disables SWR
+  // whenever s-maxage, must-revalidate or proxy-revalidate is present (RFC 9111
+  // 4.2.4) — and this value needs both: max-age=0 + must-revalidate keeps the
+  // browser revalidating, s-maxage gives the shared cache a short freshness
+  // window. An SWR directive alongside them is inert, and advertising a
+  // stale-serving window that can never happen is worse than omitting it.
+  const HTML_CACHE = 'public, max-age=0, must-revalidate, s-maxage=300';
+  // Directory URLs never collide with the asset rules below: a placeholder
+  // matches everything except "/", and each of these ends in "/".
+  const htmlRules = ['/', '/:page/', '/:section/:page/', '/404.html', '/offline.html']
+    .map((pattern) => `${pattern}\n  Cache-Control: ${HTML_CACHE}\n`)
+    .join('\n');
+
   return `/*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
@@ -232,11 +282,21 @@ function headers() {
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   Content-Security-Policy: ${csp}
 
-/assets/*
+${htmlRules}
+/assets/fonts/*
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=31536000
+
+/assets/${site.assets.css}
+  Cache-Control: public, max-age=31536000, immutable
+
+/assets/js/*
+  Cache-Control: public, max-age=300, stale-while-revalidate=86400
+
+/assets/*.png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
-/assets/styles.*.css
-  Cache-Control: public, max-age=31536000, immutable
+/assets/*.svg
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
 
 /data/*
   Cache-Control: public, max-age=3600
@@ -298,6 +358,9 @@ async function main() {
   // Per-state pages
   const { statePage } = await import('./pages/state.mjs');
   for (const st of states) {
+    const socialDir = join(dist, 'assets', 'og');
+    mkdirSync(socialDir, { recursive: true });
+    writeFileSync(join(socialDir, `${st.slug}.svg`), stateOgSvg(site, st, ctx.models.get(st.abbr).model, ctx.provenance));
     written.push(writePage(statePage(ctx, st)));
     sitemap.push({ path: `/state/${st.slug}/`, changefreq: 'weekly', priority: 0.8, lastmod: snapshot.weekEnding });
   }
