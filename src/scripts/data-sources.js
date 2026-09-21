@@ -24,7 +24,11 @@
 import { stateByAbbr, states } from './states-data.js';
 import { labelToLevel } from './threat-index.js';
 
-const SOCRATA_BASE = 'https://data.cdc.gov/resource';
+// TrueAPI Phase 1: the browser's live refresh reads the portfolio ingest worker's
+// warm copies (CORS-open, refreshed on the 6h cron slot) instead of querying CDC
+// Socrata per visitor. Same payloads, same SoQL queries — zero upstream calls
+// from this site, and the snapshot fallback below still covers cold starts.
+const SOCRATA_BASE = 'https://ingest.oakandmain.dev/data/cdc-socrata/resource';
 
 // How much history the live query asks for. The threat model only ever looks at
 // the latest value and the prior three weeks, so a ~4-month window is generous
@@ -68,7 +72,7 @@ export const DATASETS = Object.freeze({
     label: 'NWSS Wastewater Viral Activity Level',
     license: 'Public Domain (U.S. Government)',
     fields: {
-      week: ['date_period', 'week_ending', 'reference_date', 'date'],
+      week: ['week_end', 'date_period', 'week_ending', 'reference_date', 'date'],
       geography: ['state', 'wwtp_jurisdiction', 'geography'],
       pathogen: ['pathogen', 'pathogen_name'],
       wval: ['wval', 'wva_level', 'activity_level', 'value'],
@@ -150,7 +154,12 @@ async function fetchJson(url, { signal } = {}) {
     headers: { Accept: 'application/json' },
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
-  return res.json();
+  const payload = await res.json();
+  // The ingest worker wraps warm payloads: { api, data, fetchedAt, stale }. Unwrap
+  // transparently so every adapter below keeps seeing raw Socrata rows.
+  return payload && typeof payload === 'object' && payload.api && 'data' in payload
+    ? payload.data
+    : payload;
 }
 
 // --- Per-dataset live adapters -------------------------------------------- //

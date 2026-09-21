@@ -27,7 +27,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 
 import { createHash } from 'node:crypto';
-import { site, disclaimers, hasPublisherEmail } from './lib/site.mjs';
+import { site, disclaimers } from './lib/site.mjs';
 import { states } from './lib/states.mjs';
 import { layout, BOOT_SCRIPT } from './lib/layout.mjs';
 import { computeModel } from '../src/scripts/model.js';
@@ -36,7 +36,8 @@ import { threatCard, pathogenTiles, stateChip, signalRows } from '../src/scripts
 import * as seo from './lib/seo.mjs';
 import * as partials from './lib/partials.mjs';
 import { generateSnapshot } from './lib/snapshot.mjs';
-import { assetFiles, manifest, icoFromPng } from './lib/assets.mjs';
+import { assetFiles, manifest, icoFromPng, stateOgSvg } from './lib/assets.mjs';
+import { extractCritical } from './lib/critical.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
@@ -111,41 +112,10 @@ function minifyCss(css) {
     .trim();
 }
 
-/**
- * Derive the `prefers-color-scheme: dark` block from the single
- * `:root[data-theme='dark']` rule and substitute it for the generation marker.
- *
- * Both contexts must carry an identical set of custom properties. Maintaining
- * them as two hand-written copies had already gone wrong once — the media copy
- * was missing four tokens, which is invisible until you view the site on a dark
- * OS without ever having clicked the theme toggle.
- */
-function emitDarkMediaBlock(css) {
-  const MARKER = '/* @generated-dark-media-block */';
-  if (!css.includes(MARKER)) {
-    throw new Error('tokens.css is missing the dark-media-block marker');
-  }
-  const m = css.match(/:root\[data-theme='dark'\]\s*\{([\s\S]*?)\n\}/);
-  if (!m) throw new Error("Could not find the :root[data-theme='dark'] rule in tokens.css");
-
-  // Re-indent the captured declarations one level deeper for the nested rule.
-  const body = m[1]
-    .split('\n')
-    .map((line) => (line.trim() ? `  ${line}` : line))
-    .join('\n');
-
-  const block = `@media (prefers-color-scheme: dark) {\n  :root:not([data-theme='light']) {${body}\n  }\n}`;
-  return css.replace(MARKER, block);
-}
-
 function bundleCss() {
   const order = ['tokens.css', 'base.css', 'components.css', 'main.css'];
-  const css = order
-    .map((f) => {
-      const raw = readFileSync(join(srcStyles, f), 'utf8');
-      return f === 'tokens.css' ? emitDarkMediaBlock(raw) : raw;
-    })
-    .join('\n');
+  const sources = Object.fromEntries(order.map((f) => [f, readFileSync(join(srcStyles, f), 'utf8')]));
+  const css = order.map((f) => sources[f]).join('\n');
   const min = minifyCss(css);
   // Content-hash the filename so the immutable cache header is always safe.
   const hash = createHash('sha256').update(min).digest('hex').slice(0, 10);
@@ -153,101 +123,37 @@ function bundleCss() {
   const out = join(dist, 'assets', name);
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, `/* FluTrack — bundled stylesheet */\n${min}`);
-  site.assets = { ...(site.assets || {}), css: name };
+
+  // Critical CSS for the header and the hero readout, cut from the same
+  // sources so it can never drift from the sheet it is a subset of. The token
+  // and reset layers go in whole: every above-the-fold rule resolves custom
+  // properties against them, and @font-face must be inline for the preloaded
+  // fonts to be used.
+  const critical = minifyCss(
+    [
+      extractCritical(sources['tokens.css'], { all: true }),
+      extractCritical(sources['base.css'], { all: true }),
+      extractCritical(sources['components.css']),
+      extractCritical(sources['main.css']),
+    ].join('\n')
+  );
+  site.assets = { ...(site.assets || {}), css: name, critical };
 }
-
-// Modules the browser loads directly (via <script type="module">). The rest of
-// src/scripts is either imported transitively or build-time only.
-const BROWSER_ENTRIES = ['ui.js', 'alerts.js', 'consent.js', 'app.js', 'states-filter.js'];
-
-// Imported only by the Node build (SSR), never by a browser module graph.
-// Copying them shipped dead bytes to the CDN.
-const BUILD_ONLY = new Set(['icons.js', 'map-render.js', 'us-tilegrid.js']);
 
 function copyScripts() {
   const outDir = join(dist, 'assets', 'js');
   mkdirSync(outDir, { recursive: true });
-  const emitted = [];
   for (const f of readdirSync(srcScripts)) {
     if (f === 'sw.js') continue; // service worker is emitted at the root scope
-    if (BUILD_ONLY.has(f)) continue;
-    if (!f.endsWith('.js')) continue;
-    const src = readFileSync(join(srcScripts, f), 'utf8');
-    writeFileSync(join(outDir, f), stripJsComments(src));
-    emitted.push(`/assets/js/${f}`);
+    if (f.endsWith('.js')) cpSync(join(srcScripts, f), join(outDir, f));
   }
-  site.assets = { ...(site.assets || {}), js: emitted };
 }
 
-// Conservative comment stripper: removes block and line comments while leaving
-// string and template literals intact. The CSS already gets a minify pass; the
-// JS shipped with full JSDoc, which was ~33% of its gzipped weight.
-function stripJsComments(src) {
-  let out = '';
-  let i = 0;
-  const n = src.length;
-  let quote = null; // "'", '"', '`'
-  while (i < n) {
-    const c = src[i];
-    const next = src[i + 1];
-    if (quote) {
-      out += c;
-      if (c === '\\') {
-        out += next ?? '';
-        i += 2;
-        continue;
-      }
-      if (c === quote) quote = null;
-      i += 1;
-      continue;
-    }
-    if (c === '"' || c === "'" || c === '`') {
-      quote = c;
-      out += c;
-      i += 1;
-      continue;
-    }
-    if (c === '/' && next === '*') {
-      const end = src.indexOf('*/', i + 2);
-      i = end === -1 ? n : end + 2;
-      continue;
-    }
-    if (c === '/' && next === '/') {
-      // Not a comment if this '/' opens a regex literal — check the previous
-      // meaningful char. Line comments always follow whitespace or a statement
-      // end in this codebase, so the simple guard is sufficient.
-      const prev = out.replace(/\s+$/, '').slice(-1);
-      if (!['(', ',', '=', ':', '[', '!', '&', '|', '?', '{', '}', ';', '+', '-', '*', '~', '%'].includes(prev)) {
-        const end = src.indexOf('\n', i);
-        i = end === -1 ? n : end;
-        continue;
-      }
-    }
-    out += c;
-    i += 1;
-  }
-  // Collapse the blank lines the comment removal leaves behind.
-  return out.replace(/\n{3,}/g, '\n\n').replace(/[ \t]+\n/g, '\n');
-}
-
-// Emit the service worker at the site root (root scope). The cache key is
-// derived from EVERY emitted asset, not just the stylesheet — keying it on the
-// CSS hash alone meant a JS-only deploy never rotated the cache, so users stayed
-// one deploy behind on scripts indefinitely.
+// Emit the service worker at the site root (root scope), versioned by the CSS
+// content hash so a new deploy activates a fresh cache.
 function writeServiceWorker() {
-  const h = createHash('sha256').update(site.assets?.css || '');
-  // Hash the actual script contents so any JS change rotates the cache, not
-  // just a change to the (unhashed) filenames.
-  for (const f of readdirSync(srcScripts).sort()) {
-    if (f.endsWith('.js')) h.update(readFileSync(join(srcScripts, f)));
-  }
-  const fingerprint = h.digest('hex').slice(0, 12);
-  // Precache the stylesheet and the scripts the browser actually loads, so the
-  // offline shell renders styled and interactive.
-  const precache = [`/assets/${site.assets.css}`, ...BROWSER_ENTRIES.map((f) => `/assets/js/${f}`)];
-  const sw = readFileSync(join(srcScripts, 'sw.js'), 'utf8')
-    .replace('__BUILD__', fingerprint)
-    .replace('__ASSETS__', JSON.stringify(precache));
+  const version = (site.assets?.css || 'styles').replace(/[^a-z0-9]/gi, '') || 'v1';
+  const sw = readFileSync(join(srcScripts, 'sw.js'), 'utf8').replace('__BUILD__', version);
   writeFileSync(join(dist, 'sw.js'), sw);
 }
 
@@ -263,6 +169,9 @@ function writeAssets() {
     for (const f of readdirSync(srcAssets)) {
       if (/\.(png|ico|webp|jpg|jpeg)$/i.test(f)) cpSync(join(srcAssets, f), join(outDir, f));
     }
+    // Font assets stay same-origin to satisfy the production CSP.
+    const fonts = join(srcAssets, 'fonts');
+    if (existsSync(fonts)) cpSync(fonts, join(outDir, 'fonts'), { recursive: true });
   }
   // Copy the bundled snapshot into the served tree, minified (the source copy
   // stays pretty-printed for readable diffs).
@@ -291,19 +200,8 @@ function writeRootFiles(sitemapEntries) {
 
 function securityTxt() {
   // Expires ~1 year out from the season anchor (stable, avoids build-time Date).
-  // Contact MUST be reachable — a security.txt pointing at a dead mailbox is
-  // worse than none, so fall back to the contact page when no real mailbox is set.
-  // Prefer the dedicated security mailbox when one is configured — it exists
-  // precisely so a vulnerability report does not land in the general inbox.
-  // Same reserved-TLD guard as everywhere else: never advertise a dead route.
-  const routable = (a) => Boolean(a) && !/\.(example|invalid|test|localhost)$/i.test(a);
-  const contact = routable(site.publisher.securityEmail)
-    ? `mailto:${site.publisher.securityEmail}`
-    : hasPublisherEmail()
-      ? `mailto:${site.publisher.email}`
-      : `${site.origin}/contact/`;
   return `# ${site.name} security contact
-Contact: ${contact}
+Contact: mailto:${site.publisher.email}
 Expires: ${site.season.endsISO}T00:00:00Z
 Preferred-Languages: en
 Canonical: ${site.origin}/.well-known/security.txt
@@ -313,7 +211,7 @@ Canonical: ${site.origin}/.well-known/security.txt
 function humansTxt() {
   return `/* TEAM */
   Site: ${site.name}
-  Contact: ${hasPublisherEmail() ? site.publisher.email : `${site.origin}/contact/`}
+  Contact: ${site.publisher.email}
 
 /* SITE */
   An independent, plain-English respiratory illness tracker built on
@@ -323,67 +221,76 @@ function humansTxt() {
 `;
 }
 
-// Cloudflare Web Analytics is enabled for this zone with automatic injection,
-// so the edge adds <script src="https://static.cloudflareinsights.com/beacon.min.js">
-// to every HTML response. It is not in this repo and cannot be hashed here, so
-// the CSP must name its host explicitly — otherwise the tag ships on every page
-// and is blocked on every load, which is both a broken beacon and a privacy
-// policy that describes analytics the site never actually collects. The beacon
-// reports to cloudflareinsights.com, hence the connect-src entry.
-const CF_BEACON_HOST = 'https://static.cloudflareinsights.com';
-const CF_BEACON_REPORT_HOST = 'https://cloudflareinsights.com';
-
 function headers() {
   // Content-Security-Policy tuned to exactly what FluTrack loads:
   //   * scripts are self-hosted ES modules; the single inline theme-boot script
   //     is allowlisted by its SHA-256 hash rather than 'unsafe-inline'.
   //   * style-src keeps 'unsafe-inline' because the templates use inline
   //     style="" attributes (no inline <style> blocks or remote styles).
-  //     script-src-attr 'none' still blocks inline event handlers outright.
   //   * connect-src permits the CDC Socrata API and the FCC geocoder used for
   //     "use my location".
-  //   * violations are reported to a first-party collector; report-uri is kept
-  //     alongside report-to because it is still the only form Safari honours.
   const bootHash = createHash('sha256').update(BOOT_SCRIPT).digest('base64');
   const csp = [
     "default-src 'self'",
     "base-uri 'self'",
-    "object-src 'none'",
-    "frame-ancestors 'none'",
-    "form-action 'self'",
-    `script-src 'self' 'sha256-${bootHash}' ${CF_BEACON_HOST}`,
-    "script-src-attr 'none'",
+    `script-src 'self' 'sha256-${bootHash}'`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
     "font-src 'self'",
-    `connect-src 'self' https://data.cdc.gov https://geo.fcc.gov ${CF_BEACON_REPORT_HOST}`,
-    "manifest-src 'self'",
-    "worker-src 'self'",
+    // ingest.oakandmain.dev is the TrueAPI ingest Worker that data-sources.js
+    // has fetched from since b817d55; that commit repointed the host without
+    // updating this policy, so every live refresh has been blocked ever since.
+    "connect-src 'self' https://data.cdc.gov https://geo.fcc.gov https://ingest.oakandmain.dev",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+    "object-src 'none'",
     'upgrade-insecure-requests',
-    'report-uri /api/csp-report',
-    'report-to csp-endpoint',
   ].join('; ');
+  // Cache-Control rules must be MUTUALLY EXCLUSIVE. Cloudflare's _headers spec:
+  // "If a header is applied twice in the _headers file, the values are joined
+  // with a comma separator" — and a splat "will greedily match all characters",
+  // including "/". So /assets/* would also match /assets/js/app.js, and a file
+  // matching two rules ends up with a spliced, meaningless Cache-Control.
+  // build/check.mjs asserts no emitted file matches more than one rule.
+  //
+  // Only the stylesheet carries a content hash, so only it may be immutable.
+  // Everything else is served at a stable name that pins no bytes — including
+  // the fonts: `newsreader-latin.woff2` does not change when the face does, so
+  // a year of `immutable` would strand a replacement in returning visitors'
+  // caches exactly as it would for app.js. Fonts get a long TTL with a long
+  // stale-while-revalidate window instead: near-immutable in practice, but
+  // recoverable. SWR is live here because no revalidating directive accompanies
+  // it (see the HTML rule below for the case where it would be inert).
+  // No stale-while-revalidate here, deliberately. Cloudflare disables SWR
+  // whenever s-maxage, must-revalidate or proxy-revalidate is present (RFC 9111
+  // 4.2.4) — and this value needs both: max-age=0 + must-revalidate keeps the
+  // browser revalidating, s-maxage gives the shared cache a short freshness
+  // window. An SWR directive alongside them is inert, and advertising a
+  // stale-serving window that can never happen is worse than omitting it.
+  const HTML_CACHE = 'public, max-age=0, must-revalidate, s-maxage=300';
+  // Directory URLs never collide with the asset rules below: a placeholder
+  // matches everything except "/", and each of these ends in "/".
+  const htmlRules = ['/', '/:page/', '/:section/:page/', '/404.html', '/offline.html']
+    .map((pattern) => `${pattern}\n  Cache-Control: ${HTML_CACHE}\n`)
+    .join('\n');
 
-  // Strict-Transport-Security deliberately carries NO `preload` token. Preload
-  // is effectively irreversible and asserts HTTPS on every present and future
-  // subdomain; adding it before a complete subdomain inventory is how a stray
-  // HTTP-only host becomes unreachable with no quick way back.
   return `/*
   X-Content-Type-Options: nosniff
   X-Frame-Options: DENY
   Referrer-Policy: strict-origin-when-cross-origin
-  Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=(), browsing-topics=()
+  Permissions-Policy: geolocation=(self), camera=(), microphone=(), payment=()
   Strict-Transport-Security: max-age=63072000; includeSubDomains
-  Cross-Origin-Opener-Policy: same-origin
-  Cross-Origin-Resource-Policy: same-origin
-  Reporting-Endpoints: csp-endpoint="${site.origin}/api/csp-report"
   Content-Security-Policy: ${csp}
 
-/assets/js/*
-  Cache-Control: public, max-age=300, stale-while-revalidate=86400
+${htmlRules}
+/assets/fonts/*
+  Cache-Control: public, max-age=2592000, stale-while-revalidate=31536000
 
 /assets/${site.assets.css}
   Cache-Control: public, max-age=31536000, immutable
+
+/assets/js/*
+  Cache-Control: public, max-age=300, stale-while-revalidate=86400
 
 /assets/*.png
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
@@ -451,6 +358,9 @@ async function main() {
   // Per-state pages
   const { statePage } = await import('./pages/state.mjs');
   for (const st of states) {
+    const socialDir = join(dist, 'assets', 'og');
+    mkdirSync(socialDir, { recursive: true });
+    writeFileSync(join(socialDir, `${st.slug}.svg`), stateOgSvg(site, st, ctx.models.get(st.abbr).model, ctx.provenance));
     written.push(writePage(statePage(ctx, st)));
     sitemap.push({ path: `/state/${st.slug}/`, changefreq: 'weekly', priority: 0.8, lastmod: snapshot.weekEnding });
   }

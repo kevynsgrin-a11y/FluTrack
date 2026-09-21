@@ -12,27 +12,15 @@
 // mismatch the static markup.
 // ===========================================================================
 
-import { loadSnapshot, fetchLiveSignals, hasSignalData } from './data-sources.js';
+import { loadSnapshot, fetchLiveSignals } from './data-sources.js';
 import { computeModel } from './model.js';
 import { nationalSignals } from './aggregate.js';
-import {
-  threatCard,
-  pathogenTiles,
-  signalRows,
-  stateSummary,
-  stateEvidence,
-  cachedNotice,
-} from './render.js';
+import { threatCard, pathogenTiles, signalRows, levelToken, trendChip } from './render.js';
 import { states, stateByAbbr } from './states-data.js';
 import { formatDate, formatChange } from './util.js';
 
 const SELECT_KEY = 'flutrack-state';
 const US = { abbr: 'US', name: 'United States', slug: '', isNational: true };
-
-// A live refresh must cover a meaningful share of the country before the UI is
-// allowed to call itself "Live CDC data". Below this, the bundled sample data is
-// still what's mostly on screen, so the sample badge stays.
-const LIVE_STATE_FLOOR = 25;
 
 const cardRegion = document.querySelector('[data-region="threat-card"]');
 if (cardRegion) {
@@ -45,170 +33,29 @@ async function boot() {
 
   const store = { signals: new Map(), weekEnding: '', provenance: { live: false } };
 
-  // Determine initial selection. A ?state= parameter wins over the saved one so
-  // a chosen state can be linked and shared.
-  let selection = isStatePage ? pinnedAbbr : selectionFromUrl() || readSavedSelection();
-
-  // --- 0. Wire interaction FIRST -----------------------------------------
-  // The picker must work before any network call resolves. Wiring it after an
-  // await meant an early submit fell through to a native GET on a form with no
-  // action, navigating to /?state=XX and silently losing the selection.
-  if (!isStatePage) wirePicker(store, (abbr) => (selection = abbr));
-
-  // --- 1. Snapshot + live refresh, started together ----------------------
-  // The live request is the slow one and does not depend on the snapshot, so
-  // kick it off first and let both settle in parallel.
-  const livePromise = fetchLiveSignals().catch((e) => {
-    console.info('[FluTrack] live CDC feed unavailable, showing sample data', e?.message || e);
-    return null;
-  });
-
-  // A state page server-renders from exactly one state's signals and inlines
-  // them, so it needs no network round trip at all for its baseline view.
-  const inlined = readInlineSignals();
-  if (inlined && pinnedAbbr) {
-    store.signals.set(pinnedAbbr, inlined);
-    store.weekEnding = inlined.weekEnding || cardRegion.getAttribute('data-week') || '';
-  } else {
-    try {
-      const snap = await loadSnapshot('');
-      ingestSnapshot(store, snap);
-      if (snap && snap.note) store.sampleNote = snap.note;
-    } catch (e) {
-      console.warn('[FluTrack] snapshot load failed', e);
-    }
+  // --- 1. Snapshot (always available) ------------------------------------
+  try {
+    const snap = await loadSnapshot('');
+    ingestSnapshot(store, snap);
+  } catch (e) {
+    console.warn('[FluTrack] snapshot load failed', e);
   }
 
-  // The server already rendered this exact view from this exact data, so the
-  // first client render would be byte-identical — it would only tear down the
-  // DOM and restart the gauge and tile animations. Skip it.
-  const ssrWeek = cardRegion.getAttribute('data-week');
-  const ssrMatches = Boolean(ssrWeek) && ssrWeek === store.weekEnding && selection === (pinnedAbbr || readSavedSelection());
-  if (!ssrMatches) render(store, selection);
+  // Determine initial selection.
+  let selection = isStatePage ? pinnedAbbr : readSavedSelection();
+  render(store, selection);
+  if (!isStatePage) wirePicker(store, (abbr) => (selection = abbr));
 
-  // --- 2. Wire the offline/cached freshness boundary ---------------------
-  // Wired before the live result settles so a device that is already offline
-  // says so immediately, rather than after the fetch has finished timing out.
-  wireCacheNotice(store, () => selection);
-
-  // --- 3. Apply the live refresh if it produced usable data --------------
-  settleLive(store, await livePromise, selection);
-}
-
-/**
- * Apply a live result (or the lack of one) to the store and the page.
- * Shared by the initial load and by the "Retry refresh" control, so the two
- * paths cannot drift into treating the same response differently.
- */
-function settleLive(store, live, selection) {
-  if (live && live.statesWithData >= LIVE_STATE_FLOOR && isIsoDate(live.weekEnding)) {
+  // --- 2. Live refresh (progressive enhancement) -------------------------
+  try {
+    const live = await fetchLiveSignals();
     ingestLive(store, live);
     store.provenance = { live: true, sources: live.sources };
     render(store, selection);
-    paintCacheNotice(store);
-    announceLive(store, selection, live);
-    return true;
-  }
-  // Either the fetch failed, or it succeeded but carried nothing usable
-  // (empty result set, or an upstream schema change that stopped resolving
-  // geographies). Both cases leave sample data on screen, so say so plainly
-  // rather than leaving the badge reading "not loaded yet" forever.
-  if (live) {
-    console.warn(
-      `[FluTrack] live CDC feed returned no usable data (${live.statesWithData} states); keeping sample data`
-    );
-  }
-  store.provenance = { live: false, failed: true };
-  render(store, selection);
-  paintCacheNotice(store);
-  announceLiveFailure();
-  return false;
-}
-
-// --- Offline / cached-data boundary --------------------------------------- //
-
-/** `navigator.onLine` is only reliable in the negative — which is the case we
- *  care about here: false means definitively no network. */
-function isOffline() {
-  return navigator.onLine === false;
-}
-
-/**
- * Show or clear the freshness boundary. A cached page that looks identical to a
- * live one is the hazard; naming the snapshot on screen is the fix.
- */
-function paintCacheNotice(store) {
-  const region = document.querySelector('[data-region="cache-notice"]');
-  if (!region) return;
-  if (!isOffline()) {
-    region.innerHTML = '';
-    return;
-  }
-  // Re-rendering identical markup would steal focus from the retry button a
-  // keyboard user is sitting on.
-  if (region.querySelector('.cache-notice')) return;
-  region.innerHTML = cachedNotice({ weekEnding: store.weekEnding });
-}
-
-/**
- * Wire the boundary: paint it now, keep it in step with connectivity changes,
- * and make the visible Retry control actually re-attempt the live pull.
- */
-function wireCacheNotice(store, getSelection) {
-  const region = document.querySelector('[data-region="cache-notice"]');
-  if (!region) return;
-
-  let retrying = false;
-  const retry = async (btn) => {
-    if (retrying) return;
-    retrying = true;
-    const label = btn ? btn.textContent : '';
-    if (btn) {
-      btn.disabled = true;
-      btn.textContent = 'Refreshing…';
-    }
-    try {
-      const live = await fetchLiveSignals().catch(() => null);
-      const ok = settleLive(store, live, getSelection());
-      if (!ok) setStatus('Still offline or unable to reach the CDC feed. Showing cached data.');
-    } finally {
-      retrying = false;
-      if (btn && btn.isConnected) {
-        btn.disabled = false;
-        btn.textContent = label;
-      }
-    }
-  };
-
-  region.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-action="retry-refresh"]');
-    if (btn) retry(btn);
-  });
-
-  window.addEventListener('offline', () => paintCacheNotice(store));
-  window.addEventListener('online', () => {
-    paintCacheNotice(store);
-    retry(region.querySelector('[data-action="retry-refresh"]'));
-  });
-
-  paintCacheNotice(store);
-}
-
-/** Read the per-state signal bundle inlined by the build, if present. */
-function readInlineSignals() {
-  const el = document.querySelector('script[type="application/json"][data-state-signals]');
-  if (!el) return null;
-  try {
-    return JSON.parse(el.textContent);
+    announceLive(live);
   } catch (e) {
-    console.warn('[FluTrack] inline state signals could not be parsed', e);
-    return null;
+    console.info('[FluTrack] live CDC feed unavailable, showing sample data', e?.message || e);
   }
-}
-
-/** Strict YYYY-MM-DD check — guards against '' and malformed upstream dates. */
-function isIsoDate(s) {
-  return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 }
 
 function ingestSnapshot(store, snap) {
@@ -223,9 +70,15 @@ function ingestLive(store, live) {
   store.weekEnding = live.weekEnding || store.weekEnding;
   for (const [abbr, sig] of live.signalsByAbbr) {
     // Only overwrite when the live bundle actually has data for the state.
-    if (hasSignalData(sig)) store.signals.set(abbr, sig);
+    if (hasData(sig)) store.signals.set(abbr, sig);
   }
   store.signals.set('US', nationalSignals(states.map((s) => store.signals.get(s.abbr)).filter(Boolean)));
+}
+
+function hasData(sig) {
+  return (sig.edCombinedSeries && sig.edCombinedSeries.length) ||
+    (sig.wastewaterSeries && sig.wastewaterSeries.length) ||
+    Number.isFinite(sig.ariLevel);
 }
 
 function resolveState(abbr) {
@@ -235,34 +88,14 @@ function resolveState(abbr) {
 
 function render(store, abbr) {
   const st = resolveState(abbr);
-  // Falling back to national data is right for the US view, but on a state page
-  // it would render national numbers under that state's own heading — plausible
-  // enough that the reader could never tell. Let the "No data" branch handle it.
-  const signals = st.isNational
-    ? store.signals.get('US')
-    : store.signals.get(st.abbr);
-  if (!signals) {
-    // Render an explicit "No data" view rather than returning silently — a bare
-    // return left the picker looking dead when the store was empty.
-    const empty = computeModel({});
-    setRegion('threat-card', threatCard(st, empty, { weekEnding: '', provenance: store.provenance }));
-    setRegion('pathogen-tiles', pathogenTiles(empty));
-    setRegion('signal-rows', signalRows({}));
-    setRegion('state-evidence', stateEvidence(st, empty, {}, { weekEnding: '' }));
-    setStatus(`No data available for ${st.isNational ? 'the United States' : st.name}.`);
-    return;
-  }
+  const signals = store.signals.get(st.abbr) || store.signals.get('US');
+  if (!signals) return;
   const model = computeModel(signals);
   const opts = { weekEnding: store.weekEnding, provenance: store.provenance };
 
   setRegion('threat-card', threatCard(st, model, opts));
   setRegion('pathogen-tiles', pathogenTiles(model));
   setRegion('signal-rows', signalRows(signals));
-  // Keep the prose in step with the numbers — stale data-derived text sitting
-  // under a freshly-updated card is worse than no prose at all. The evidence
-  // block cites concrete figures, so it is the last thing that may lag.
-  setRegion('state-summary', stateSummary(st, model, signals));
-  setRegion('state-evidence', stateEvidence(st, model, signals, { weekEnding: store.weekEnding }));
 
   // Home-only regions.
   setText('state-name', st.isNational ? 'the U.S.' : st.name);
@@ -277,10 +110,11 @@ function render(store, abbr) {
       ? `${escapeText(model.trend.label)} ${escapeText(formatChange(model.trend.changePct))}`
       : escapeText(model.trend.label)
   );
-  // Only overwrite the server-rendered date when we have a real one to put
-  // there — otherwise a malformed/missing weekEnding blanks a correct value.
-  const asOf = formatDate(store.weekEnding);
-  if (asOf && asOf !== store.weekEnding) setText('glance-week', asOf);
+  setText('glance-week', formatDate(store.weekEnding));
+  setRegion('sticky-level', levelToken(model.level, model.label));
+  setRegion('sticky-trend', trendChip(model.trend));
+  const stickyLevel = document.querySelector('[data-region="sticky-level"]');
+  if (stickyLevel && Number.isFinite(model.level)) stickyLevel.setAttribute('data-sev', String(model.level));
   const heroBg = document.querySelector('.hero__bg');
   if (heroBg && Number.isFinite(model.level)) heroBg.setAttribute('data-sev', String(model.level));
   repaintMap(store, st.abbr);
@@ -302,32 +136,21 @@ function repaintMap(store, selectedAbbr) {
       const title = tile.querySelector('title');
       if (title) title.textContent = `${stateByAbbr(abbr)?.name || abbr} — ${m.label}`;
       const st = stateByAbbr(abbr);
-      if (st) tile.setAttribute('aria-label', `${st.name}: ${m.label}. View ${st.name} report.`);
+      // Mirror map-render.js exactly, rank included — hydration used to drop
+      // the ", level N" the server-rendered label carries.
+      if (st) {
+        const rank = Number.isFinite(m.level) ? `, level ${m.level}` : '';
+        tile.setAttribute('aria-label', `${st.name}: ${m.label}${rank}. View ${st.name} report.`);
+      }
     }
     tile.classList.toggle('is-selected', abbr === selectedAbbr);
   });
 }
 
 // Announce a picker-driven change to assistive tech via the polite live region.
-//
-// While offline the reading is qualified rather than stated bare. A cached page
-// can hold a weeks-old level, and announcing "Very High, rising" from stale
-// data is indistinguishable from a live severity alert — which is the one thing
-// a respiratory tracker must never fake.
-//
-// INVARIANT: no severity may be announced as current while offline. This is the
-// only in-page path that states one today; any future escalation notice must
-// carry the same isOffline() guard. Covered by test/offline-boundary.test.mjs.
 function announceSelection(st, model) {
-  const where = st.isNational ? 'United States' : st.name;
-  const suffix = isOffline() ? ' (cached data — may not be current).' : '.';
-  setStatus(`${where}: ${model.label}, ${model.trend.label}${suffix}`);
-}
-
-
-function setStatus(text) {
   const region = document.getElementById('live-status');
-  if (region) region.textContent = text;
+  if (region) region.textContent = `${st.isNational ? 'United States' : st.name}: ${model.label}, ${model.trend.label}.`;
 }
 
 function setRegion(name, html) {
@@ -376,7 +199,6 @@ function wirePicker(store, onChange) {
   const apply = (abbr) => {
     onChange(abbr);
     saveSelection(abbr);
-    reflectSelectionInUrl(abbr);
     const r = render(store, abbr);
     if (r) announceSelection(r.st, r.model);
     const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -395,130 +217,44 @@ function wirePicker(store, onChange) {
   });
 
   if (geoBtn && 'geolocation' in navigator) {
-    const ctx = { original: geoBtn.innerHTML, resetTimer: 0, busy: false };
-    geoBtn.addEventListener('click', () => locate(select, apply, geoBtn, ctx));
+    geoBtn.addEventListener('click', () => locate(select, apply, geoBtn));
   } else if (geoBtn) {
     geoBtn.hidden = true;
   }
 }
 
 // Reverse-geolocate to a state using the free, keyless FCC Area API (US only).
-// `original` and `resetTimer` are captured once per button at wire time: reading
-// innerHTML at click time meant a second click during the error window captured
-// "Location unavailable" and destroyed the label permanently.
-async function locate(select, apply, btn, ctx) {
-  if (ctx.busy) return;
-  ctx.busy = true;
-  clearTimeout(ctx.resetTimer);
+async function locate(select, apply, btn) {
+  const original = btn.innerHTML;
   btn.disabled = true;
   btn.textContent = 'Locating…';
-
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 8000);
   try {
     const pos = await new Promise((res, rej) =>
       navigator.geolocation.getCurrentPosition(res, rej, { timeout: 8000, maximumAge: 600000 })
     );
     const { latitude, longitude } = pos.coords;
     const url = `https://geo.fcc.gov/api/census/area?lat=${latitude}&lon=${longitude}&format=json`;
-    // The FCC endpoint has no SLA; without an abort a stall left the button
-    // reading "Locating…" forever with no way back short of a reload.
-    const res = await fetch(url, { signal: controller.signal });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const res = await fetch(url);
     const data = await res.json();
     const stateAbbr = data?.results?.[0]?.state_code;
     const st = stateAbbr && stateByAbbr(stateAbbr);
-    if (!st) throw new Error('outside-us');
-    select.value = st.abbr;
-    apply(st.abbr);
-    btn.innerHTML = ctx.original;
+    if (st) {
+      select.value = st.abbr;
+      apply(st.abbr);
+    } else {
+      throw new Error('No state match');
+    }
   } catch (e) {
-    const message = geoErrorMessage(e);
-    btn.textContent = message.short;
-    setStatus(message.long);
-    ctx.resetTimer = setTimeout(() => {
-      btn.innerHTML = ctx.original;
-    }, 4000);
-  } finally {
-    clearTimeout(timer);
+    btn.textContent = 'Location unavailable';
+    setTimeout(() => (btn.innerHTML = original), 2500);
     btn.disabled = false;
-    ctx.busy = false;
-  }
-}
-
-/** Distinguish the geolocation failure modes — "unavailable" told a user who
- *  denied permission nothing about how to recover. */
-function geoErrorMessage(err) {
-  if (err && err.code === 1) {
-    return {
-      short: 'Permission blocked',
-      long: 'Location permission is blocked. Choose your state from the list instead.',
-    };
-  }
-  if (err && (err.code === 2 || err.code === 3)) {
-    return {
-      short: 'Location unavailable',
-      long: 'Could not determine your location. Choose your state from the list instead.',
-    };
-  }
-  if (err && err.message === 'outside-us') {
-    return {
-      short: 'Not a US location',
-      long: 'That location is outside the United States. Choose a state from the list instead.',
-    };
-  }
-  return {
-    short: 'Location unavailable',
-    long: 'Location lookup failed. Choose your state from the list instead.',
-  };
-}
-
-// Announce the live upgrade in terms of what actually changed on screen, not
-// merely that a fetch completed — the level itself may have moved.
-function announceLive(store, selection, live) {
-  const st = resolveState(selection);
-  const signals = st.isNational ? store.signals.get('US') : store.signals.get(st.abbr);
-  const where = st.isNational ? 'United States' : st.name;
-  const week = formatDate(live.weekEnding);
-  if (!signals) {
-    setStatus(`Live CDC data loaded (week ending ${week}).`);
     return;
   }
-  const model = computeModel(signals);
-  setStatus(
-    `Live CDC data loaded (week ending ${week}). ${where}: ${model.label}, ${model.trend.label}.`
-  );
+  btn.innerHTML = original;
+  btn.disabled = false;
 }
 
-function announceLiveFailure() {
-  setStatus('Live CDC data is unavailable. Showing bundled sample data instead.');
-}
-
-/**
- * Mirror the selection into ?state=XX so the view can be linked and shared.
- * replaceState (not pushState): the picker is a filter on one page, not a
- * navigation, so it should not stack up Back-button entries.
- */
-function reflectSelectionInUrl(abbr) {
-  try {
-    const url = new URL(window.location.href);
-    if (!abbr || abbr === 'US') url.searchParams.delete('state');
-    else url.searchParams.set('state', abbr);
-    window.history.replaceState(null, '', url);
-  } catch (e) {
-    /* ignore */
-  }
-}
-
-/** Read a ?state=XX parameter, so a selection can be linked and shared. */
-function selectionFromUrl() {
-  try {
-    const raw = new URLSearchParams(window.location.search).get('state');
-    if (!raw) return null;
-    const abbr = raw.trim().toUpperCase();
-    if (abbr === 'US' || stateByAbbr(abbr)) return abbr;
-  } catch (e) {
-    /* ignore */
-  }
-  return null;
+function announceLive(live) {
+  const region = document.getElementById('live-status');
+  if (region) region.textContent = `Live CDC data loaded (week ending ${formatDate(live.weekEnding)}).`;
 }
