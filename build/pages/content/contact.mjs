@@ -1,5 +1,4 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
-import { hasPublisherEmail, postalAddressLine } from '../../lib/site.mjs';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd, organizationLd } from '../../lib/seo.mjs';
@@ -66,27 +65,14 @@ export default function contact(ctx) {
 
   <section class="section" style="padding-top: 0">
     <div class="container container--narrow">
-      <p class="text-secondary">${
-        hasPublisherEmail()
-          ? `The fastest way to reach us is email. Write to <a href="mailto:${escapeHtml(
-              email
-            )}"><strong>${escapeHtml(
-              email
-            )}</strong></a>, or use one of the routes below to land your message in the right place.`
-          : 'Pick the route below that best matches your message. We read everything that comes in.'
-      }</p>
+      <p class="text-secondary">The fastest way to reach us is email. Write to <a href="mailto:${escapeHtml(
+        email
+      )}"><strong>${escapeHtml(
+    email
+  )}</strong></a>, or use one of the routes below to land your message in the right place.</p>
       <div class="grid-2" style="margin-top: var(--space-xl)">
       ${routeCards}
       </div>
-      ${
-        postalAddressLine()
-          ? `<p class="text-secondary" style="margin-top: var(--space-xl)">Postal mail reaches ${escapeHtml(
-              site.publisher.legalName
-            )} at <strong>${escapeHtml(
-              postalAddressLine()
-            )}, United States</strong>. Email is far faster for anything time-sensitive, including corrections.</p>`
-          : ''
-      }
     </div>
   </section>
 
@@ -116,7 +102,7 @@ export default function contact(ctx) {
   `;
 
   return {
-    title: 'Contact the FluTrack team',
+    title: 'Contact',
     description:
       'Contact FluTrack for general questions, data corrections, press and partnership inquiries. Independent of the CDC, and not a medical service.',
     path: '/contact/',
@@ -129,20 +115,12 @@ export default function contact(ctx) {
 
 /** A single contact-route card with a pre-addressed mailto action. */
 function routeCard(email, { title, desc, subject, cta }) {
-  // Only render a call-to-action when it actually goes somewhere. A mailto: to
-  // an RFC-2606 `.example` address is a dead end that looks like a live route.
-  const action = hasPublisherEmail()
-    ? `<a class="btn btn--secondary" href="mailto:${escapeHtml(email)}?subject=${encodeURIComponent(
-        subject
-      )}">${escapeHtml(cta)}</a>`
-    : `<p class="muted" style="margin: 0">${escapeHtml(
-        subject
-      )} — email routing is being set up; use the alert form below in the meantime.</p>`;
+  const href = `mailto:${escapeHtml(email)}?subject=${encodeURIComponent(subject)}`;
   return `<div class="card">
         <h2 style="font-size: var(--step-1)">${escapeHtml(title)}</h2>
         <p class="text-secondary" style="margin: var(--space-2xs) 0 var(--space-md)">${escapeHtml(
           desc
         )}</p>
-        ${action}
+        <a class="btn btn--secondary" href="${href}">${escapeHtml(cta)}</a>
       </div>`;
 }

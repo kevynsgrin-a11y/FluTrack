@@ -1,5 +1,4 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
-import { hasPublisherEmail } from '../../lib/site.mjs';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
@@ -15,11 +14,6 @@ import { breadcrumbLd } from '../../lib/seo.mjs';
 export default function terms(ctx) {
   const { site, disclaimers } = ctx;
   const email = escapeHtml(site.publisher.email);
-  // Only link a mailbox that actually receives mail; otherwise route to the
-  // contact page so no policy commitment points at a dead address.
-  const contactLink = hasPublisherEmail()
-    ? `<a href="mailto:${email}">${email}</a>`
-    : '<a href="/contact/">our contact page</a>';
   const domain = escapeHtml(site.origin.replace(/^https?:\/\//, ''));
 
   const crumbs = [
@@ -107,16 +101,12 @@ export default function terms(ctx) {
     <p>FluTrack is an evolving project. We may change, suspend, or discontinue any part of the Service at any time, and we may update these Terms as the Service or the law changes. When we make a material change to these Terms, we will revise the “Last updated” date above and, where appropriate, make the change prominent rather than quietly editing it in. Your continued use of the Service after an update means you accept the revised Terms.</p>
 
     <h2>13. Governing law</h2>
-    <p>These Terms are governed by the laws of the State of ${escapeHtml(
-      site.publisher.jurisdiction
-    )} and the United States, without regard to conflict-of-law principles. You agree to resolve any dispute relating to the Service in the state or federal courts located in Sacramento County, ${escapeHtml(
-      site.publisher.jurisdiction
-    )}, to the extent permitted by applicable law. Nothing here deprives you of the protection of any mandatory consumer-protection law of the place where you live. If any provision of these Terms is found unenforceable, the remaining provisions will stay in full force.</p>
+    <p>These Terms are governed by the laws of the United States and of the state in which FluTrack is operated, without regard to conflict-of-law principles. You agree to resolve any dispute relating to the Service in the courts located in the United States, to the extent permitted by applicable law. If any provision of these Terms is found unenforceable, the remaining provisions will stay in full force.</p>
 
     <h2>14. Contact</h2>
-    <p>Questions about these Terms are welcome. You can reach us at ${contactLink}, and a real person will read it.</p>
+    <p>Questions about these Terms are welcome. You can reach us at <a href="mailto:${email}">${email}</a>, and a real person will read it.</p>
   `,
-    { updated: 'August 2026' }
+    { updated: 'July 2026' }
   )}
 
   ${signupBand()}

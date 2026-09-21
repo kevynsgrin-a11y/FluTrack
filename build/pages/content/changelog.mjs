@@ -2,7 +2,7 @@ import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
-import { site, privacyEmail } from '../../lib/site.mjs';
+import { site, privacyEmail } from '../../lib/site-main.mjs';
 
 /**
  * /changelog/ — the public record of corrections and methodology changes.

@@ -2,7 +2,6 @@ import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand, breadcrumbs } from '../../lib/partials.mjs';
 import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
-import { site } from '../../lib/site.mjs';
 
 /**
  * /methodology/ — the primary trust page.
@@ -51,9 +50,8 @@ export default function methodology(ctx) {
     <p>Every score in FluTrack ultimately resolves to a level from 0 to 4. The composite is first
     expressed as a continuous score from 0 to 100, then bucketed at fixed cut points. A score sitting
     exactly on a boundary rounds up into the higher level.</p>
-    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table">
+    <div class="table-wrap">
       <table>
-        <caption class="visually-hidden">The five threat levels and their composite score ranges</caption>
         <thead>
           <tr><th scope="col">Level</th><th scope="col">Label</th><th scope="col">Composite score (0&ndash;100)</th><th scope="col">In plain English</th></tr>
         </thead>
@@ -71,9 +69,8 @@ export default function methodology(ctx) {
     <p>FluTrack draws on four independent, public-domain CDC surveillance signals. Each is converted
     to its own 0&ndash;100 sub-score (see below), and the composite is a weighted average of whichever
     signals are present. The weights are fixed:</p>
-    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table">
+    <div class="table-wrap">
       <table>
-        <caption class="visually-hidden">The four CDC surveillance signals and their weights</caption>
         <thead>
           <tr><th scope="col">Signal</th><th scope="col">CDC source</th><th scope="col">Weight</th><th scope="col">Why this weight</th></tr>
         </thead>
@@ -113,9 +110,8 @@ export default function methodology(ctx) {
     breakpoint moves up into the next level. Units are noted per row. Again: these are FluTrack's
     editorial thresholds, informed by typical seasonal ranges in the CDC products &mdash; not official
     CDC cut points.</p>
-    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table">
+    <div class="table-wrap">
       <table>
-        <caption class="visually-hidden">Per-signal breakpoints that separate the five levels</caption>
         <thead>
           <tr>
             <th scope="col">Signal</th>
@@ -179,9 +175,8 @@ export default function methodology(ctx) {
     <p>Suppose a state reports three signals for the latest week: a wastewater index of 6.0, combined
     ED visits at 4.2% of all visits, and an ARI label of <em>High</em>. Test positivity is missing.
     Each present signal is scored, then blended:</p>
-    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table">
+    <div class="table-wrap">
       <table>
-        <caption class="visually-hidden">Trend thresholds for rising, falling and holding steady</caption>
         <thead>
           <tr><th scope="col">Signal</th><th scope="col">Reading</th><th scope="col">Sub-score</th><th scope="col">Weight</th></tr>
         </thead>
@@ -194,7 +189,7 @@ export default function methodology(ctx) {
       </table>
     </div>
     <p>The weights of the three present signals sum to 0.80. The composite is
-    (50&nbsp;&times;&nbsp;0.30 + 47&nbsp;&times;&nbsp;0.25 + 70&nbsp;&times;&nbsp;0.25) &divide; 0.80 = 44.25 &divide; 0.80 &asymp; <strong>55</strong>.
+    (50&nbsp;&times;&nbsp;0.30&nbsp;+&nbsp;47&nbsp;&times;&nbsp;0.25&nbsp;+&nbsp;70&nbsp;&times;&nbsp;0.25)&nbsp;&divide;&nbsp;0.80&nbsp;=&nbsp;44.25&nbsp;&divide;&nbsp;0.80&nbsp;&asymp;&nbsp;<strong>55</strong>.
     A score of 55 falls in the 40&ndash;60 band, so the headline level for this state would read
     <strong>Moderate</strong>.</p>
 
@@ -258,7 +253,7 @@ export default function methodology(ctx) {
       'trend rule, exactly as the code applies them.',
   })}
 
-  ${prose(content, { updated: 'August 2026' })}
+  ${prose(content, { updated: 'July 2026' })}
 
   <section class="section" style="background: var(--bg-elevated); border-block: 1px solid var(--border)">
     <div class="container container--narrow">
@@ -280,7 +275,7 @@ export default function methodology(ctx) {
   return {
     title: 'Methodology: how the threat level is computed',
     description:
-      'How FluTrack turns four CDC surveillance signals into one respiratory threat level, with every weight, breakpoint and threshold published in full.',
+      'How FluTrack turns four CDC surveillance signals into one respiratory threat level — a 0–4 scale from a 0–100 composite score — with transparent weights and thresholds.',
     path: '/methodology/',
     body,
     ogType: 'article',
@@ -306,10 +301,8 @@ function techArticleLd(site) {
       'score, and the trend rule.',
     url: `${site.origin}/methodology/`,
     inLanguage: 'en-US',
-    // Must not precede site.contentPublished — the index itself was first
-    // published on 2026-07-19, so documentation of it cannot be older.
-    datePublished: site.contentPublished,
-    dateModified: site.contentUpdated,
+    datePublished: '2026-07-01',
+    dateModified: '2026-07-19',
     author: { '@type': 'Organization', name: site.name },
     publisher: { '@type': 'Organization', name: site.name, url: site.origin },
     isBasedOn: 'https://data.cdc.gov/',

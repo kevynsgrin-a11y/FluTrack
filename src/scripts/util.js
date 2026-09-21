@@ -39,6 +39,11 @@ export function formatChange(n) {
   return `${sign}${Math.abs(n)}%`;
 }
 
+/** Clamp helper (mirrors threat-index clamp for local use). */
+export function clamp(n, min, max) {
+  return Math.min(max, Math.max(min, n));
+}
+
 /** Trend glyph for a direction. */
 export function trendGlyph(direction) {
   return { up: '▲', down: '▼', flat: '▬' }[direction] || '▬';

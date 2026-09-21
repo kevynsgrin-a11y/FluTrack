@@ -1,5 +1,5 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
-import { site } from '../../lib/site.mjs';
+import { site } from '../../lib/site-main.mjs';
 import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 

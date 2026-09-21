@@ -10,39 +10,18 @@ const BRAND = '#127c74';
 const BRAND_DEEP = '#083d39';
 const SEV = ['#127c74', '#3e8fb0', '#e8b21f', '#d4541e', '#8c1d33'];
 
-/**
- * The FluTrack glyph: a rounded shield with a vitals "pulse" line.
- *
- * @param idns    suffix for this instance's element ids. SVG ids are
- *                document-global, so when this glyph is inlined into another
- *                SVG (see ogSvg) an un-suffixed `bg` collides with the host's
- *                own gradient and `url(#bg)` silently resolves to whichever is
- *                declared first. Pass a namespace whenever inlining.
- * @param maskable emit the Android maskable variant: full-bleed square (no
- *                corner radius, so the OS mask has opaque pixels to cut) with
- *                the glyph scaled to stay inside the 40%-radius safe zone. The
- *                default shield's shoulders reach ~43.8% of the canvas from
- *                centre, which Android crops.
- */
-export function iconSvg({ size = 512, bg = true, idns = '', maskable = false } = {}) {
-  const r = maskable ? 0 : size * 0.22;
+/** The FluTrack glyph: a rounded shield with a vitals "pulse" line. */
+export function iconSvg({ size = 512, bg = true } = {}) {
+  const r = size * 0.22;
   const pad = size * 0.16;
-  const gid = `bg${idns}`;
-  const c = size / 2;
-  const k = maskable ? 0.86 : 1;
-  const open = maskable
-    ? `<g transform="translate(${c} ${c}) scale(${k}) translate(${-c} ${-c})">`
-    : '';
-  const close = maskable ? '</g>' : '';
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-  ${bg ? `<rect width="${size}" height="${size}" rx="${r}" fill="url(#${gid})"/>` : ''}
+  ${bg ? `<rect width="${size}" height="${size}" rx="${r}" fill="url(#bg)"/>` : ''}
   <defs>
-    <linearGradient id="${gid}" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="${BRAND}"/>
       <stop offset="1" stop-color="${BRAND_DEEP}"/>
     </linearGradient>
   </defs>
-  ${open}
   <path d="M${size / 2} ${pad}
     L${size - pad} ${pad + size * 0.1}
     L${size - pad} ${size * 0.52}
@@ -57,50 +36,18 @@ export function iconSvg({ size = 512, bg = true, idns = '', maskable = false } =
     l${size * 0.07} -${size * 0.14}
     h${size * 0.14}"
     fill="none" stroke="#ffffff" stroke-width="${size * 0.05}" stroke-linecap="round" stroke-linejoin="round"/>
-  ${close}
 </svg>`;
 }
 
 const MAP_FILLS = SEV;
 
-/**
- * Colours that must survive colour quantisation of the OG card exactly: the
- * five severity steps (they carry meaning, and the legend prints a swatch of
- * each), plus white for the wordmark and glyph strokes.
- *
- * An area-weighted quantiser allocates slots by pixel count, so a severity
- * colour used by no state that week gets dropped and its legend swatch renders
- * as a mottled approximation — a brand colour whose fidelity depends on the
- * data. Reserving the slots removes that coupling.
- */
-export const OG_RESERVED_COLORS = [
-  ...MAP_FILLS.map((hex) => [
-    parseInt(hex.slice(1, 3), 16),
-    parseInt(hex.slice(3, 5), 16),
-    parseInt(hex.slice(5, 7), 16),
-  ]),
-  [255, 255, 255],
-];
-
-// The share card's tiles are a UNIFORM brand tint, deliberately.
-//
-// They used to be coloured by `ogLevel(abbr)` — a hash of the state's own
-// abbreviation — and rendered under a "Minimal → Very High" legend with no
-// sample marker. That is fabricated per-state health data on the single most
-// distributed asset the site owns, stripped of the footer disclaimer by every
-// surface that renders it. It is the image-layer form of the defect the data
-// layer already fixed by refusing to badge sample data as live.
-//
-// Generating the tiles from the bundled snapshot instead would not fix it: that
-// artifact is deterministic PRNG sample data, so a dated card built from it
-// would present illustrative numbers as a real weekly reading — the same claim
-// with better production values. The site has no real per-state data at build
-// time at all; the live figures are fetched in the visitor's browser.
-//
-// So the card claims only what is true of it: which places FluTrack covers, and
-// what scale it reports. The tint is brand teal, deliberately outside the
-// green→red severity ramp, so no tile can be read as a level.
-const TILE_FILL = '#0b7285';
+/** Deterministic plausible severity per state for static art (summer-ish skew). */
+function ogLevel(abbr) {
+  let h = 0;
+  for (let i = 0; i < abbr.length; i += 1) h = (h * 31 + abbr.charCodeAt(i)) >>> 0;
+  const r = h % 100;
+  return r < 42 ? 0 : r < 72 ? 1 : r < 92 ? 2 : r < 98 ? 3 : 4;
+}
 
 /** 1200×630 Open Graph card — features the signature tile-grid map. */
 export function ogSvg(site) {
@@ -113,9 +60,9 @@ export function ogSvg(site) {
     .map(([abbr, [row, col]]) => {
       const x = ox + col * pitch;
       const y = oy + row * pitch;
-      return `<g><rect x="${x}" y="${y}" width="${tile}" height="${tile}" rx="9" fill="${TILE_FILL}"/><text x="${
-        x + tile / 2
-      }" y="${y + tile / 2 + 4}" text-anchor="middle" font-family="${FONT}" font-size="13" font-weight="700" fill="#fff">${abbr}</text></g>`;
+      return `<g><rect x="${x}" y="${y}" width="${tile}" height="${tile}" rx="9" fill="${
+        MAP_FILLS[ogLevel(abbr)]
+      }"/><text x="${x + tile / 2}" y="${y + tile / 2 + 4}" text-anchor="middle" font-family="${FONT}" font-size="13" font-weight="700" fill="#fff">${abbr}</text></g>`;
     })
     .join('');
   const legend = MAP_FILLS.map(
@@ -132,16 +79,14 @@ export function ogSvg(site) {
   </defs>
   <rect width="1200" height="630" fill="url(#bg)"/>
   <rect width="1200" height="630" fill="url(#aura)"/>
-  <g transform="translate(72,58)">${iconSvg({ size: 84, idns: '-mark' }).replace('<svg', '<svg x="0" y="0"')}</g>
+  <g transform="translate(72,58)">${iconSvg({ size: 84 }).replace('<svg', '<svg x="0" y="0"')}</g>
   <text x="172" y="112" font-family="${FONT}" font-size="38" font-weight="700" fill="#0b7285">FluTrack</text>
   <text x="72" y="250" font-family="${FONT}" font-size="60" font-weight="800" fill="#141a20">Flu, RSV &amp; COVID-19,</text>
   <text x="72" y="322" font-family="${FONT}" font-size="60" font-weight="800" fill="#141a20">for your state —</text>
   <text x="72" y="394" font-family="${FONT}" font-size="60" font-weight="800" fill="#0b7285">in plain English.</text>
   <text x="72" y="456" font-family="${FONT}" font-size="27" font-weight="500" fill="#4c5763">One local respiratory threat level, built on public CDC data.</text>
   ${legend}
-  <text x="${
-    72 + 5 * 30 + 12
-  }" y="496" font-family="${FONT}" font-size="20" font-weight="600" fill="#5b6773">The scale: Minimal → Very High</text>
+  <text x="${72 + 5 * 30 + 12}" y="496" font-family="${FONT}" font-size="20" font-weight="600" fill="#5b6773">Minimal → Very High</text>
   ${tiles}
 </svg>`;
 }
@@ -202,37 +147,13 @@ export function manifest(site) {
       background_color: '#ffffff',
       // Match the light-mode <meta name="theme-color"> so the installed-PWA UI
       // tint agrees with the in-browser tint.
-      // Matches the brand, not a flat white — the installed PWA otherwise renders
-      // white-tinted chrome regardless of the user's theme.
-      theme_color: site.themeColor,
-      lang: 'en-US',
-      dir: 'ltr',
+      theme_color: '#ffffff',
       categories: ['health', 'medical', 'utilities'],
       icons: [
         { src: '/assets/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
         { src: '/assets/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
         { src: '/assets/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         { src: '/assets/favicon.svg', sizes: 'any', type: 'image/svg+xml' },
-      ],
-      // Real captures of the built site, not mock-ups: a synthesised
-      // "screenshot" of a health product is a misrepresentation of what the
-      // reader will actually get. Without these, Chrome and Edge fall back to
-      // the minimal install prompt instead of the richer preview card.
-      screenshots: [
-        {
-          src: '/assets/screenshot-wide.png',
-          sizes: '1280x800',
-          type: 'image/png',
-          form_factor: 'wide',
-          label: 'The FluTrack home page: a national respiratory threat level and a tile map of all 50 states and DC.',
-        },
-        {
-          src: '/assets/screenshot-narrow.png',
-          sizes: '390x844',
-          type: 'image/png',
-          form_factor: 'narrow',
-          label: "A single state's respiratory report, showing its combined threat level, trend and data provenance.",
-        },
       ],
     },
     null,
@@ -268,11 +189,9 @@ export function icoFromPng(png, size = 32) {
 /** Text assets written into dist/assets. The manifest is emitted once at the
  *  site root by the build (see writeRootFiles), not duplicated here. */
 export function assetFiles(site) {
-  // Only files the site actually references. `icon-source.svg` and
-  // `og-source.svg` used to ship here too — 15.4 KB pushed to the CDN on every
-  // deploy, linked from nothing. They were build inputs, not site assets; both
-  // are regenerable from iconSvg()/ogSvg() when a render needs inspecting.
   return {
     'favicon.svg': iconSvg({ size: 64 }),
+    'icon-source.svg': iconSvg({ size: 512 }),
+    'og-source.svg': ogSvg(site),
   };
 }
