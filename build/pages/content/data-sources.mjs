@@ -74,9 +74,8 @@ export default function dataSources(ctx) {
     <p>The Centers for Disease Control and Prevention publish a great deal about respiratory illness every week, all of it in the public domain and all of it downloadable from <a href="https://data.cdc.gov/">data.cdc.gov</a>. FluTrack draws on four of those feeds and blends them into a single 0–4 threat level for your state. Nothing below is proprietary, and nothing sits behind a login — you can pull the very same inputs we do and check our work. How the signals are combined is documented separately in our <a href="/methodology/">methodology</a>.</p>
 
     <h2>The datasets behind the index</h2>
-    <div class="table-wrap" tabindex="0" role="region" aria-label="Scrollable table">
+    <div class="table-wrap">
       <table>
-        <caption class="visually-hidden">CDC surveillance datasets used, with what each measures, its granularity and its licensing</caption>
         <thead>
           <tr>
             <th scope="col">Dataset</th>
@@ -105,7 +104,7 @@ export default function dataSources(ctx) {
 
     <h2>Licensing and what we deliberately exclude</h2>
     <p>FluTrack uses <strong>only public-domain U.S. Government data</strong> — the CDC's own surveillance products, which carry no usage restrictions and can be reused by anyone, including on a commercial site. That constraint is a deliberate design choice, not an accident of what was easy to find.</p>
-    <p>In particular, FluTrack <strong>deliberately excludes WastewaterSCAN (also referenced as SCAN or Verily) data</strong>. Those wastewater readings are licensed <strong>CC BY-NC 4.0</strong> — a non-commercial license. FluTrack is operated as a commercial, advertising-supported project, which makes this a commercial use regardless of whether an advertisement is being served on a given day, so incorporating that data would violate its license terms. We therefore ingest only the CDC's own public-domain NWSS Wastewater Viral Activity Level product and leave the non-commercial networks out entirely.</p>
+    <p>In particular, FluTrack <strong>deliberately excludes WastewaterSCAN (also referenced as SCAN or Verily) data</strong>. Those wastewater readings are licensed <strong>CC BY-NC 4.0</strong> — a non-commercial license. FluTrack is supported by advertising and affiliate links, which makes it a commercial use, so incorporating that data would violate its license terms. We therefore ingest only the CDC's own public-domain NWSS Wastewater Viral Activity Level product and leave the non-commercial networks out entirely.</p>
     <div class="callout">
       <p class="callout__title">${icon('check')} The exclusion is enforced in code</p>
       <p class="text-secondary">This is not left to good intentions. The ingestion pipeline runs a defensive source filter — <code>excludeNonCommercial()</code> in <code>src/scripts/data-sources.js</code> — that drops any wastewater row whose provenance references SCAN, WastewaterSCAN, Verily or the other non-commercial networks, so CC BY-NC 4.0 data can never surface on a monetized page even if it appeared in an upstream response.</p>
@@ -127,7 +126,7 @@ export default function dataSources(ctx) {
   `;
 
   return {
-    title: 'The CDC data sources behind the threat level',
+    title: 'Data sources',
     description:
       "Every CDC dataset behind FluTrack's respiratory threat level — what each measures, its license and cadence — and why we exclude non-commercial data.",
     path: '/data-sources/',

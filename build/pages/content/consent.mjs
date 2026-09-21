@@ -2,7 +2,7 @@ import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
-import { privacyEmail } from '../../lib/site.mjs';
+import { privacyEmail } from '../../lib/site-main.mjs';
 
 /**
  * /consent/ — the live preference centre for non-essential storage.
