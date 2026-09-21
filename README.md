@@ -139,3 +139,5 @@ the PR because CI cannot certify it.
 ## License
 
 Code is MIT-licensed (see `LICENSE`). The underlying CDC surveillance data is in the U.S. public domain. FluTrack's branding and presentation are its own.
+
+<!-- deploy nudge 2026-09-21: Pages queue stalled on duplicate builds -->
