@@ -129,7 +129,7 @@ export default function home(ctx) {
       <div class="state-index">
         ${ctx.states.slice(0, 12).map((s) => ctx.render.stateChip(s, ctx.models.get(s.abbr).model)).join('')}
       </div>
-      <div style="margin-top: var(--space-xl)"><a class="btn btn--secondary" href="/states/">Browse all states</a></div>
+      <div style="margin-top: var(--space-xl)"><a class="btn btn--secondary" href="/states/">See the US flu map</a></div>
     </div>
   </section>
 

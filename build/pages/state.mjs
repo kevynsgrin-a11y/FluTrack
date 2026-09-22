@@ -74,6 +74,11 @@ export function statePage(ctx, state) {
             <p class="text-secondary" style="margin: var(--space-2xs) 0 var(--space-md)">We'll email you when activity starts climbing here.</p>
             <a class="btn btn--primary btn--block" href="/alerts/?state=${escapeHtml(state.abbr)}">Set up surge alerts</a>
           </div>
+          <div class="card">
+            <h2 style="font-size: var(--step-1)">US flu map</h2>
+            <p class="text-secondary" style="margin: var(--space-2xs) 0 var(--space-md)">See how ${escapeHtml(state.name)} compares with every other state right now.</p>
+            <a class="btn btn--block" href="/states/">Open the flu map</a>
+          </div>
         </aside>
       </div>
     </div>

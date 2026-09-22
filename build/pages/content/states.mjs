@@ -5,7 +5,7 @@ import { breadcrumbLd } from '../../lib/seo.mjs';
 
 export default function states(ctx) {
   const { site } = ctx;
-  const crumbs = [{ name: 'Home', path: '/' }, { name: 'All states', path: '/states/' }];
+  const crumbs = [{ name: 'Home', path: '/' }, { name: 'US flu map', path: '/states/' }];
   const mapEntries = ctx.states.map((s) => {
     const m = ctx.models.get(s.abbr).model;
     return { abbr: s.abbr, name: s.name, slug: s.slug, level: m.level, label: m.label };
@@ -15,8 +15,8 @@ export default function states(ctx) {
   <section class="section section--tight state-masthead">
     <div class="container">
       ${breadcrumbs(crumbs)}
-      <h1>Respiratory activity by state</h1>
-      <p class="lede" style="margin-top: var(--space-sm); max-width: 46rem">Pick your state for a plain-English flu, RSV and COVID-19 threat level and weekly trend, built on public-domain CDC surveillance data.</p>
+      <h1>US flu map: respiratory activity by state</h1>
+      <p class="lede" style="margin-top: var(--space-sm); max-width: 46rem">The US flu map: current flu, RSV and COVID-19 activity for all 50 states and DC. Pick your state for a plain-English threat level and weekly trend, built on public-domain CDC surveillance data.</p>
     </div>
   </section>
   <section class="section" style="padding-top: var(--space-xl)"><div class="container"><div data-region="us-map">${usMap(mapEntries, {})}</div></div></section>
@@ -35,8 +35,8 @@ export default function states(ctx) {
   </section>
   ${signupBand({ compact: true })}`;
   return {
-    title: 'All states — respiratory activity directory',
-    description: 'Browse flu, RSV and COVID-19 respiratory activity for all 50 states and DC. Pick your state for a plain-English threat level and weekly trend from public CDC data.',
+    title: 'US Flu Map — Flu, RSV & COVID Activity by State | FluTrack',
+    description: 'US flu map: current flu, RSV, and COVID-19 activity for all 50 states and DC — plain-English threat levels, weekly trends, and public CDC surveillance data for every state.',
     path: '/states/',
     body,
     scripts: ['/assets/js/states-filter.js', '/assets/js/map-keyboard.js'],
