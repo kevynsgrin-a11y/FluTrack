@@ -196,6 +196,14 @@ function writeRootFiles(sitemapEntries) {
   mkdirSync(join(dist, '.well-known'), { recursive: true });
   writeFileSync(join(dist, '.well-known', 'security.txt'), securityTxt());
   writeFileSync(join(dist, 'humans.txt'), humansTxt());
+
+  // IndexNow key: repo-root indexnow.txt holds the fleet key; the protocol
+  // requires it served at /<key>.txt (Disney-Guide's build does the same).
+  const indexNowKeyPath = resolve(root, 'indexnow.txt');
+  if (existsSync(indexNowKeyPath)) {
+    const key = readFileSync(indexNowKeyPath, 'utf8').trim();
+    if (/^[0-9a-f]{8,64}$/.test(key)) writeFileSync(join(dist, `${key}.txt`), key);
+  }
 }
 
 function securityTxt() {
