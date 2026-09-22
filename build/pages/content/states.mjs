@@ -35,7 +35,8 @@ export default function states(ctx) {
   </section>
   ${signupBand({ compact: true })}`;
   return {
-    title: 'US Flu Map — Flu, RSV & COVID Activity by State | FluTrack',
+    // The layout appends "· FluTrack" — no manual brand suffix here.
+    title: 'US Flu Map — Flu, RSV & COVID Activity by State',
     description: 'US flu map: current flu, RSV, and COVID-19 activity for all 50 states and DC — plain-English threat levels, weekly trends, and public CDC surveillance data for every state.',
     path: '/states/',
     body,
