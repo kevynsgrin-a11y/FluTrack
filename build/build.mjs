@@ -241,14 +241,16 @@ function headers() {
   const csp = [
     "default-src 'self'",
     "base-uri 'self'",
-    `script-src 'self' 'sha256-${bootHash}'`,
+    // googletagmanager.com serves the GA4 gtag loader (injected by the fleet
+    // ga4-inject worker); beacons post to google-analytics.com.
+    `script-src 'self' 'sha256-${bootHash}' https://googletagmanager.com https://www.googletagmanager.com`,
     "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' data:",
+    "img-src 'self' data: https://www.google-analytics.com https://*.google-analytics.com",
     "font-src 'self'",
     // ingest.oakandmain.dev is the TrueAPI ingest Worker that data-sources.js
     // has fetched from since b817d55; that commit repointed the host without
     // updating this policy, so every live refresh has been blocked ever since.
-    "connect-src 'self' https://data.cdc.gov https://geo.fcc.gov https://ingest.oakandmain.dev",
+    "connect-src 'self' https://data.cdc.gov https://geo.fcc.gov https://ingest.oakandmain.dev https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com",
     "form-action 'self'",
     "frame-ancestors 'none'",
     "object-src 'none'",
