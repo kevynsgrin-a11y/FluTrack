@@ -53,8 +53,17 @@ function head(page) {
   const ogType = page.ogType || 'website';
   const ogImage = `${site.origin}${page.ogImage || '/assets/og-default.png'}`;
   const jsonld = (page.jsonld || []).map((obj) => `<script type="application/ld+json">${JSON.stringify(obj)}</script>`).join('\n  ');
+  // GA4 goes through the consent gate: analytics.js registers it with
+  // consent.js and gtag.js loads only once analytics storage is granted. The
+  // tag sits at the top of <head> on purpose — the fleet's edge ga4-inject
+  // Worker only looks at the first 5,000 characters for an existing G- ID, and
+  // injects an ungated second copy of GA4 if it finds none there.
+  const ga4 = site.analytics?.ga4MeasurementId;
+  const analyticsTag = ga4
+    ? `\n  <script type="module" src="/assets/js/analytics.js" data-ga4-id="${escapeHtml(ga4)}"></script>`
+    : '';
   return `<meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">${analyticsTag}
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(desc)}">
   <meta name="author" content="${escapeHtml(site.publisher.name)}">

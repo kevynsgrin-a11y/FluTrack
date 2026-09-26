@@ -39,9 +39,10 @@ export const CATEGORIES = ['analytics', 'advertising'];
 
 /**
  * Non-essential tags, gated by category. Registering one is what arms the
- * banner — the registry is intentionally empty today because FluTrack runs no
- * advertising and its only analytics (Cloudflare Web Analytics) is cookieless
- * and writes nothing to the device, so it never reaches this gate.
+ * banner. It starts empty; src/scripts/analytics.js registers Google Analytics
+ * 4 (analytics: it sets _ga cookies) on every page. Cloudflare Web Analytics is
+ * cookieless and writes nothing to the device, so it never reaches this gate,
+ * and FluTrack runs no advertising.
  *
  * Shape: { key, category, label, load() }
  * `load` is called at most once, and only after that category is granted.

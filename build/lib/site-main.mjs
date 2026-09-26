@@ -161,6 +161,20 @@ export const processors = [
     docs: 'https://www.cloudflare.com/web-analytics/',
   },
   {
+    key: 'google-analytics',
+    vendor: 'Google LLC',
+    service: 'Google Analytics 4',
+    purpose: 'Aggregate traffic measurement (pages viewed, approximate location, device type)',
+    basis: 'Consent — loads only after you allow analytics storage',
+    dataCategories:
+      'Page URL, referrer, approximate location derived from IP, device/browser type; _ga and _ga_* cookies',
+    retention: 'Per the retention setting of the Google Analytics property',
+    deletionPath: 'privacy@flufollower.com; opt out with https://tools.google.com/dlpage/gaoptout',
+    consentClass: 'analytics',
+    status: 'Live — only after analytics consent',
+    docs: 'https://policies.google.com/privacy',
+  },
+  {
     key: 'cloudflare-kv',
     vendor: 'Cloudflare, Inc.',
     service: 'Workers KV (surge-alert subscription store)',

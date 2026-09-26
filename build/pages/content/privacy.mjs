@@ -52,7 +52,7 @@ export default function privacy(ctx) {
     <p>The only personal information you actively provide is what you submit to the <a href="/alerts/">surge-alert</a> form: your <strong>email address</strong> and the <strong>state</strong> you want alerts for. We use those two fields solely to send the weekly-at-most alert you asked for. We do not require a name, a password, or an account.</p>
 
     <h3>Information collected automatically</h3>
-    <p>Like almost every website, our hosting provider records standard <strong>server logs</strong> when a page is requested — typically your IP address, the time of the request, the page fetched, and your browser's user-agent string. These logs exist for security, abuse prevention, and understanding aggregate traffic. If we enable <strong>analytics</strong>, we use a privacy-respecting service configured to measure visits in aggregate rather than to build a profile of you across sites, and we do not attempt to identify individual visitors from it.</p>
+    <p>Like almost every website, our hosting provider records standard <strong>server logs</strong> when a page is requested — typically your IP address, the time of the request, the page fetched, and your browser's user-agent string. These logs exist for security, abuse prevention, and understanding aggregate traffic. We measure traffic in aggregate with two analytics services, and we do not attempt to identify individual visitors from either. <strong>Cloudflare Web Analytics</strong> is cookieless and stores nothing on your device. <strong>Google Analytics 4</strong> measures aggregate traffic — pages viewed, approximate location and device type — and Google sets cookies (<code>_ga</code>, <code>_ga_*</code>) to do so. Google Analytics loads only if you allow analytics storage on our <a href="/consent/">privacy choices</a> page or banner; a Global Privacy Control signal from your browser is treated as declining it. Google's handling of this data is described in its <a href="https://policies.google.com/privacy">privacy policy</a>, and you can opt out of Google Analytics on every site with Google's <a href="https://tools.google.com/dlpage/gaoptout">browser add-on</a>.</p>
 
     <h3>Approximate location — only when you ask for it</h3>
     <p>The home page offers a “Use my location” button. It does nothing unless you tap it and your browser then grants permission. If you do, your device provides approximate coordinates, which are sent once to the U.S. Federal Communications Commission's public <a href="https://geo.fcc.gov/">Area API geocoder</a> (<code>geo.fcc.gov</code>) purely to resolve which U.S. state you are in. That state is used to pre-select the picker for you and nothing more. <strong>We do not store your coordinates or your resolved location</strong> — the value is discarded as soon as the picker is set. If you never tap the button, no location is ever requested.</p>
@@ -83,7 +83,7 @@ export default function privacy(ctx) {
             <td>A short retention window, then deleted or anonymized</td>
           </tr>
           <tr>
-            <th scope="row">Aggregate analytics (if enabled)</th>
+            <th scope="row">Aggregate analytics (Cloudflare Web Analytics; Google Analytics 4 only if you allow it)</th>
             <td>To see which pages are useful</td>
             <td>Kept in aggregate; not tied to your identity</td>
           </tr>
@@ -97,12 +97,13 @@ export default function privacy(ctx) {
     </div>
 
     <h2>Cookies and browser storage</h2>
-    <p>FluTrack itself sets <strong>no cross-site tracking cookies</strong>. The only data the site keeps on your device is two small entries in your browser's <code>localStorage</code>, which stay on your machine and are never transmitted to us:</p>
+    <p>FluTrack itself sets <strong>no cross-site tracking cookies</strong>. The site keeps three small entries in your browser's <code>localStorage</code>, which stay on your machine and are never transmitted to us:</p>
     <ul>
       <li><code>flutrack-theme</code> — remembers whether you prefer the light or dark appearance.</li>
       <li><code>flutrack-state</code> — remembers the last state you looked at, so the picker can restore it on your next visit.</li>
+      <li><code>flutrack-consent</code> — remembers your analytics choice, so we can honor it.</li>
     </ul>
-    <p>Both are conveniences, not trackers. You can clear them at any time through your browser's “clear site data” controls, and the site will simply fall back to its defaults.</p>
+    <p>These are conveniences, not trackers. If you allow analytics storage, Google Analytics also sets the <code>_ga</code> and <code>_ga_*</code> cookies described above. You can clear all of this at any time through your browser's “clear site data” controls, and the site will simply fall back to its defaults.</p>
 
     <h2>Advertising</h2>
     <p>FluTrack is free and is intended to be supported in part by advertising. When advertising is enabled, third-party advertising partners that serve ads on the site may set their own cookies or use similar technologies to measure and, in some cases, personalize the ads you see. Where required by law, non-essential advertising and analytics cookies will be gated behind a consent prompt. Those partners operate under their own privacy policies, which we do not control. You can manage or opt out of interest-based advertising from participating companies through the industry choice tools at the <a href="https://optout.aboutads.info/">Digital Advertising Alliance</a>, the <a href="https://optout.networkadvertising.org/">Network Advertising Initiative</a>, and, in Europe, <a href="https://www.youronlinechoices.eu/">Your Online Choices</a>. Most browsers also let you block or delete third-party cookies directly.</p>
@@ -115,9 +116,11 @@ export default function privacy(ctx) {
     <ul>
       <li><strong>CDC open data</strong> — the surveillance figures are fetched directly from the CDC's public-domain endpoints on <a href="https://data.cdc.gov/">data.cdc.gov</a> by your own browser. That request goes to the CDC, not through a server of ours that could re-host or reshape it.</li>
       <li><strong>FCC Area API</strong> — used only for the optional “Use my location” lookup described above, and only when you tap it.</li>
+      <li><strong>Google Analytics 4</strong> (Google LLC) — aggregate traffic measurement, loaded only if you allow analytics storage, as described above.</li>
+      <li><strong>Cloudflare Web Analytics</strong> (Cloudflare, Inc.) — cookieless, aggregate traffic measurement.</li>
       <li><strong>Our email provider</strong> — surge alerts are delivered through a reputable third-party email service that processes your email address on our behalf, under its own security and privacy commitments, solely to send the messages you requested.</li>
     </ul>
-    <p>We describe these providers by role rather than by brand because vendors can change; in every case they are used only for the narrow purpose above and are not permitted to use your information for their own marketing.</p>
+    <p>Where we describe a provider by role rather than by brand, it is because vendors can change; in every case they are used only for the narrow purpose above and are not permitted to use your information for their own marketing.</p>
 
     <h2>Surge-alert emails and unsubscribing</h2>
     <p>If you subscribe to surge alerts, we will email you when CDC data shows respiratory activity climbing in your chosen state — at most about once a week, and often less. Every alert email includes a one-click unsubscribe link, and unsubscribing takes effect immediately. You can also ask us to remove you by emailing <a href="mailto:${email}">${email}</a>. Once you unsubscribe, we delete your email address and state from the alert list.</p>
@@ -146,7 +149,7 @@ export default function privacy(ctx) {
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
   `,
-    { updated: 'July 2026' }
+    { updated: 'September 2026' }
   )}
 
   ${signupBand()}
@@ -155,7 +158,7 @@ export default function privacy(ctx) {
   return {
     title: 'Privacy Policy',
     description:
-      'How FluTrack handles your data: email only for surge alerts, no tracking cookies of ours, location used on tap and never stored — and your data rights.',
+      'How FluTrack handles your data: email only for surge alerts, analytics cookies only if you allow them, location used on tap and never stored — and your data rights.',
     path: '/privacy/',
     body,
     changefreq: 'yearly',

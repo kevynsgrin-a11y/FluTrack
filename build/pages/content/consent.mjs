@@ -29,7 +29,7 @@ export default function consent(ctx) {
       key: 'analytics',
       title: 'Analytics storage',
       desc:
-        'Storage used to measure how the site is used — for example, remembering that a visit is part of the same session. Nothing in this category runs today: our only measurement tool, Cloudflare Web Analytics, is cookieless and writes nothing to your device, so it never reaches this gate.',
+        'Storage used to measure how the site is used — for example, remembering that a visit is part of the same session. Google Analytics 4 is in this category: if you allow it, it loads and sets the <code>_ga</code> and <code>_ga_*</code> cookies to measure visits in aggregate. Cloudflare Web Analytics is cookieless and writes nothing to your device, so it never reaches this gate.',
     },
     {
       key: 'advertising',
@@ -125,7 +125,7 @@ export default function consent(ctx) {
         : 'To ask what we hold, or to have it corrected or deleted, use our <a href="/contact/">contact page</a>.'
     } The full picture is in our <a href="/privacy/">Privacy Policy</a>.</p>
   `,
-    { updated: 'August 2026' }
+    { updated: 'September 2026' }
   )}
   `;
 

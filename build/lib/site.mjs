@@ -30,6 +30,13 @@ export const site = {
   social: {
     twitter: '@flutrack',
   },
+  // GA4 measurement ID for this site. It is emitted in every page's <head>
+  // (build/lib/layout.mjs) and read by src/scripts/analytics.js, which registers
+  // GA4 with the consent gate — gtag.js never loads until analytics is granted.
+  // Zaraz-only delivery of this ID records nothing, so it must be in-page.
+  analytics: {
+    ga4MeasurementId: 'G-65H1FJWYLR',
+  },
   // The CDC data cadence, surfaced in the UI to set expectations honestly.
   dataCadence: 'Weekly (CDC surveillance systems publish on Fridays)',
   // Content/legal-page revision date (for sitemap <lastmod>). Bump when copy changes.
