@@ -402,6 +402,16 @@ main { flex: 1 0 auto; }
 .notice { display: flex; gap: var(--space-sm); align-items: flex-start; border-left: 3px solid var(--border-strong); border-block: 1px solid var(--border); padding: var(--space-md); background: var(--surface-2); color: var(--text-secondary); }
 .skeleton { background: repeating-linear-gradient(135deg, var(--surface-2) 0 8px, var(--bg-sunken) 8px 16px); color: transparent !important; }
 
+/* Consent banner (src/scripts/consent.js). Rendered only while a gated vendor
+   awaits a decision. Fixed to the viewport so it never shifts layout; the three
+   actions share one button class, so equal prominence is kept here too. */
+.consent-banner { position: fixed; inset-inline: 0; bottom: 0; z-index: var(--z-toast); background: var(--surface); color: var(--text); border-top: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); padding: var(--space-md) clamp(var(--space-md), 3vw, var(--space-xl)) max(var(--space-md), env(safe-area-inset-bottom)); }
+.consent-banner__inner { max-width: var(--container); margin-inline: auto; display: flex; flex-wrap: wrap; gap: var(--space-md); align-items: center; justify-content: space-between; }
+.consent-banner__copy { flex: 1 1 28rem; min-width: 0; }
+.consent-banner__title { font-weight: var(--weight-semibold); }
+.consent-banner__text { margin-top: var(--space-2xs); font-size: var(--step--1); color: var(--text-secondary); }
+.consent-banner__actions { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+
 @media (max-width: 48rem) {
   .section { padding-block: var(--space-2xl); }
   .threat__body { grid-template-columns: 1fr; }

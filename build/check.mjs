@@ -178,6 +178,44 @@ for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_header
   console.log(`CSP: ${inlineTotal} inline script(s) across ${htmlFiles.length} pages checked against ${allowed.size} allowlisted hash(es).`);
 }
 
+// --- GA4: in-page, consent-gated, and allowed by the CSP ------------------ //
+// Every page must carry the per-site measurement ID on the analytics.js tag,
+// early enough that the fleet's edge ga4-inject Worker (which only scans the
+// first 5,000 characters for a G- ID) sees it and does not inject an ungated
+// second copy. No page may hard-code the gtag.js loader: analytics.js inserts
+// it only after consent. And the policy must allow the GA4 and Cloudflare Web
+// Analytics origins, or the tags are silently refused.
+{
+  const GA4_ID = 'G-65H1FJWYLR';
+  const tag = `<script type="module" src="/assets/js/analytics.js" data-ga4-id="${GA4_ID}"></script>`;
+  if (!existsSync(join(dist, 'assets', 'js', 'analytics.js'))) errors.push('missing /assets/js/analytics.js (GA4 bootstrap)');
+  for (const file of htmlFiles) {
+    const rel = file.replace(dist, '');
+    const html = readFileSync(file, 'utf8');
+    const at = html.indexOf(tag);
+    if (at === -1) errors.push(`${rel}: GA4 analytics.js tag with ${GA4_ID} is missing`);
+    else if (at + tag.length > 5000) errors.push(`${rel}: GA4 tag ends at char ${at + tag.length}; the ga4-inject Worker only scans the first 5000`);
+    if (html.split(tag).length - 1 > 1) errors.push(`${rel}: GA4 analytics.js tag emitted more than once`);
+    if (/googletagmanager\.com\/gtag\/js/.test(html)) errors.push(`${rel}: hard-coded gtag.js loader bypasses the consent gate`);
+  }
+  const headersText = existsSync(join(dist, '_headers')) ? readFileSync(join(dist, '_headers'), 'utf8') : '';
+  const csp = (headersText.match(/^\s*Content-Security-Policy:\s*(.+)$/m) || [])[1] || '';
+  const directive = (name) => ((csp.match(new RegExp(`(?:^|;)\\s*${name}\\s+([^;]*)`)) || [])[1] || '').trim().split(/\s+/);
+  const required = {
+    'script-src': ['https://www.googletagmanager.com', 'https://static.cloudflareinsights.com'],
+    'connect-src': ["'self'", 'https://*.google-analytics.com', 'https://*.analytics.google.com', 'https://*.googletagmanager.com', 'https://cloudflareinsights.com'],
+    'img-src': ['https://*.google-analytics.com', 'https://*.googletagmanager.com'],
+  };
+  for (const [name, hosts] of Object.entries(required)) {
+    const have = directive(name);
+    for (const h of hosts) if (!have.includes(h)) errors.push(`_headers: CSP ${name} is missing ${h}`);
+  }
+  if (/'unsafe-inline'|'unsafe-eval'/.test(directive('script-src').join(' '))) {
+    errors.push("_headers: CSP script-src must not allow 'unsafe-inline' or 'unsafe-eval'");
+  }
+  console.log(`GA4: ${htmlFiles.length} page(s) checked for the consent-gated ${GA4_ID} tag and CSP origins.`);
+}
+
 // --- Cache-Control rules must not overlap -------------------------------- //
 // Cloudflare joins duplicate header values with a comma, and a splat matches
 // greedily across "/", so two matching rules give one file a spliced
