@@ -380,6 +380,14 @@ async function main() {
   }
   log(`${states.length} state pages written`);
 
+  // Metro "what's going around" pages (state-level read, honestly labeled)
+  const { metroPage, metros } = await import('./pages/metro.mjs');
+  for (const metro of metros) {
+    written.push(writePage(metroPage(ctx, metro)));
+    sitemap.push({ path: `/metro/${metro.slug}/`, changefreq: 'weekly', priority: 0.7, lastmod: snapshot.weekEnding });
+  }
+  log(`${metros.length} metro pages written`);
+
   // Auto-discovered content/legal pages
   const contentPages = await discoverContentPages(ctx);
   for (const page of contentPages) {
