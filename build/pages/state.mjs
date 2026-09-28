@@ -2,6 +2,7 @@ import { escapeHtml, formatDate, formatChange } from '../../src/scripts/util.js'
 import { threatCard, pathogenTiles, signalRows, levelToken, trendChip } from '../../src/scripts/render.js';
 import { signupBand, trendDisclaimer, breadcrumbs, adSlot, seasonKitModule } from '../lib/partials.mjs';
 import { breadcrumbLd, statePageLd, faqLd } from '../lib/seo.mjs';
+import { metros } from './metro.mjs';
 
 /** Build a per-state report without changing its data or URL contract. */
 export function statePage(ctx, state) {
@@ -79,6 +80,11 @@ export function statePage(ctx, state) {
             <p class="text-secondary" style="margin: var(--space-2xs) 0 var(--space-md)">See how ${escapeHtml(state.name)} compares with every other state right now.</p>
             <a class="btn btn--block" href="/states/">Open the flu map</a>
           </div>
+          ${metrosFor(state).map((m) => `<div class="card">
+            <h2 style="font-size: var(--step-1)">What's going around in ${escapeHtml(m.titleName || m.name)}</h2>
+            <p class="text-secondary" style="margin: var(--space-2xs) 0 var(--space-md)">The metro read for ${escapeHtml(m.name)}, from the same public CDC data.</p>
+            <a class="btn btn--block" href="/metro/${m.slug}/">Open the ${escapeHtml(m.name)} page</a>
+          </div>`).join('')}
         </aside>
       </div>
     </div>
@@ -113,6 +119,7 @@ function stateIntro(state, neighbors) {
 }
 function listJoin(items) { if (items.length <= 1) return items[0] || ''; return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`; }
 function neighborsFor(ctx, state) { return ctx.states.filter((s) => s.hhsRegion === state.hhsRegion && s.abbr !== state.abbr).slice(0, 6); }
+function metrosFor(state) { return metros.filter((m) => m.stateAbbr === state.abbr); }
 function stateFaqs(state) {
   return [
     { q: `How much respiratory illness is going around in ${state.name} right now?`, a: `<p>The current combined flu, RSV and COVID-19 threat level for ${escapeHtml(state.name)} — and whether it is rising, falling or holding steady — is shown at the top of this page. It reflects the CDC's latest public surveillance data and is a directional weekly trend, not a real-time case count.</p>` },
