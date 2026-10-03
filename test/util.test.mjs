@@ -100,3 +100,21 @@ test('trendGlyph maps each direction to its glyph and defaults to flat', () => {
   assert.equal(trendGlyph(null), '▬');
   assert.equal(trendGlyph(undefined), '▬');
 });
+
+// Round-2 additions (union with the branch version — assertions not already
+// covered above): combined hostile input, rounding boundaries, string inputs.
+test('escapeHtml neutralizes a combined hostile string in one pass', () => {
+  assert.equal(escapeHtml('&<>"'), '&amp;&lt;&gt;&quot;');
+  assert.equal(escapeHtml("it's"), 'it&#39;s');
+});
+
+test('formatPct rounds to nearest at the decimal boundary', () => {
+  assert.equal(formatPct(2.34), '2.3%');
+  assert.equal(formatPct(2.6, 0), '3%');
+  assert.equal(formatPct(2.567, 2), '2.57%');
+});
+
+test('formatPct and formatChange treat non-number strings and Infinity as non-finite', () => {
+  assert.equal(formatPct('3'), '—');
+  assert.equal(formatChange(Infinity), 'no change');
+});
