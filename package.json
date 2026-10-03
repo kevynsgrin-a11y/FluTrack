@@ -15,6 +15,7 @@
     "dev": "node build/build.mjs && node build/serve.mjs",
     "serve": "node build/serve.mjs",
     "check": "node build/check.mjs",
+    "typecheck": "node build/typecheck.mjs",
     "test": "node --test test/*.test.mjs",
     "verify": "node build/build.mjs && node build/check.mjs && node --test test/*.test.mjs"
   },
