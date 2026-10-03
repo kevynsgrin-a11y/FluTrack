@@ -184,6 +184,8 @@ function writeAssets() {
 function writeRootFiles(sitemapEntries) {
   writeFileSync(join(dist, 'sitemap.xml'), seo.sitemapXml(sitemapEntries));
   writeFileSync(join(dist, 'robots.txt'), seo.robotsTxt());
+  // IndexNow key file (shared fleet vault key) — must exist at dist root for keyLocation validation.
+  writeFileSync(join(dist, 'd390aee0a606d453b3585684871efd3e.txt'), 'd390aee0a606d453b3585684871efd3e');
   writeFileSync(join(dist, 'manifest.webmanifest'), manifest(site));
   writeFileSync(join(dist, '_headers'), headers());
   writeFileSync(join(dist, '_redirects'), redirects());
