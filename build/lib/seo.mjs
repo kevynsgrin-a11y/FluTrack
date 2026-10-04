@@ -95,9 +95,9 @@ export function statePageLd(state, weekEnding) {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: `${state.name} respiratory illness activity`,
+    name: `Flu in ${state.name}: current activity level`,
     url: `${site.origin}/state/${state.slug}/`,
-    description: `Current flu, RSV and COVID-19 activity level and trend for ${state.name}, from public CDC surveillance data.`,
+    description: `Current flu (influenza) activity level and weekly trend for ${state.name}, plus RSV and COVID-19, from public CDC surveillance data. Updated weekly.`,
     isPartOf: { '@type': 'WebSite', name: site.name, url: site.origin },
     about: ['Influenza', 'Respiratory syncytial virus', 'COVID-19'],
     ...(weekEnding ? { datePublished: weekEnding, dateModified: weekEnding } : {}),

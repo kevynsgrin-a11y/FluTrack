@@ -64,12 +64,22 @@ test('snapshot is deterministic (reproducible builds)', () => {
   assert.deepEqual(a.states.CA, b.states.CA);
 });
 
-test('scenario is honest: off-season flu/RSV stay low', () => {
-  // Mid-July: influenza & RSV ED share should be minimal everywhere.
+test('scenario is honest for its own season stage', () => {
+  // The bundled snapshot must match the season stage it claims: off-season
+  // flu/RSV stay near the floor; in-season they climb but stay plausible.
+  const inSeason = /season/i.test(snap.scenario) && !/Off-season/.test(snap.scenario);
   for (const st of states) {
-    const flu = snap.states[st.abbr].pathogens.influenza.edPercentSeries.at(-1);
-    const rsv = snap.states[st.abbr].pathogens.rsv.edPercentSeries.at(-1);
-    assert.ok(flu < 1, `${st.abbr} flu minimal off-season`);
-    assert.ok(rsv < 1, `${st.abbr} rsv minimal off-season`);
+    const fluSeries = snap.states[st.abbr].pathogens.influenza.edPercentSeries;
+    const rsvSeries = snap.states[st.abbr].pathogens.rsv.edPercentSeries;
+    const flu = fluSeries.at(-1);
+    const rsv = rsvSeries.at(-1);
+    if (inSeason) {
+      assert.ok(flu > 0.3 && flu < 3.5, `${st.abbr} flu in plausible early/mid-season band (${flu})`);
+      assert.ok(rsv > 0 && rsv < 2.5, `${st.abbr} rsv in plausible band (${rsv})`);
+      assert.ok(flu >= fluSeries[0], `${st.abbr} flu rising, not flat-lining out of season`);
+    } else {
+      assert.ok(flu < 1, `${st.abbr} flu minimal off-season`);
+      assert.ok(rsv < 1, `${st.abbr} rsv minimal off-season`);
+    }
   }
 });

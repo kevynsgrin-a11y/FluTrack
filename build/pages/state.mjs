@@ -27,8 +27,8 @@ export function statePage(ctx, state) {
   <section class="section section--tight state-masthead" data-state-masthead>
     <div class="container">
       ${breadcrumbs(crumbs)}
-      <h1>${escapeHtml(state.name)} flu, RSV &amp; COVID-19 activity</h1>
-      <p class="lede" style="margin-top: var(--space-sm); max-width: 44rem">A plain-English respiratory threat level for ${escapeHtml(state.name)}, built from public-domain CDC surveillance data and refreshed weekly.</p>
+      <h1>Flu in ${escapeHtml(state.name)}: current activity level &amp; weekly trend</h1>
+      <p class="lede" style="margin-top: var(--space-sm); max-width: 44rem">Current influenza (flu) activity in ${escapeHtml(state.name)} for the 2026–27 season, in plain English — plus RSV and COVID-19 levels, built from public-domain CDC surveillance data and refreshed weekly.</p>
       <p class="text-secondary" style="margin-top: var(--space-md); max-width: 48rem">${escapeHtml(stateIntro(state, others))}</p>
     </div>
   </section>
@@ -101,8 +101,8 @@ export function statePage(ctx, state) {
   `;
 
   return {
-    title: `${state.name} flu, RSV & COVID activity`,
-    description: `Current flu, RSV and COVID-19 respiratory threat level and weekly trend for ${state.name}, from public-domain CDC surveillance data. Not medical advice.`,
+    title: `Flu in ${state.name}: current activity level & weekly trend`,
+    description: `Current flu (influenza) activity level and weekly trend for ${state.name}, plus RSV and COVID-19, from public-domain CDC surveillance data. Updated weekly, 2026–27 season. Not medical advice.`,
     path: `/state/${state.slug}/`,
     body,
     scripts: ['/assets/js/app.js', '/assets/js/sticky-status.js'],
@@ -115,16 +115,17 @@ export function statePage(ctx, state) {
 function stateIntro(state, neighbors) {
   const names = neighbors.slice(0, 4).map((s) => s.name);
   const neighborText = names.length ? ` You can also compare nearby states such as ${listJoin(names)}.` : '';
-  return `FluTrack blends four public CDC surveillance signals for ${state.name} — emergency-department visits, wastewater viral activity, laboratory test positivity, and the Acute Respiratory Illness (ARI) activity level — into the single, plain-English threat level shown here, refreshed every week.${neighborText}`;
+  return `FluTrack blends four public CDC surveillance signals for ${state.name} — emergency-department visits, wastewater viral activity, laboratory test positivity, and the Acute Respiratory Illness (ARI) activity level — into the single, plain-English influenza threat level shown here, refreshed every week of the season.${neighborText}`;
 }
 function listJoin(items) { if (items.length <= 1) return items[0] || ''; return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`; }
 function neighborsFor(ctx, state) { return ctx.states.filter((s) => s.hhsRegion === state.hhsRegion && s.abbr !== state.abbr).slice(0, 6); }
 function metrosFor(state) { return metros.filter((m) => m.stateAbbr === state.abbr); }
 function stateFaqs(state) {
   return [
-    { q: `How much respiratory illness is going around in ${state.name} right now?`, a: `<p>The current combined flu, RSV and COVID-19 threat level for ${escapeHtml(state.name)} — and whether it is rising, falling or holding steady — is shown at the top of this page. It reflects the CDC's latest public surveillance data and is a directional weekly trend, not a real-time case count.</p>` },
+    { q: `How much flu is going around in ${state.name} right now?`, a: `<p>The current combined flu, RSV and COVID-19 threat level for ${escapeHtml(state.name)} — and whether it is rising, falling or holding steady — is shown at the top of this page. It reflects the CDC's latest public surveillance data and is a directional weekly trend, not a real-time case count.</p>` },
+    { q: `When is flu season in ${state.name}?`, a: `<p>The 2026–27 respiratory season runs from early October 2026 through late May 2027. Flu activity in ${escapeHtml(state.name)} typically stays low in October, climbs from November through the winter peak, and fades by spring. This page updates every week of the season.</p>` },
     { q: `Where does this ${escapeHtml(state.name)} data come from?`, a: `<p>From the CDC's public-domain surveillance systems — emergency-department visits (NSSP), wastewater viral activity (NWSS) and laboratory test positivity (NREVSS). See our <a href="/methodology/">methodology</a> and <a href="/data-sources/">data sources</a>.</p>` },
-    { q: `How often is the ${state.name} threat level updated?`, a: `<p>Weekly. CDC surveillance systems publish on Fridays, and reported data typically reflects illness from one to two weeks earlier — so FluTrack emphasizes the trend rather than a single day's number.</p>` },
+    { q: `How often is the ${state.name} flu level updated?`, a: `<p>Weekly. CDC surveillance systems publish on Fridays, and reported data typically reflects illness from one to two weeks earlier — so FluTrack emphasizes the trend rather than a single day's number.</p>` },
     { q: 'Is this medical advice?', a: '<p>No. FluTrack is an independent data-visualization utility and is not affiliated with the CDC. The information here is general and is not a substitute for professional medical advice. For guidance about your health, consult a qualified provider.</p>' },
   ];
 }
