@@ -39,7 +39,7 @@ test('a state report is emitted at the documented URL contract', () => {
   assert.equal(page.path, '/state/california/');
   assert.equal(page.ogType, 'article');
   assert.equal(page.ogImage, '/assets/og/california.svg');
-  assert.match(page.title, /^California flu, RSV & COVID activity$/);
+  assert.match(page.title, /^Flu in California: current activity level & weekly trend$/);
   assert.ok(page.description.includes('California'));
   assert.ok(page.scripts.includes('/assets/js/app.js'));
 });
@@ -83,7 +83,7 @@ test('the state name is escaped wherever it is interpolated', () => {
 test('the masthead names the state and the illness it covers', () => {
   const state = find('TX');
   const { body } = statePage(ctx, state);
-  assert.ok(body.includes('<h1>Texas flu, RSV &amp; COVID-19 activity</h1>'));
+  assert.ok(body.includes('<h1>Flu in Texas: current activity level &amp; weekly trend</h1>'));
   assert.ok(body.includes('data-state="TX"'), 'the threat card is tagged for hydration');
   assert.ok(body.includes(`data-week="${snap.weeks.at(-1)}"`), 'the report week is exposed to the client');
 });
@@ -156,7 +156,7 @@ test('a state with no same-region neighbors still renders', () => {
   const local = makeCtx();
   local.models.set('ZZ', { model: computeModel(snap.states.CA), signals: nationalSignals([snap.states.CA]) });
   const { body } = statePage(local, isolated);
-  assert.ok(body.includes('<h1>Testland flu, RSV &amp; COVID-19 activity</h1>'));
+  assert.ok(body.includes('<h1>Flu in Testland: current activity level &amp; weekly trend</h1>'));
   assert.ok(!body.includes('undefined'));
   assert.ok(!body.includes('You can also compare nearby states'), 'no dangling comparison sentence');
 });
