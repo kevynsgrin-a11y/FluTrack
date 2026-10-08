@@ -94,7 +94,24 @@ export default function methodology(ctx) {
     to the 0&ndash;4 scale as follows: <em>Minimal</em> or <em>Very Low</em> &rarr; 0, <em>Low</em> &rarr; 1,
     <em>Moderate</em> or <em>Medium</em> &rarr; 2, <em>High</em> &rarr; 3, and <em>Very High</em> or
     <em>Extremely High</em> &rarr; 4. That level is then represented by its band midpoint score
-    (10, 30, 50, 70 or 90) before entering the weighted average.</p>
+    (10, 30, 50, 70 or 90) before entering the weighted average. The label FluTrack displays is the
+    CDC's own wording for the latest week; <em>Data Unavailable</em> counts as a missing signal, never
+    as a level.</p>
+
+    <h3>How the CDC feeds become a state reading</h3>
+    <ul>
+      <li><strong>Emergency-department visits.</strong> NSSP publishes one share per virus &mdash; influenza,
+      COVID-19 and RSV. The <em>combined</em> figure is the sum of the three shares for the week, computed
+      only when all three were reported.</li>
+      <li><strong>Wastewater.</strong> NWSS publishes a viral activity level for each sampling site. After
+      sites from non-commercially licensed networks are excluded, a state's weekly reading for each virus
+      is the <strong>median</strong> across its reporting sites, so a single small sewershed cannot set the
+      whole state's value. The composite wastewater signal is the highest of the three virus medians. A
+      state with no eligible site that week has no wastewater signal, and its level rests on the others.</li>
+      <li><strong>Laboratory test positivity.</strong> There is no live adapter for NREVSS yet, so a live
+      reading rests on up to three signals; only the illustrative sample models positivity.</li>
+      <li><strong>Trends.</strong> The twelve most recent reported weeks drive each trend and sparkline.</li>
+    </ul>
 
     <h2>From a raw reading to a 0&ndash;100 sub-score</h2>
     <p>Each numeric signal is turned into a 0&ndash;100 sub-score by anchoring its breakpoints to the
@@ -303,7 +320,7 @@ function techArticleLd(site) {
     url: `${site.origin}/methodology/`,
     inLanguage: 'en-US',
     datePublished: '2026-07-01',
-    dateModified: '2026-07-19',
+    dateModified: '2026-10-08',
     author: { '@type': 'Organization', name: site.name },
     publisher: { '@type': 'Organization', name: site.name, url: site.origin },
     isBasedOn: 'https://data.cdc.gov/',

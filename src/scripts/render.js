@@ -85,9 +85,14 @@ export function provenanceStrip(provenance = {}) {
   const badge = provenance.live
     ? `<span class="prov__live"><span class="prov__dot" aria-hidden="true"></span>Live CDC data</span>`
     : `<span class="prov__live prov__live--sample">Sample data</span>`;
+  // A live reading names only the systems that actually fed it (there is no
+  // live NREVSS positivity adapter); the sample models all three.
+  const tags = provenance.live && provenance.sources?.length
+    ? [...new Set(provenance.sources.map((s) => (/NWSS|wastewater/i.test(s) ? 'NWSS' : 'NSSP')))]
+    : ['NSSP', 'NWSS', 'NREVSS'];
   return `<div class="prov" role="note">
     <span class="prov__src">CDC surveillance</span>
-    <span class="prov__tags" aria-label="Sources"><span>NSSP</span><span>NWSS</span><span>NREVSS</span></span>
+    <span class="prov__tags" aria-label="Sources">${tags.map((t) => `<span>${t}</span>`).join('')}</span>
     <span>Updated weekly</span>
     ${badge}
   </div>`;

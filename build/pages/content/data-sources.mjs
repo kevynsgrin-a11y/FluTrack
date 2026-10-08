@@ -44,7 +44,7 @@ export default function dataSources(ctx) {
     {
       name: 'NREVSS laboratory test positivity',
       measures:
-        'The share of respiratory laboratory tests that come back positive, by virus.',
+        'The share of respiratory laboratory tests that come back positive, by virus. FluTrack has no live adapter for it yet, so a live reading rests on up to three signals; only the illustrative sample models it.',
       granularity: 'HHS region / state',
       cadence: 'Weekly',
     },
@@ -94,13 +94,14 @@ export default function dataSources(ctx) {
       disclaimers.trendNotLive
     )} That is why FluTrack emphasizes the direction of a trend rather than any single week's figure.</p>
 
-    <h2>How the data reaches your browser</h2>
-    <p>FluTrack runs a two-tier strategy so a page is useful the instant it loads, even if a government feed is briefly unreachable:</p>
+    <h2>How the data reaches your screen</h2>
+    <p>FluTrack works in three tiers, so a page shows real data the moment it loads and stays usable if a government feed is briefly unreachable:</p>
     <ul>
-      <li><strong>A bundled snapshot</strong> ships with the site and paints immediately. It is clearly labeled as illustrative sample data until a live refresh succeeds.</li>
-      <li><strong>A live refresh</strong> then queries the CDC's public-domain Socrata (SODA) endpoints on <a href="https://data.cdc.gov/">data.cdc.gov</a> directly from your browser. When it succeeds, the snapshot is replaced and the provenance badge flips from <span class="badge badge--cached">Sample data</span> to <span class="badge badge--live"><span class="badge__dot"></span>Live CDC data</span>.</li>
+      <li><strong>Built from the CDC feeds.</strong> Each time the site is built — automatically every week, after the CDC's Friday publication — it reads the CDC's public-domain Socrata (SODA) datasets from <a href="https://data.cdc.gov/">data.cdc.gov</a> and renders every page from them. Those pages carry the <span class="badge badge--live"><span class="badge__dot"></span>Live CDC data</span> badge from the first paint.</li>
+      <li><strong>A sample fallback.</strong> If the feeds cannot be read when the site is built, it ships a bundled illustrative snapshot instead. Those pages say <span class="badge badge--cached">Sample data</span> and carry no plain-English summary, because a summary of sample figures would be a claim about a real state that no data supports.</li>
+      <li><strong>A refresh in your browser.</strong> When the page you loaded holds sample data, or a newer CDC week may have been published since it was built, your browser fetches the same feeds and updates the page.</li>
     </ul>
-    <p>Because the fetch happens client-side against open government endpoints, the data you see is the data the CDC published — no intermediary server re-hosts or reshapes it. CDC surveillance systems refresh weekly, typically on Fridays, and reported figures generally reflect illness from one to two weeks earlier.</p>
+    <p>Both the build and the browser read the feeds through a caching copy run by FluTrack's publisher (<code>ingest.oakandmain.dev</code>), which re-fetches the CDC's datasets every few hours and serves their rows as published, so the CDC's servers are not queried on every visit. CDC surveillance systems refresh weekly, typically on Fridays, and reported figures generally reflect illness from one to two weeks earlier.</p>
 
     <h2>Licensing and what we deliberately exclude</h2>
     <p>FluTrack uses <strong>only public-domain U.S. Government data</strong> — the CDC's own surveillance products, which carry no usage restrictions and can be reused by anyone, including on a commercial site. That constraint is a deliberate design choice, not an accident of what was easy to find.</p>

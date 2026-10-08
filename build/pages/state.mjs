@@ -3,6 +3,7 @@ import { threatCard, pathogenTiles, signalRows, levelToken, trendChip } from '..
 import { signupBand, trendDisclaimer, breadcrumbs, adSlot, seasonKitModule } from '../lib/partials.mjs';
 import { breadcrumbLd, statePageLd, faqLd } from '../lib/seo.mjs';
 import { metros } from './metro.mjs';
+import { takeawaysBlock } from '../../src/scripts/takeaways.js';
 
 /** Build a per-state report without changing its data or URL contract. */
 export function statePage(ctx, state) {
@@ -17,6 +18,10 @@ export function statePage(ctx, state) {
   ];
   const faqs = stateFaqs(state);
   const others = neighborsFor(ctx, state);
+  // Every other state in the HHS region (neighborsFor caps its list at six).
+  const peers = ctx.states
+    .filter((s) => s.hhsRegion === state.hhsRegion && s.abbr !== state.abbr)
+    .map((s) => ({ name: s.name, level: ctx.models.get(s.abbr)?.model.level }));
 
   const body = `
   <div class="status-strip" data-sticky-status aria-label="${escapeHtml(state.name)} report status">
@@ -41,6 +46,7 @@ export function statePage(ctx, state) {
             ${threatCard(state, model, { weekEnding, provenance })}
           </div>
           ${trendDisclaimer()}
+          <div data-region="takeaways">${takeawaysBlock(state, model, signals, { live: Boolean(provenance?.live), peers, weekEnding })}</div>
           <div>
             <div class="section-head section-rule">
               <h2>By virus</h2>

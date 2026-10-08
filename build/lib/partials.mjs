@@ -114,19 +114,19 @@ export function seasonKitModule() {
 export const contentRevised = Object.freeze({
   '/accessibility/': '2026-09-21',
   '/affiliate-disclosure/': '2026-09-21',
-  '/changelog/': '2026-09-21',
+  '/changelog/': '2026-10-08',
   '/consent/': '2026-09-26',
-  '/editorial-policy/': '2026-09-21',
+  '/editorial-policy/': '2026-10-08',
   '/faq/': '2026-09-21',
   '/medical-disclaimer/': '2026-09-21',
-  '/methodology/': '2026-09-21',
+  '/methodology/': '2026-10-08',
   '/privacy/': '2026-09-26',
   '/terms/': '2026-09-21',
   '/vendors/': '2026-09-21',
   '/about/': '2026-09-21',
   '/alerts/': '2026-09-21',
   '/contact/': '2026-09-21',
-  '/data-sources/': '2026-09-21',
+  '/data-sources/': '2026-10-08',
   '/season/2026-27/': '2026-09-29',
 });
 

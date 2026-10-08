@@ -10,7 +10,7 @@
 //     assets/styles.css              bundled CSS
 //     assets/js/*.js                 client ES modules (copied)
 //     assets/*                       icons, og image, etc.
-//     data/snapshot.json             bundled sample data
+//     data/snapshot.json             live CDC snapshot (sample fallback)
 //     sitemap.xml, robots.txt, manifest.webmanifest, _headers, _redirects, 404
 // ===========================================================================
 
@@ -36,6 +36,7 @@ import { threatCard, pathogenTiles, stateChip, signalRows } from '../src/scripts
 import * as seo from './lib/seo.mjs';
 import * as partials from './lib/partials.mjs';
 import { generateSnapshot } from './lib/snapshot.mjs';
+import { resolveSnapshot } from './lib/live-snapshot.mjs';
 import { assetFiles, manifest, icoFromPng, stateOgSvg } from './lib/assets.mjs';
 import { extractCritical } from './lib/critical.mjs';
 
@@ -50,7 +51,9 @@ function log(msg) {
 }
 
 // --- Snapshot ------------------------------------------------------------- //
-function loadSnapshot() {
+// The bundled sample: deterministic, labeled "Sample data" wherever it shows.
+// Only used when the live CDC pre-render is off or unavailable (see below).
+function loadSampleSnapshot() {
   const p = resolve(root, 'src/data/snapshot.json');
   if (existsSync(p)) return JSON.parse(readFileSync(p, 'utf8'));
   log('snapshot.json missing — generating');
@@ -79,7 +82,7 @@ function buildContext(snapshot) {
     states,
     snapshot,
     weekEnding: snapshot.weekEnding,
-    provenance: { live: false },
+    provenance: snapshot.kind === 'live' ? { live: true, sources: snapshot.sources } : { live: false },
     models,
     national,
     render: { threatCard, pathogenTiles, stateChip, signalRows },
@@ -157,7 +160,7 @@ function writeServiceWorker() {
   writeFileSync(join(dist, 'sw.js'), sw);
 }
 
-function writeAssets() {
+function writeAssets(snapshot) {
   const outDir = join(dist, 'assets');
   mkdirSync(outDir, { recursive: true });
   for (const [name, content] of Object.entries(assetFiles(site))) {
@@ -173,12 +176,12 @@ function writeAssets() {
     const fonts = join(srcAssets, 'fonts');
     if (existsSync(fonts)) cpSync(fonts, join(outDir, 'fonts'), { recursive: true });
   }
-  // Copy the bundled snapshot into the served tree, minified (the source copy
-  // stays pretty-printed for readable diffs).
+  // Ship exactly the snapshot the pages were rendered from, minified, so the
+  // browser's first re-render reproduces the static markup — live data stays
+  // live instead of flashing back to the sample.
   const dataOut = join(dist, 'data');
   mkdirSync(dataOut, { recursive: true });
-  const snap = JSON.parse(readFileSync(resolve(root, 'src/data/snapshot.json'), 'utf8'));
-  writeFileSync(join(dataOut, 'snapshot.json'), JSON.stringify(snap));
+  writeFileSync(join(dataOut, 'snapshot.json'), JSON.stringify(snapshot));
 }
 
 function writeRootFiles(sitemapEntries) {
@@ -353,14 +356,19 @@ async function main() {
   rmSync(dist, { recursive: true, force: true });
   mkdirSync(dist, { recursive: true });
 
-  const snapshot = loadSnapshot();
+  const { snapshot, live, reason } = await resolveSnapshot({
+    mode: process.env.LIVE_PRERENDER || 'auto',
+    loadSample: loadSampleSnapshot,
+  });
+  if (live) log(`data: LIVE CDC pre-render — ${reason}`);
+  else console.warn(`  ! data: SAMPLE fallback — pages will say "Sample data" (${reason})`);
   const ctx = buildContext(snapshot);
 
   // Assets & code
   bundleCss();
   copyScripts();
   writeServiceWorker();
-  writeAssets();
+  writeAssets(snapshot);
   log('assets, styles, scripts and service worker written');
 
   const written = [];
