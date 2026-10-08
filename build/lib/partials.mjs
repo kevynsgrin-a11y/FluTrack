@@ -100,3 +100,47 @@ export function seasonKitModule() {
             <div class="season-kit__grid">${slots}</div>
           </aside>`;
 }
+
+// Per-page revision dates for the content and legal pages.
+//
+// Every one of these pages used to take its sitemap <lastmod> from
+// site.contentUpdated — a single site-wide constant — while printing its own
+// hardcoded month in its body. The two drifted: nine pages displayed "July" or
+// "August 2026" though git shows every one of them was last revised in
+// September 2026, and the sitemap told crawlers something different again.
+//
+// Both the rendered line and the sitemap entry now read from this map, so they
+// cannot disagree. Dates are the real last-revision dates from git history.
+export const contentRevised = Object.freeze({
+  '/accessibility/': '2026-09-21',
+  '/affiliate-disclosure/': '2026-09-21',
+  '/changelog/': '2026-09-21',
+  '/consent/': '2026-09-26',
+  '/editorial-policy/': '2026-09-21',
+  '/faq/': '2026-09-21',
+  '/medical-disclaimer/': '2026-09-21',
+  '/methodology/': '2026-09-21',
+  '/privacy/': '2026-09-26',
+  '/terms/': '2026-09-21',
+  '/vendors/': '2026-09-21',
+  '/about/': '2026-09-21',
+  '/alerts/': '2026-09-21',
+  '/contact/': '2026-09-21',
+  '/data-sources/': '2026-09-21',
+  '/season/2026-27/': '2026-09-29',
+});
+
+/** ISO revision date for a content page, for sitemap <lastmod>. */
+export function revisedOn(path) {
+  return contentRevised[path] || site.contentUpdated;
+}
+
+/** The same date as "September 2026", for the rendered "Last updated" line. */
+export function revisedLabel(path) {
+  const iso = revisedOn(path);
+  const [y, m] = String(iso).split('-');
+  const MONTHS = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+  const name = MONTHS[Number(m) - 1];
+  return name ? `${name} ${y}` : String(iso);
+}

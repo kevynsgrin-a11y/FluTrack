@@ -5,6 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { site, hasPublisherEmail } from '../build/lib/site.mjs';
+import { contentRevised, revisedOn, revisedLabel } from '../build/lib/partials.mjs';
 import {
   organizationLd,
   websiteLd,
@@ -172,4 +173,35 @@ test('robotsTxt allows crawling and points at the sitemap', () => {
   assert.match(txt, /^User-agent: \*$/m);
   assert.match(txt, /^Allow: \/$/m);
   assert.match(txt, new RegExp(`^Sitemap: ${site.origin}/sitemap\\.xml$`, 'm'));
+});
+
+// --- content revision dates ------------------------------------------------ //
+
+test('every content page declares its own revision date, not a site-wide constant', () => {
+  // All 16 content pages used to take sitemap <lastmod> from site.contentUpdated
+  // while printing their own hardcoded month, so the two drifted: nine pages
+  // displayed July or August 2026 though git shows each was revised in September.
+  const paths = Object.keys(contentRevised);
+  assert.ok(paths.length >= 16, `expected every content page, got ${paths.length}`);
+  for (const p of paths) {
+    assert.match(p, /^\/[a-z0-9./-]*\/$/, `${p} is a rooted directory path`);
+    assert.match(contentRevised[p], /^\d{4}-\d{2}-\d{2}$/, `${p} has an ISO date`);
+    assert.equal(revisedOn(p), contentRevised[p]);
+  }
+});
+
+test('the rendered month and the sitemap date are the same value', () => {
+  // The defect was that these were two independent literals. They are now one.
+  assert.equal(revisedLabel('/privacy/'), 'September 2026');
+  assert.equal(revisedOn('/privacy/'), contentRevised['/privacy/']);
+  assert.equal(revisedLabel('/terms/'), 'September 2026');
+  for (const [p, iso] of Object.entries(contentRevised)) {
+    const [y, m] = iso.split('-');
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    assert.equal(revisedLabel(p), `${MONTHS[Number(m) - 1]} ${y}`, p);
+  }
+});
+
+test('an unknown path falls back to the site-wide date rather than throwing', () => {
+  assert.equal(revisedOn('/not-a-page/'), site.contentUpdated);
 });

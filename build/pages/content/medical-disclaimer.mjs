@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
+import { pageHeader, prose, signupBand, revisedOn, revisedLabel } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
 /**
@@ -77,7 +77,7 @@ export default function medicalDisclaimer(ctx) {
       )} In an emergency, call 911, and for guidance about your health, consult a qualified provider.</p>
     </div>
   `,
-    { updated: 'July 2026' }
+    { updated: revisedLabel('/medical-disclaimer/') }
   )}
 
   ${signupBand()}
@@ -88,6 +88,7 @@ export default function medicalDisclaimer(ctx) {
     description:
       'FluTrack is general information from public-domain CDC surveillance data — not medical advice, diagnosis, or treatment. Read our full medical disclaimer.',
     path: '/medical-disclaimer/',
+    lastmod: revisedOn('/medical-disclaimer/'),
     body,
     changefreq: 'yearly',
     priority: 0.3,

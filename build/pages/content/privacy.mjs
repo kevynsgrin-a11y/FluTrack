@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
+import { pageHeader, prose, signupBand, revisedOn, revisedLabel } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
 /**
@@ -149,7 +149,7 @@ export default function privacy(ctx) {
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
   `,
-    { updated: 'September 2026' }
+    { updated: revisedLabel('/privacy/') }
   )}
 
   ${signupBand()}
@@ -160,6 +160,7 @@ export default function privacy(ctx) {
     description:
       'How FluTrack handles your data: email only for surge alerts, analytics cookies only if you allow them, location used on tap and never stored — and your data rights.',
     path: '/privacy/',
+    lastmod: revisedOn('/privacy/'),
     body,
     changefreq: 'yearly',
     priority: 0.3,

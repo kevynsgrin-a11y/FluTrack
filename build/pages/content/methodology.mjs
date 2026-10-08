@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose, signupBand, breadcrumbs } from '../../lib/partials.mjs';
+import { pageHeader, prose, signupBand, breadcrumbs, revisedOn, revisedLabel } from '../../lib/partials.mjs';
 import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
 
 /**
@@ -253,7 +253,7 @@ export default function methodology(ctx) {
       'trend rule, exactly as the code applies them.',
   })}
 
-  ${prose(content, { updated: 'July 2026' })}
+  ${prose(content, { updated: revisedLabel('/methodology/') })}
 
   <section class="section" style="background: var(--bg-elevated); border-block: 1px solid var(--border)">
     <div class="container container--narrow">
@@ -277,6 +277,7 @@ export default function methodology(ctx) {
     description:
       'How FluTrack turns four CDC surveillance signals into one respiratory threat level — a 0–4 scale from a 0–100 composite score — with transparent weights and thresholds.',
     path: '/methodology/',
+    lastmod: revisedOn('/methodology/'),
     body,
     ogType: 'article',
     changefreq: 'monthly',

@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
+import { pageHeader, prose, signupBand, revisedOn } from '../../lib/partials.mjs';
 import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
 
 /**
@@ -112,6 +112,7 @@ export default function alerts(ctx) {
     description:
       'Free FluTrack surge alerts email you when CDC data shows flu, RSV or COVID-19 activity climbing in your state — at most weekly, no spam, not medical advice.',
     path: '/alerts/',
+    lastmod: revisedOn('/alerts/'),
     body,
     changefreq: 'monthly',
     priority: 0.6,

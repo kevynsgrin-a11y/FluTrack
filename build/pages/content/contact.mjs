@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
+import { pageHeader, prose, signupBand, revisedOn } from '../../lib/partials.mjs';
 import { breadcrumbLd, organizationLd } from '../../lib/seo.mjs';
 
 /**
@@ -106,6 +106,7 @@ export default function contact(ctx) {
     description:
       'Contact FluTrack for general questions, data corrections, press and partnership inquiries. Independent of the CDC, and not a medical service.',
     path: '/contact/',
+    lastmod: revisedOn('/contact/'),
     body,
     changefreq: 'monthly',
     priority: 0.5,

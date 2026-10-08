@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose } from '../../lib/partials.mjs';
+import { pageHeader, prose, revisedOn, revisedLabel } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 import { processors, privacyEmail } from '../../lib/site.mjs';
 
@@ -126,7 +126,7 @@ export default function vendors(ctx) {
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
   `,
-    { updated: 'August 2026' }
+    { updated: revisedLabel('/vendors/') }
   )}
   `;
 
@@ -135,6 +135,7 @@ export default function vendors(ctx) {
     description:
       'Every processor FluTrack uses, named by legal entity, with purpose, lawful basis, data categories, retention and deletion path.',
     path: '/vendors/',
+    lastmod: revisedOn('/vendors/'),
     body,
     changefreq: 'monthly',
     priority: 0.3,

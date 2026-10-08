@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { site } from '../../lib/site.mjs';
-import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
+import { pageHeader, prose, signupBand, revisedOn, revisedLabel } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
 /**
@@ -92,7 +92,7 @@ export default function editorialPolicy(ctx) {
     </table>
     <p>None of this makes FluTrack correct. It makes a particular set of failures loud instead of silent, which is a narrower claim and a more honest one.</p>
   `,
-    { updated: 'August 2026' }
+    { updated: revisedLabel('/editorial-policy/') }
   )}
 
   ${signupBand()}
@@ -103,6 +103,7 @@ export default function editorialPolicy(ctx) {
     description:
       "What FluTrack publishes and refuses to publish, where the numbers come from, whose thresholds these are, and which editorial rules the build enforces.",
     path: '/editorial-policy/',
+    lastmod: revisedOn('/editorial-policy/'),
     body,
     changefreq: 'yearly',
     priority: 0.4,
