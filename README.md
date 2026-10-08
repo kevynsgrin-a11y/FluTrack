@@ -112,11 +112,18 @@ week than production serves — POSTs a Cloudflare Pages deploy hook. It never
 deploys sample data. Run it on demand from the Actions tab (`force` rebuilds
 even when production is current).
 
-**One-time setup:** Cloudflare dashboard → Workers & Pages → `flufollower` →
-Settings → Builds → **Deploy hooks** → add a hook for branch `main`, then save
-the URL as the GitHub repository secret **`CF_PAGES_DEPLOY_HOOK`** (Settings →
-Secrets and variables → Actions). Until it exists the workflow fails with that
-instruction rather than silently skipping. GitHub pauses scheduled workflows
+**One-time setup (two steps):**
+
+1. Cloudflare dashboard → Workers & Pages → `flufollower` → Settings → Builds →
+   **Deploy hooks** → add a hook for branch `main`, then save the URL as the
+   GitHub repository secret **`CF_PAGES_DEPLOY_HOOK`** (Settings → Secrets and
+   variables → Actions). Until it exists the workflow fails with that
+   instruction rather than silently skipping.
+2. Same project → Settings → **Variables and Secrets** → *Production* → add
+   `LIVE_PRERENDER` = `require`. A push-triggered production build during a
+   feed outage then fails and Cloudflare keeps serving the last live deploy,
+   instead of replacing it with sample data. Leave Preview on the default
+   (`auto`) so branch previews still build when the feed is down. GitHub pauses scheduled workflows
 in a repository with no activity for 60 days; re-enable it from the Actions tab
 if that happens.
 
