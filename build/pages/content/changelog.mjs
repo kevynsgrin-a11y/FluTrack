@@ -17,6 +17,30 @@ import { site, privacyEmail } from '../../lib/site-main.mjs';
  */
 const ENTRIES = [
   {
+    date: '2026-10-08',
+    kind: 'Correction',
+    title: 'The live CDC refresh was not reading the CDC’s data',
+    body:
+      'The code that reads the CDC feeds expected column names the published datasets do not use: emergency-department visits are published one row per virus, not one column per virus; the respiratory-illness rating is in a column called “label”; and wastewater is reported per sampling site under different field names. Every live refresh therefore parsed to nothing, and the page kept showing the bundled sample figures. The 25 July entry below describes a rule requiring at least 25 of 51 states to carry real data before anything is badged “Live CDC data”; that rule was not in the code the site was running, so the badge could still appear over sample figures. The readers now match the datasets as published, and the 25-state rule is enforced for both the browser and the build. Any reading seen with a “Live CDC data” badge before this fix may have been sample data.',
+    affectsReadings: true,
+  },
+  {
+    date: '2026-10-08',
+    kind: 'Methodology',
+    title: 'How live CDC readings are assembled, now stated and changed',
+    body:
+      'Pages are now built from the live CDC feeds, so the figures are current from the first paint rather than after a browser refresh, and the site is rebuilt weekly after the CDC’s Friday publication. Three assembly rules are now documented on the methodology page. Combined emergency-department visits are the sum of the influenza, COVID-19 and RSV shares. A state’s wastewater reading for each virus is the median across its reporting sites (previously the single highest site, which let one small sewershed set the whole state’s value), and the composite uses the highest of the three virus medians. The respiratory-illness rating is shown in the CDC’s own words, and “Data Unavailable” counts as missing rather than as a level. Laboratory positivity still has no live adapter.',
+    affectsReadings: true,
+  },
+  {
+    date: '2026-10-08',
+    kind: 'Interface',
+    title: 'Plain-English weekly summary on every state report',
+    body:
+      'Each state report now opens with three to five sentences restating that week’s figures: the overall level and its direction, flu’s share of emergency-department visits, which virus is most common, what wastewater shows (or that there is none), and how the state compares with its HHS region. The summary is written only from live CDC data; a page showing sample data has none.',
+    affectsReadings: false,
+  },
+  {
     date: '2026-08-29',
     kind: 'Correction',
     title: 'Corrected several claims the site made about itself',
@@ -223,7 +247,7 @@ export default function changelog(ctx) {
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
   `,
-    { updated: 'August 2026' }
+    { updated: 'October 2026' }
   )}
   `;
 
@@ -232,6 +256,7 @@ export default function changelog(ctx) {
     description:
       'FluTrack’s public record of corrections and methodology changes, including which ones affected readings that had already been published.',
     path: '/changelog/',
+    lastmod: '2026-10-08',
     body,
     changefreq: 'monthly',
     priority: 0.4,
