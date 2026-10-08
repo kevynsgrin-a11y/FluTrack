@@ -108,13 +108,24 @@ export function faqLd(items) {
 }
 
 /** A WebPage node describing a state report (dated, medical-webpage flavored). */
-export function statePageLd(state, weekEnding) {
+/**
+ * WebPage node for a page whose reading is a state-level one.
+ *
+ * `page` lets a caller that is NOT at /state/<slug>/ describe itself. The metro
+ * pages render the state reading but live at /metro/<slug>/, and without this
+ * they emitted a WebPage node whose url and name pointed at the state page —
+ * contradicting their own canonical and og:url, and telling crawlers that three
+ * distinct URLs are the same document.
+ */
+export function statePageLd(state, weekEnding, page = {}) {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: `Flu in ${state.name}: current activity level`,
-    url: `${site.origin}/state/${state.slug}/`,
-    description: `Current flu (influenza) activity level and weekly trend for ${state.name}, plus RSV and COVID-19, from public CDC surveillance data. Updated weekly.`,
+    name: page.name || `Flu in ${state.name}: current activity level`,
+    url: `${site.origin}${page.path || `/state/${state.slug}/`}`,
+    description:
+      page.description ||
+      `Current flu (influenza) activity level and weekly trend for ${state.name}, plus RSV and COVID-19, from public CDC surveillance data. Updated weekly.`,
     isPartOf: { '@type': 'WebSite', name: site.name, url: site.origin },
     about: ['Influenza', 'Respiratory syncytial virus', 'COVID-19'],
     ...(weekEnding ? { datePublished: weekEnding, dateModified: weekEnding } : {}),

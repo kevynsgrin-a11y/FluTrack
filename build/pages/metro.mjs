@@ -128,15 +128,21 @@ export function metroPage(ctx, metro) {
   ${signupBand({ compact: true })}
   `;
 
+  // Hoisted so the WebPage JSON-LD describes THIS page with the same strings the
+  // <head> uses, instead of inheriting the state page's identity.
+  const title = `What's Going Around in ${displayName}: Flu, RSV & COVID`;
+  const description = `Is flu, RSV or COVID-19 going around in ${displayName}? Current ${state.name}-level respiratory threat level and weekly trend from public-domain CDC surveillance, plus metro-specific official sources. Not medical advice.`;
+  const path = `/metro/${metro.slug}/`;
+
   return {
-    title: `What's Going Around in ${displayName}: Flu, RSV & COVID`,
-    description: `Is flu, RSV or COVID-19 going around in ${displayName}? Current ${state.name}-level respiratory threat level and weekly trend from public-domain CDC surveillance, plus metro-specific official sources. Not medical advice.`,
-    path: `/metro/${metro.slug}/`,
+    title,
+    description,
+    path,
     body,
     scripts: ['/assets/js/app.js', '/assets/js/sticky-status.js'],
     ogType: 'article',
     ogImage: `/assets/og/${state.slug}.svg`,
-    jsonld: [breadcrumbLd(crumbs), statePageLd(state, weekEnding), faqLd(faqs.map((f) => ({ q: f.q, a: stripTags(f.a) })))],
+    jsonld: [breadcrumbLd(crumbs), statePageLd(state, weekEnding, { path, name: title, description }), faqLd(faqs.map((f) => ({ q: f.q, a: stripTags(f.a) })))],
   };
 }
 

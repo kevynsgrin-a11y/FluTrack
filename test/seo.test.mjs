@@ -119,6 +119,24 @@ test('statePageLd targets the state slug and only claims dates when a week is su
   assert.equal('dateModified' in undated, false);
 });
 
+test('statePageLd describes the calling page, not always the state page', () => {
+  // The metro pages render a state-level reading but live at /metro/<slug>/.
+  // Without an override they emitted a WebPage node whose url and name pointed
+  // at /state/<slug>/, contradicting their own canonical and og:url and telling
+  // crawlers that three distinct URLs were the same document.
+  const state = { name: 'Georgia', slug: 'georgia' };
+  const metro = statePageLd(state, '2026-10-02', {
+    path: '/metro/atlanta/',
+    name: "What's Going Around in Atlanta: Flu, RSV & COVID",
+    description: 'Metro-specific description.',
+  });
+  assert.equal(metro.url, `${site.origin}/metro/atlanta/`);
+  assert.equal(metro.name, "What's Going Around in Atlanta: Flu, RSV & COVID");
+  assert.equal(metro.description, 'Metro-specific description.');
+  // The state page keeps its own identity when nothing is passed.
+  assert.equal(statePageLd(state, '2026-10-02').url, `${site.origin}/state/georgia/`);
+});
+
 test('statePageLd stamps the same week as both published and modified when dated', () => {
   const dated = statePageLd({ name: 'Alabama', slug: 'alabama' }, '2026-07-11');
   assert.equal(dated.datePublished, '2026-07-11');
