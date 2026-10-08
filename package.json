@@ -2,7 +2,7 @@
   "name": "flutrack",
   "version": "1.0.0",
   "private": true,
-  "description": "FluTrack — a plain-English, mobile-first respiratory illness tracker (flu, RSV, COVID-19) built on public-domain CDC surveillance data.",
+  "description": "FluTrack \u2014 a plain-English, mobile-first respiratory illness tracker (flu, RSV, COVID-19) built on public-domain CDC surveillance data.",
   "type": "module",
   "license": "MIT",
   "engines": {
@@ -12,6 +12,7 @@
     "clean": "node build/clean.mjs",
     "build": "node build/build.mjs",
     "build:snapshot": "node build/lib/snapshot.mjs",
+    "snapshot:live": "node build/lib/live-snapshot.mjs",
     "dev": "node build/build.mjs && node build/serve.mjs",
     "serve": "node build/serve.mjs",
     "check": "node build/check.mjs",

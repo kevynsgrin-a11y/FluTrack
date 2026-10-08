@@ -3,6 +3,7 @@
 //   * every internal href / src resolves to a real file (no dead links)
 //   * every page has <title>, meta description, canonical, exactly one <h1>
 //   * no obvious unresolved template placeholders
+//   * the bundled data is not older than the "updated weekly" promise implies
 // Exits non-zero on failure so it can gate CI.  Usage: node build/check.mjs
 // ===========================================================================
 
@@ -281,6 +282,49 @@ for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_header
     `Cache rules: ${cacheRules.length} pattern(s), ${served.length} emitted file(s), ` +
       `${overlaps === 0 ? 'no overlaps' : `${overlaps} OVERLAP(S)`}.`
   );
+}
+
+// --- Data freshness ------------------------------------------------------ //
+// The site tells visitors it updates weekly and stamps a date on every reading,
+// but build.mjs reads a COMMITTED snapshot, so nothing advances that date on its
+// own. This gate turns silent staleness into a red build. Previously a 10-week
+// -old snapshot built clean and QA printed "passed".
+{
+  const snapPath = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'src/data/snapshot.json');
+  const MAX_AGE_DAYS = Number(process.env.FLUTRACK_MAX_DATA_AGE_DAYS || 21);
+  if (!existsSync(snapPath)) {
+    errors.push('src/data/snapshot.json is missing — every published figure would be undated');
+  } else {
+    let snap = null;
+    try {
+      snap = JSON.parse(readFileSync(snapPath, 'utf8'));
+    } catch (e) {
+      errors.push(`src/data/snapshot.json is not valid JSON: ${e.message}`);
+    }
+    if (snap) {
+      const week = String(snap.weekEnding || '');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(week)) {
+        errors.push(`snapshot weekEnding is not an ISO date (got ${JSON.stringify(week)})`);
+      } else {
+        const ageDays = Math.floor((Date.now() - Date.parse(`${week}T00:00:00Z`)) / 86_400_000);
+        const kind = snap.kind || 'unknown';
+        const label = `${kind} data, week ending ${week}, ${ageDays} day(s) old`;
+        if (ageDays < 0) {
+          errors.push(`data is dated in the future: ${label}`);
+        } else if (ageDays > MAX_AGE_DAYS) {
+          errors.push(
+            `data is stale: ${label} exceeds the ${MAX_AGE_DAYS}-day ceiling. ` +
+              'Refresh it (npm run snapshot:live for real CDC data, npm run build:snapshot for sample) — ' +
+              'the site tells visitors it updates weekly.'
+          );
+        }
+        if (kind === 'live' && !(Array.isArray(snap.sources) && snap.sources.length)) {
+          errors.push('snapshot claims kind "live" but names no upstream sources');
+        }
+        console.log(`Data freshness: ${label} (ceiling ${MAX_AGE_DAYS} days).`);
+      }
+    }
+  }
 }
 
 console.log(`Checked ${htmlFiles.length} HTML pages.`);
