@@ -4,7 +4,8 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { site } from '../build/lib/site.mjs';
+import { site, hasPublisherEmail } from '../build/lib/site.mjs';
+import { contentRevised, revisedOn, revisedLabel } from '../build/lib/partials.mjs';
 import {
   organizationLd,
   websiteLd,
@@ -26,11 +27,34 @@ test('organizationLd describes the site against schema.org and its production or
   assert.equal(org.description, site.shortDescription);
 });
 
-test('organizationLd omits a placeholder .example publisher email', () => {
-  // RFC-2606 `.example` is not deliverable; advertising it in structured data
-  // would be a false contact claim.
-  assert.match(site.publisher.email, /\.example$/);
-  assert.equal('email' in organizationLd(), false);
+test('organizationLd advertises the publisher email now that it is deliverable', () => {
+  // This test used to assert the opposite, because the build pipeline read a
+  // config whose publisher email was the RFC-2606 placeholder hello@flutrack
+  // .example. The richer config carrying the verified mailbox was never
+  // imported by the pipeline, so the site shipped a contactless Organization
+  // node. The two configs are now one module.
+  assert.equal(hasPublisherEmail(), true);
+  assert.equal(organizationLd().email, site.publisher.email);
+});
+
+test('a reserved-domain address is still refused as a contact claim', () => {
+  // The guard is what keeps a placeholder out of structured data; it must hold
+  // for every RFC-2606 reserved domain, case-insensitively.
+  for (const bad of ['hello@flutrack.example', 'x@y.invalid', 'x@y.test', 'x@y.localhost', 'X@Y.EXAMPLE']) {
+    assert.equal(hasPublisherEmail(bad), false, bad);
+  }
+  assert.equal(hasPublisherEmail('hello@flufollower.com'), true);
+});
+
+test('organizationLd names the accountable entity and a complete postal address', () => {
+  const org = organizationLd();
+  assert.equal(org.legalName, site.publisher.legalName);
+  assert.equal(org.address['@type'], 'PostalAddress');
+  assert.equal(org.address.streetAddress, site.publisher.address.street);
+  assert.equal(org.address.addressLocality, site.publisher.address.locality);
+  assert.equal(org.address.addressRegion, site.publisher.address.region);
+  assert.equal(org.address.postalCode, site.publisher.address.postalCode);
+  assert.equal(org.address.addressCountry, site.publisher.address.country);
 });
 
 test('organizationLd omits sameAs unless a real social profile URL is configured', () => {
@@ -96,6 +120,24 @@ test('statePageLd targets the state slug and only claims dates when a week is su
   assert.equal('dateModified' in undated, false);
 });
 
+test('statePageLd describes the calling page, not always the state page', () => {
+  // The metro pages render a state-level reading but live at /metro/<slug>/.
+  // Without an override they emitted a WebPage node whose url and name pointed
+  // at /state/<slug>/, contradicting their own canonical and og:url and telling
+  // crawlers that three distinct URLs were the same document.
+  const state = { name: 'Georgia', slug: 'georgia' };
+  const metro = statePageLd(state, '2026-10-02', {
+    path: '/metro/atlanta/',
+    name: "What's Going Around in Atlanta: Flu, RSV & COVID",
+    description: 'Metro-specific description.',
+  });
+  assert.equal(metro.url, `${site.origin}/metro/atlanta/`);
+  assert.equal(metro.name, "What's Going Around in Atlanta: Flu, RSV & COVID");
+  assert.equal(metro.description, 'Metro-specific description.');
+  // The state page keeps its own identity when nothing is passed.
+  assert.equal(statePageLd(state, '2026-10-02').url, `${site.origin}/state/georgia/`);
+});
+
 test('statePageLd stamps the same week as both published and modified when dated', () => {
   const dated = statePageLd({ name: 'Alabama', slug: 'alabama' }, '2026-07-11');
   assert.equal(dated.datePublished, '2026-07-11');
@@ -131,4 +173,35 @@ test('robotsTxt allows crawling and points at the sitemap', () => {
   assert.match(txt, /^User-agent: \*$/m);
   assert.match(txt, /^Allow: \/$/m);
   assert.match(txt, new RegExp(`^Sitemap: ${site.origin}/sitemap\\.xml$`, 'm'));
+});
+
+// --- content revision dates ------------------------------------------------ //
+
+test('every content page declares its own revision date, not a site-wide constant', () => {
+  // All 16 content pages used to take sitemap <lastmod> from site.contentUpdated
+  // while printing their own hardcoded month, so the two drifted: nine pages
+  // displayed July or August 2026 though git shows each was revised in September.
+  const paths = Object.keys(contentRevised);
+  assert.ok(paths.length >= 16, `expected every content page, got ${paths.length}`);
+  for (const p of paths) {
+    assert.match(p, /^\/[a-z0-9./-]*\/$/, `${p} is a rooted directory path`);
+    assert.match(contentRevised[p], /^\d{4}-\d{2}-\d{2}$/, `${p} has an ISO date`);
+    assert.equal(revisedOn(p), contentRevised[p]);
+  }
+});
+
+test('the rendered month and the sitemap date are the same value', () => {
+  // The defect was that these were two independent literals. They are now one.
+  assert.equal(revisedLabel('/privacy/'), 'September 2026');
+  assert.equal(revisedOn('/privacy/'), contentRevised['/privacy/']);
+  assert.equal(revisedLabel('/terms/'), 'September 2026');
+  for (const [p, iso] of Object.entries(contentRevised)) {
+    const [y, m] = iso.split('-');
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    assert.equal(revisedLabel(p), `${MONTHS[Number(m) - 1]} ${y}`, p);
+  }
+});
+
+test('an unknown path falls back to the site-wide date rather than throwing', () => {
+  assert.equal(revisedOn('/not-a-page/'), site.contentUpdated);
 });

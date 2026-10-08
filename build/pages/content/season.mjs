@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose, signupBand, trendDisclaimer } from '../../lib/partials.mjs';
+import { pageHeader, prose, signupBand, trendDisclaimer, revisedOn } from '../../lib/partials.mjs';
 import { organizationLd } from '../../lib/seo.mjs';
 
 /**
@@ -57,6 +57,7 @@ export default function season(ctx) {
     description:
       'When does flu season start? The documented U.S. pattern — rising October–November, peak most often December–February, tail into May — plus where to watch the 2026–27 weekly read for your state.',
     path: '/season/2026-27/',
+    lastmod: revisedOn('/season/2026-27/'),
     body,
     changefreq: 'monthly',
     priority: 0.7,

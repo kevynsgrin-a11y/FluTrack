@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
+import { pageHeader, prose, signupBand, revisedOn, revisedLabel } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
 /**
@@ -88,7 +88,7 @@ export default function affiliateDisclosure(ctx) {
       )}</p>
     </div>
   `,
-    { updated: 'July 2026' }
+    { updated: revisedLabel('/affiliate-disclosure/') }
   )}
 
   ${signupBand()}
@@ -99,6 +99,7 @@ export default function affiliateDisclosure(ctx) {
     description:
       'How FluTrack is funded: display advertising and disclosed affiliate links, at no extra cost to you. Revenue never influences the CDC-derived threat level.',
     path: '/affiliate-disclosure/',
+    lastmod: revisedOn('/affiliate-disclosure/'),
     body,
     changefreq: 'yearly',
     priority: 0.3,

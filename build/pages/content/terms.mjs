@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
+import { pageHeader, prose, signupBand, revisedOn, revisedLabel } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
 /**
@@ -106,7 +106,7 @@ export default function terms(ctx) {
     <h2>14. Contact</h2>
     <p>Questions about these Terms are welcome. You can reach us at <a href="mailto:${email}">${email}</a>, and a real person will read it.</p>
   `,
-    { updated: 'July 2026' }
+    { updated: revisedLabel('/terms/') }
   )}
 
   ${signupBand()}
@@ -117,6 +117,7 @@ export default function terms(ctx) {
     description:
       'The Terms of Use for FluTrack: an informational data-visualization utility built on public CDC data — not medical advice, not official, provided as is.',
     path: '/terms/',
+    lastmod: revisedOn('/terms/'),
     body,
     changefreq: 'yearly',
     priority: 0.3,

@@ -7,6 +7,10 @@ import { nationalSignals } from '../src/scripts/aggregate.js';
 import { states } from '../src/scripts/states-data.js';
 import { stateChip } from '../src/scripts/render.js';
 import { site } from '../build/lib/site.mjs';
+import { adSlot } from '../build/lib/partials.mjs';
+import { layout } from '../build/lib/layout.mjs';
+import statesPage from '../build/pages/content/states.mjs';
+import { disclaimers } from '../build/lib/site.mjs';
 
 const snap = generateSnapshot();
 
@@ -38,10 +42,36 @@ test('a state report is emitted at the documented URL contract', () => {
   const page = statePage(ctx, state);
   assert.equal(page.path, '/state/california/');
   assert.equal(page.ogType, 'article');
-  assert.equal(page.ogImage, '/assets/og/california.svg');
+  // Deliberately no per-page ogImage: layout.mjs falls back to the 1200x630
+  // og-default.png. This used to assert '/assets/og/california.svg', which no
+  // social or chat consumer renders in a link preview, so every share was blank.
+  assert.equal(page.ogImage, undefined);
   assert.match(page.title, /^Flu in California: current activity level & weekly trend$/);
   assert.ok(page.description.includes('California'));
   assert.ok(page.scripts.includes('/assets/js/app.js'));
+});
+
+test('the rendered state page advertises a share card format that consumers render', () => {
+  // The whole point of dropping the ogImage override: the tag must not point at
+  // an SVG, and the dimensions the head declares must be true of what it points at.
+  const html = layout(statePage(ctx, find('CA')));
+  const og = html.match(/property="og:image" content="([^"]+)"/);
+  assert.ok(og, 'og:image is emitted');
+  assert.doesNotMatch(og[1], /\.svg$/, 'no SVG share card');
+  assert.match(og[1], /\/assets\/og-default\.png$/);
+  assert.match(html, /property="og:image:width" content="1200"/);
+  assert.match(html, /property="og:image:height" content="630"/);
+});
+
+test('the all-states map labels its own figures as sample data', () => {
+  // /states/ publishes a colour-coded level and a numeric rank for all 51
+  // jurisdictions. It carried no provenance marker at all, while every other
+  // number-bearing page carried one — and it loads neither app.js nor any live
+  // refresh, so what is built in is what a visitor sees.
+  const page = statesPage(makeCtx({ disclaimers }));
+  assert.match(page.body, /class="badge badge--cached"/, 'a provenance badge is rendered');
+  assert.match(page.body, /Sample data/);
+  assert.match(page.body, /as of [A-Z][a-z]+ \d+, \d{4}/, 'the data date is stated');
 });
 
 test('every jurisdiction renders a state report at its own slug', () => {
@@ -203,4 +233,16 @@ test('report generation is deterministic', () => {
   const a = statePage(ctx, find('CO'));
   const b = statePage(ctx, find('CO'));
   assert.deepEqual(a, b, 'the same state renders byte-identically every build');
+});
+
+test('an unconfigured ad slot collapses instead of rendering an empty labelled box', () => {
+  // src/styles/main.css has collapse rules for .ad-slot[data-empty='true'], but
+  // nothing ever set the attribute, so the default 90px hatched box applied and
+  // every page showed boxes captioned "Advertisement" with no creative in them.
+  assert.equal(site.ads.publisherId, '', 'no ad network is configured yet');
+  const html = adSlot('state-mid');
+  assert.match(html, /data-empty="true"/);
+  assert.doesNotMatch(html, /aria-label="Advertisement"/, 'a collapsed slot is not a named landmark');
+  assert.doesNotMatch(html, /ad-slot__label/, 'a collapsed slot carries no visible caption');
+  assert.match(html, /data-ad-slot="state-mid"/, 'the integration boundary is preserved');
 });

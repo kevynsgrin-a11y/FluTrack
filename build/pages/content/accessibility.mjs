@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose } from '../../lib/partials.mjs';
+import { pageHeader, prose, revisedOn, revisedLabel } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
 /**
@@ -52,7 +52,7 @@ export default function accessibility(ctx) {
     )}</a> with the page and what you experienced. We take these reports seriously and will respond as quickly as we can.</p>
     </div>
 
-    <p class="muted">This statement was last reviewed in July 2026 and is updated as the site changes.</p>
+    <p class="muted">This statement was last reviewed in ${revisedLabel('/accessibility/')} and is updated as the site changes.</p>
   `
   )}
   `;
@@ -62,6 +62,7 @@ export default function accessibility(ctx) {
     description:
       'FluTrack targets WCAG 2.2 AA: keyboard-operable, contrast-checked in light and dark, reduced-motion aware. How to report an accessibility barrier.',
     path: '/accessibility/',
+    lastmod: revisedOn('/accessibility/'),
     body,
     changefreq: 'yearly',
     priority: 0.3,

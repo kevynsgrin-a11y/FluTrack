@@ -61,8 +61,22 @@ export function breadcrumbs(crumbs) {
   return `<nav class="breadcrumbs" aria-label="Breadcrumb">${items}</nav>`;
 }
 
-/** Reserved integration boundary: 970×90 desktop and 320×100 mobile. */
+/**
+ * Reserved integration boundary: 970×90 desktop and 320×100 mobile.
+ *
+ * All-or-nothing, the same way seasonKitModule() is. Until an ad network
+ * publisher ID is configured there is no creative to place, so the slot renders
+ * as a collapsed boundary: `data-empty="true"` triggers the rules already in
+ * src/styles/main.css, and the label and the landmark name are omitted. Without
+ * this the default `.ad-slot` style applied and every page showed a 90px hatched
+ * box captioned "Advertisement" — 110 of them across 55 pages — each one an
+ * <aside> named "Advertisement" in the accessibility tree.
+ */
 export function adSlot(slot) {
+  const configured = Boolean(site.ads && site.ads.publisherId);
+  if (!configured) {
+    return `<aside class="ad-slot" data-empty="true" data-ad-slot="${escapeHtml(slot)}"></aside>`;
+  }
   return `<aside class="ad-slot" data-ad-slot="${escapeHtml(slot)}" aria-label="Advertisement"><span class="ad-slot__label">Advertisement</span></aside>`;
 }
 
@@ -85,4 +99,48 @@ export function seasonKitModule() {
             <div class="season-kit__head"><span class="season-kit__label">Affiliate content</span><span>${escapeHtml(title)}</span></div>
             <div class="season-kit__grid">${slots}</div>
           </aside>`;
+}
+
+// Per-page revision dates for the content and legal pages.
+//
+// Every one of these pages used to take its sitemap <lastmod> from
+// site.contentUpdated — a single site-wide constant — while printing its own
+// hardcoded month in its body. The two drifted: nine pages displayed "July" or
+// "August 2026" though git shows every one of them was last revised in
+// September 2026, and the sitemap told crawlers something different again.
+//
+// Both the rendered line and the sitemap entry now read from this map, so they
+// cannot disagree. Dates are the real last-revision dates from git history.
+export const contentRevised = Object.freeze({
+  '/accessibility/': '2026-09-21',
+  '/affiliate-disclosure/': '2026-09-21',
+  '/changelog/': '2026-10-08',
+  '/consent/': '2026-09-26',
+  '/editorial-policy/': '2026-10-08',
+  '/faq/': '2026-09-21',
+  '/medical-disclaimer/': '2026-09-21',
+  '/methodology/': '2026-10-08',
+  '/privacy/': '2026-09-26',
+  '/terms/': '2026-09-21',
+  '/vendors/': '2026-09-21',
+  '/about/': '2026-09-21',
+  '/alerts/': '2026-09-21',
+  '/contact/': '2026-09-21',
+  '/data-sources/': '2026-10-08',
+  '/season/2026-27/': '2026-09-29',
+});
+
+/** ISO revision date for a content page, for sitemap <lastmod>. */
+export function revisedOn(path) {
+  return contentRevised[path] || site.contentUpdated;
+}
+
+/** The same date as "September 2026", for the rendered "Last updated" line. */
+export function revisedLabel(path) {
+  const iso = revisedOn(path);
+  const [y, m] = String(iso).split('-');
+  const MONTHS = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+  const name = MONTHS[Number(m) - 1];
+  return name ? `${name} ${y}` : String(iso);
 }

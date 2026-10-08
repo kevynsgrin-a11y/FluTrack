@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
+import { pageHeader, prose, signupBand, revisedOn } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
 /**
@@ -131,7 +131,7 @@ export default function dataSources(ctx) {
     description:
       "Every CDC dataset behind FluTrack's respiratory threat level — what each measures, its license and cadence — and why we exclude non-commercial data.",
     path: '/data-sources/',
-    lastmod: '2026-10-08',
+    lastmod: revisedOn('/data-sources/'),
     body,
     changefreq: 'monthly',
     priority: 0.5,

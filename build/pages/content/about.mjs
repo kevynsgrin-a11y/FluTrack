@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose, signupBand } from '../../lib/partials.mjs';
+import { pageHeader, prose, signupBand, revisedOn } from '../../lib/partials.mjs';
 import { organizationLd } from '../../lib/seo.mjs';
 
 /**
@@ -62,6 +62,7 @@ export default function about(ctx) {
     description:
       "What FluTrack is and how we turn public-domain CDC respiratory data into one plain-English state threat level — independent, free, not medical advice.",
     path: '/about/',
+    lastmod: revisedOn('/about/'),
     body,
     changefreq: 'monthly',
     priority: 0.5,

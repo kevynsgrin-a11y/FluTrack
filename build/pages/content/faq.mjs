@@ -1,6 +1,6 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, signupBand, breadcrumbs } from '../../lib/partials.mjs';
+import { pageHeader, signupBand, breadcrumbs, revisedOn, revisedLabel } from '../../lib/partials.mjs';
 import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
 
 /**
@@ -54,7 +54,7 @@ export default function faq(ctx) {
   <section class="section" style="padding-top: 0">
     <div class="container container--narrow">
       ${breadcrumbs(crumbs)}
-      <p class="muted">Last updated: July 2026</p>
+      <p class="muted">Last updated: ${revisedLabel('/faq/')}</p>
       <p class="text-secondary">For the full computation behind every rating, see our
       <a href="/methodology/">methodology</a>; for each dataset that feeds it, see our
       <a href="/data-sources/">data sources</a>. Everything below describes what the surveillance
@@ -76,6 +76,7 @@ export default function faq(ctx) {
     description:
       'Common questions about FluTrack — what the respiratory threat level means, where the CDC data comes from, the reporting lag, privacy and funding.',
     path: '/faq/',
+    lastmod: revisedOn('/faq/'),
     body,
     ogType: 'article',
     changefreq: 'monthly',

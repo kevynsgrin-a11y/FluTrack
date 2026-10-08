@@ -1,8 +1,8 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose } from '../../lib/partials.mjs';
+import { pageHeader, prose, revisedOn, revisedLabel } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
-import { privacyEmail } from '../../lib/site-main.mjs';
+import { privacyEmail } from '../../lib/site.mjs';
 
 /**
  * /consent/ — the live preference centre for non-essential storage.
@@ -125,7 +125,7 @@ export default function consent(ctx) {
         : 'To ask what we hold, or to have it corrected or deleted, use our <a href="/contact/">contact page</a>.'
     } The full picture is in our <a href="/privacy/">Privacy Policy</a>.</p>
   `,
-    { updated: 'September 2026' }
+    { updated: revisedLabel('/consent/') }
   )}
   `;
 
@@ -134,6 +134,7 @@ export default function consent(ctx) {
     description:
       'Manage FluTrack’s non-essential storage. Advertising and analytics storage are denied by default, Global Privacy Control is honored, and nothing loads before you decide.',
     path: '/consent/',
+    lastmod: revisedOn('/consent/'),
     body,
     changefreq: 'yearly',
     priority: 0.3,

@@ -1,8 +1,8 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
-import { pageHeader, prose } from '../../lib/partials.mjs';
+import { pageHeader, prose, revisedOn, revisedLabel } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
-import { site, privacyEmail } from '../../lib/site-main.mjs';
+import { site, privacyEmail } from '../../lib/site.mjs';
 
 /**
  * /changelog/ — the public record of corrections and methodology changes.
@@ -247,7 +247,7 @@ export default function changelog(ctx) {
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
   `,
-    { updated: 'October 2026' }
+    { updated: revisedLabel('/changelog/') }
   )}
   `;
 
@@ -256,7 +256,7 @@ export default function changelog(ctx) {
     description:
       'FluTrack’s public record of corrections and methodology changes, including which ones affected readings that had already been published.',
     path: '/changelog/',
-    lastmod: '2026-10-08',
+    lastmod: revisedOn('/changelog/'),
     body,
     changefreq: 'monthly',
     priority: 0.4,
