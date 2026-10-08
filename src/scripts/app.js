@@ -20,6 +20,7 @@ import { loadSnapshot, fetchLiveSignals, hasSignalData, shouldRefreshLive } from
 import { computeModel } from './model.js';
 import { nationalSignals } from './aggregate.js';
 import { threatCard, pathogenTiles, signalRows, levelToken, trendChip } from './render.js';
+import { takeawaysBlock } from './takeaways.js';
 import { states, stateByAbbr } from './states-data.js';
 import { formatDate, formatChange } from './util.js';
 
@@ -104,6 +105,14 @@ function render(store, abbr) {
   setRegion('threat-card', threatCard(st, model, opts));
   setRegion('pathogen-tiles', pathogenTiles(model));
   setRegion('signal-rows', signalRows(signals));
+  // State pages: plain-English takeaways, only ever written from live data.
+  if (!st.isNational && document.querySelector('[data-region="takeaways"]')) {
+    const peers = states
+      .filter((s) => s.hhsRegion === st.hhsRegion && s.abbr !== st.abbr)
+      .map((s) => ({ name: s.name, level: computeModel(store.signals.get(s.abbr) || {}).level }));
+    setRegion('takeaways', takeawaysBlock(st, model, signals, { live: store.provenance.live, peers, weekEnding: store.weekEnding }));
+  }
+
   // Home-only regions.
   setText('state-name', st.isNational ? 'the U.S.' : st.name);
   const link = document.querySelector('[data-region="state-link"]');

@@ -319,6 +319,9 @@ main { flex: 1 0 auto; }
 .spark { width: 100%; height: 2rem; }
 
 .signal-ledger { border-top: 2px solid var(--text); }
+.takeaways__list { margin: var(--space-md) 0 0; padding-left: 1.2em; display: grid; gap: var(--space-sm); max-width: 48rem; }
+.takeaways__list li { line-height: 1.55; }
+.takeaways__list li::marker { color: var(--text-secondary); }
 .signal-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-lg); padding: var(--space-md) 0; border-bottom: 1px solid var(--border-strong); }
 .signal-row__name { font-weight: var(--weight-semibold); }
 .signal-row__val { align-self: center; font-variant-numeric: tabular-nums; font-weight: var(--weight-semibold); text-align: right; }

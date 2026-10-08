@@ -91,6 +91,12 @@ if (existsSync(join(dist, 'data/snapshot.json'))) {
     if (live && html.includes(SAMPLE_BADGE)) errors.push(`${rel}: "Sample data" badge on a page rendered from live CDC data`);
     if (!live && html.includes(LIVE_BADGE)) errors.push(`${rel}: "Live CDC data" badge on a page rendered from sample data`);
     if (!html.includes(live ? LIVE_BADGE : SAMPLE_BADGE)) errors.push(`${rel}: threat card carries no provenance badge`);
+    // Plain-English takeaways are claims about a real state: live data only.
+    if (rel !== '/index.html') {
+      const hasTakeaways = html.includes('<section class="takeaways"');
+      if (live && !hasTakeaways) errors.push(`${rel}: live state report is missing its plain-English takeaways`);
+      if (!live && hasTakeaways) errors.push(`${rel}: plain-English takeaways rendered from sample data`);
+    }
   }
   const ogDir = join(dist, 'assets', 'og');
   for (const f of existsSync(ogDir) ? readdirSync(ogDir) : []) {
