@@ -141,8 +141,9 @@ export function weeklyTakeaways(state, model, signals = {}, { live = false, peer
     const every = m === 1 ? 'the only other state' : m === 2 ? 'both other states' : `all ${m} other states`;
     const all = (n) => (n === m ? every : `${n} of ${m} other states`);
     if (!higher && !lower) text = `${every[0].toUpperCase()}${every.slice(1)} in ${possessive(name)} HHS region ${m === 1 ? 'is' : 'are'} also at a ${model.label.toLowerCase()} level.`;
-    else if (!higher) text = `${name} has the highest level in its HHS region — ${all(lower)} ${lower === 1 ? 'is' : 'are'} lower.`;
-    else if (!lower) text = `${name} is at the low end of its HHS region — ${all(higher)} ${higher === 1 ? 'is' : 'are'} higher.`;
+    // Ties are stated: "highest" with two states level alongside is not the highest.
+    else if (!higher) text = `${name} ${lower < m ? 'is tied for' : 'has'} the highest level in its HHS region — ${all(lower)} ${lower === 1 ? 'is' : 'are'} lower.`;
+    else if (!lower) text = `${name} ${higher < m ? 'is tied for' : 'has'} the lowest level in its HHS region — ${all(higher)} ${higher === 1 ? 'is' : 'are'} higher.`;
     else text = `Of the ${m} other states in ${possessive(name)} HHS region, ${higher} ${higher === 1 ? 'is' : 'are'} at a higher level and ${lower} lower.`;
     out.push({ lead: 'Nearby states', text });
   }

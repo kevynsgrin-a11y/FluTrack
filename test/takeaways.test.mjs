@@ -65,6 +65,15 @@ test('Georgia: names the leading wastewater virus on FluTrack’s scale and rank
   assert.match(all, /Georgia has the highest level in its HHS region — both other states are lower\./);
 });
 
+test('regional rank states ties instead of claiming a sole highest or lowest', () => {
+  const region = (peers) => texts(weeklyTakeaways(find('GA'), computeModel(GA), GA, { live: true, peers })).split('\n').at(-1);
+  // Georgia is Low (1) on these signals.
+  assert.match(region([{ name: 'A', level: 0 }, { name: 'B', level: 1 }, { name: 'C', level: 0 }]), /Georgia is tied for the highest level in its HHS region — 2 of 3 other states are lower\./);
+  assert.match(region([{ name: 'A', level: 2 }, { name: 'B', level: 1 }]), /Georgia is tied for the lowest level in its HHS region — 1 of 2 other states is higher\./);
+  assert.match(region([{ name: 'A', level: 2 }, { name: 'B', level: 3 }]), /Georgia has the lowest level in its HHS region — both other states are higher\./);
+  assert.match(region([{ name: 'A', level: 0 }, { name: 'B', level: 2 }]), /Of the 2 other states in Georgia’s HHS region, 1 is at a higher level and 1 lower\./);
+});
+
 test('takeaways describe; they never advise, predict, or headline a percentage change', () => {
   for (const [abbr, sig] of [['MD', MD], ['GA', GA]]) {
     const all = texts(weeklyTakeaways(find(abbr), computeModel(sig), sig, { live: true, peers: [{ name: 'X', level: 2 }] }));
