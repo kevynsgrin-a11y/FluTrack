@@ -19,6 +19,14 @@ const ENTRIES = [
   {
     date: '2026-10-08',
     kind: 'Correction',
+    title: 'Wastewater readings from too few, or stuck, sampling sites',
+    body:
+      'The first build from live CDC data took a state’s wastewater reading as the median of whatever eligible sites reported, however few. In South Dakota that meant two small sites, serving about 17,000 people between them, each repeating the same value week after week; they set the state’s wastewater to very high and its overall level to Moderate while emergency-department data was near zero, and the plain-English summary repeated the wastewater figure. A state’s wastewater reading now needs at least three eligible sites that week, and a site that repeats the identical value above the 1.0 floor for three or more reports in a row is left out as stale. Readings shown on 8 October for South Dakota, Hawaii and other states with only one or two eligible sites were affected.',
+    affectsReadings: true,
+  },
+  {
+    date: '2026-10-08',
+    kind: 'Correction',
     title: 'The live CDC refresh was not reading the CDC’s data',
     body:
       'The code that reads the CDC feeds expected column names the published datasets do not use: emergency-department visits are published one row per virus, not one column per virus; the respiratory-illness rating is in a column called “label”; and wastewater is reported per sampling site under different field names. Every live refresh therefore parsed to nothing, and the page kept showing the bundled sample figures. The 25 July entry below describes a rule requiring at least 25 of 51 states to carry real data before anything is badged “Live CDC data”; that rule was not in the code the site was running, so the badge could still appear over sample figures. The readers now match the datasets as published, and the 25-state rule is enforced for both the browser and the build. Any reading seen with a “Live CDC data” badge before this fix may have been sample data.',

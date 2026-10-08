@@ -94,6 +94,7 @@ export const DATASETS = Object.freeze({
     fields: {
       week: ['week_end', 'date_period', 'week_ending', 'reference_date', 'date'],
       geography: ['state_territory', 'state', 'wwtp_jurisdiction', 'geography'],
+      site: ['site', 'wwtp_id', 'key_plot_id'],
       pathogen: ['pathogen_target', 'pathogen', 'pathogen_name'],
       wval: ['site_wval', 'wval', 'wva_level', 'activity_level', 'value'],
       // provenance fields used to enforce the non-commercial exclusion.
@@ -103,6 +104,22 @@ export const DATASETS = Object.freeze({
 });
 
 const PATHOGENS = ['influenza', 'covid', 'rsv'];
+
+/**
+ * A state's weekly wastewater reading for a virus needs at least this many
+ * eligible sites. With one or two, a couple of small sewersheds set the whole
+ * state's value — the thing the median exists to prevent.
+ */
+export const MIN_WASTEWATER_SITES = 3;
+
+/**
+ * A site reporting the identical WVAL above the floor for this many consecutive
+ * reports is carrying a stale value forward (real activity levels move week to
+ * week), so those readings are dropped. Repeats AT the floor (1.0, the usual
+ * "nothing detected above baseline" value) are legitimate and kept.
+ */
+export const STALE_RUN_REPORTS = 3;
+const WVAL_FLOOR = 1;
 
 /** Regex identifying non-commercial (CC BY-NC 4.0) wastewater sources to exclude. */
 const NONCOMMERCIAL_SOURCE = /scan|wastewaterscan|verily|stanford|emory/i;
@@ -263,13 +280,16 @@ function ariLevelFromLabel(label) {
 
 /**
  * NWSS site-level WVAL → Map<abbr, [{ week, influenza, covid, rsv }]>, oldest
- * first. Non-commercial rows are dropped first; each remaining state/week/
- * pathogen value is the MEDIAN across that state's reporting sites, so a single
- * small sewershed cannot set the whole state's reading.
+ * first. Non-commercial rows are dropped first, then stale site values (see
+ * STALE_RUN_REPORTS). Each remaining state/week/pathogen value is the MEDIAN
+ * across that state's reporting sites, and only when at least
+ * MIN_WASTEWATER_SITES reported — otherwise there is no reading (NaN).
  */
 export function parseWastewaterRows(rows) {
   const f = DATASETS.wastewater.fields;
-  const byState = new Map();
+  // 1. Group each eligible reading by state, virus and site.
+  const bySite = new Map();
+  let anonymous = 0;
   for (const row of excludeNonCommercial(rows, f.provenance)) {
     const st = resolveState(pickField(row, f.geography));
     if (!st) continue;
@@ -277,22 +297,51 @@ export function parseWastewaterRows(rows) {
     const pathogen = normalizePathogen(pickField(row, f.pathogen));
     const wval = numeric(pickField(row, f.wval));
     if (!week || !PATHOGENS.includes(pathogen) || !Number.isFinite(wval)) continue;
-    if (!byState.has(st.abbr)) byState.set(st.abbr, new Map());
-    const weeks = byState.get(st.abbr);
-    if (!weeks.has(week)) weeks.set(week, { influenza: [], covid: [], rsv: [] });
-    weeks.get(week)[pathogen].push(wval);
+    // A row with no site id can't be checked for staleness; it still counts as one site.
+    const site = pickField(row, f.site) ?? `row-${(anonymous += 1)}`;
+    const key = `${st.abbr}|${pathogen}|${site}`;
+    if (!bySite.has(key)) bySite.set(key, { abbr: st.abbr, pathogen, reports: [] });
+    const { reports } = bySite.get(key);
+    // One report per site and week, so a duplicated row is neither a second site nor a "run".
+    if (!reports.some((r) => r.week === week)) reports.push({ week, wval });
   }
+
+  // 2. Drop stale runs, then pool what is left by state, week and virus.
+  const byState = new Map();
+  for (const { abbr, pathogen, reports } of bySite.values()) {
+    for (const { week, wval } of withoutStaleRuns(sortByWeek(reports))) {
+      if (!byState.has(abbr)) byState.set(abbr, new Map());
+      const weeks = byState.get(abbr);
+      if (!weeks.has(week)) weeks.set(week, { influenza: [], covid: [], rsv: [] });
+      weeks.get(week)[pathogen].push(wval);
+    }
+  }
+
+  // 3. Median per state/week/virus, only with enough sites behind it.
+  const stateValue = (vals) => (vals.length >= MIN_WASTEWATER_SITES ? round(median(vals)) : NaN);
   const out = new Map();
   for (const [abbr, weeks] of byState) {
     const recs = [...weeks.entries()].map(([week, vals]) => ({
       week,
-      influenza: round(median(vals.influenza)),
-      covid: round(median(vals.covid)),
-      rsv: round(median(vals.rsv)),
+      influenza: stateValue(vals.influenza),
+      covid: stateValue(vals.covid),
+      rsv: stateValue(vals.rsv),
     }));
     out.set(abbr, sortByWeek(recs));
   }
   return out;
+}
+
+/** One site's reports (oldest first) minus any run of STALE_RUN_REPORTS+ identical values above the floor. */
+function withoutStaleRuns(reports) {
+  const keep = [];
+  for (let i = 0; i < reports.length; ) {
+    let j = i + 1;
+    while (j < reports.length && reports[j].wval === reports[i].wval) j += 1;
+    if (!(j - i >= STALE_RUN_REPORTS && reports[i].wval > WVAL_FLOOR)) keep.push(...reports.slice(i, j));
+    i = j;
+  }
+  return keep;
 }
 
 /** True when a signal bundle carries at least one real reading. */

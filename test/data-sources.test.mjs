@@ -13,6 +13,8 @@ import {
   MIN_LIVE_STATES,
   shouldRefreshLive,
   BROWSER_REFRESH_AFTER_DAYS,
+  MIN_WASTEWATER_SITES,
+  STALE_RUN_REPORTS,
 } from '../src/scripts/data-sources.js';
 import { states } from '../src/scripts/states-data.js';
 
@@ -128,8 +130,9 @@ test('parseAriRows reads the published `label` column, including Extremely High 
 });
 
 test('parseWastewaterRows takes the median across sites and drops non-commercial networks', () => {
+  let n = 0; // every row is a different sampling site, as in the real feed
   const site = (source, pathogen_target, site_wval, state_territory = 'Maryland', week_end = '2026-09-26') => ({
-    state_territory, counties_served: 'X', site: 'ID:1', population_served: '1000', source,
+    state_territory, counties_served: 'X', site: `ID:${(n += 1)}`, population_served: '1000', source,
     site_wval, site_wval_category: 'Low', date_included_in_wval: '2023-01-01', week_end, pathogen_target, date_updated: '2026-10-02 11:03',
   });
   const md = parseWastewaterRows([
@@ -140,6 +143,7 @@ test('parseWastewaterRows takes the median across sites and drops non-commercial
     site('State_Territory, WastewaterSCAN', 'Influenza A virus', '99'),
     site('CDC_Verily', 'Influenza A virus', '99'),
     site('State_Territory', 'SARS-CoV-2', '3.0'),
+    site('State_Territory', 'SARS-CoV-2', '4.0'),
     site('State_Territory', 'SARS-CoV-2', '5.0'),
     site('State_Territory', 'RSV', ''),
   ]).get('MD');
@@ -147,6 +151,63 @@ test('parseWastewaterRows takes the median across sites and drops non-commercial
   assert.equal(md[0].influenza, 2, 'median of the three public sites, not the 20.44 outlier or excluded 99s');
   assert.equal(md[0].covid, 4);
   assert.ok(Number.isNaN(md[0].rsv), 'a blank WVAL is not read as zero');
+});
+
+/** A real-shape NWSS row for one site and week. */
+const wwRow = (state_territory, site, source, pathogen_target, site_wval, week_end) => ({
+  state_territory, site, source, pathogen_target, site_wval, week_end,
+  counties_served: 'X', population_served: '10000', site_wval_category: 'Low', date_included_in_wval: '2023-01-01', date_updated: '2026-10-02 11:03',
+});
+const W4 = ['2026-09-05', '2026-09-12', '2026-09-19', '2026-09-26'];
+
+test(`a state reading needs at least ${MIN_WASTEWATER_SITES} eligible sites`, () => {
+  const two = W4.map((w, i) => [
+    wwRow('Ohio', 'ID:1', 'State_Territory', 'SARS-CoV-2', String(2 + i * 0.3), w),
+    wwRow('Ohio', 'ID:2', 'State_Territory', 'SARS-CoV-2', String(3 + i * 0.2), w),
+  ]).flat();
+  const oh = parseWastewaterRows(two).get('OH');
+  assert.ok(oh.every((r) => Number.isNaN(r.covid)), 'two sites → no state reading');
+  const three = [...two, ...W4.map((w, i) => wwRow('Ohio', 'ID:3', 'State_Territory', 'SARS-CoV-2', String(4 + i * 0.1), w))];
+  assert.equal(parseWastewaterRows(three).get('OH').at(-1).covid, 3.6, 'three sites → median');
+});
+
+test('South Dakota as CDC published it (Oct 2026): two stuck small sites produce no reading', () => {
+  // After the Verily / WastewaterSCAN exclusion SD had two eligible sites
+  // (≈13.8k and 3k people), each repeating one value every week. They had set
+  // the state's wastewater to "very high" and its composite to Moderate.
+  const rows = W4.flatMap((w) => [
+    wwRow('South Dakota', 'ID:2726', 'State_Territory', 'RSV', '14.63', w),
+    wwRow('South Dakota', 'ID:2727', 'State_Territory', 'RSV', '13.3', w),
+    wwRow('South Dakota', 'ID:2726', 'State_Territory', 'Influenza A virus', '9.26', w),
+    wwRow('South Dakota', 'ID:2727', 'State_Territory', 'Influenza A virus', '17.04', w),
+    wwRow('South Dakota', 'ID:1830', 'CDC_Verily', 'RSV', '1.0', w),
+  ]);
+  const sd = parseWastewaterRows(rows).get('SD') || [];
+  assert.ok(sd.every((r) => Number.isNaN(r.rsv) && Number.isNaN(r.influenza)));
+  const { signalsByAbbr } = assembleLiveSignals({ ww: parseWastewaterRows(rows) });
+  assert.deepEqual(signalsByAbbr.get('SD').wastewaterSeries, [], 'no wastewater signal reaches the model');
+});
+
+test(`a site repeating one value above the floor for ${STALE_RUN_REPORTS}+ reports is dropped; floor repeats are kept`, () => {
+  const rows = W4.flatMap((w, i) => [
+    wwRow('Utah', 'ID:9', 'State_Territory', 'SARS-CoV-2', '9.26', w), // stuck
+    wwRow('Utah', 'ID:1', 'State_Territory', 'SARS-CoV-2', String(2 + i), w),
+    wwRow('Utah', 'ID:2', 'State_Territory', 'SARS-CoV-2', String(3 + i), w),
+    wwRow('Utah', 'ID:3', 'State_Territory', 'SARS-CoV-2', '1.0', w), // at the floor: legitimate
+  ]);
+  const ut = parseWastewaterRows(rows).get('UT');
+  // Without the stuck site, week 4 has 5, 6 and the floor 1.0 → median 5.
+  assert.equal(ut.at(-1).covid, 5);
+  // A site listed twice in one week counts once — neither an extra site nor a run.
+  const dup = W4.slice(0, 2).flatMap((w, i) => [
+    wwRow('Utah', 'ID:1', 'State_Territory', 'RSV', String(2 + i), w),
+    wwRow('Utah', 'ID:1', 'State_Territory', 'RSV', String(2 + i), w),
+    wwRow('Utah', 'ID:2', 'State_Territory', 'RSV', String(3 + i), w),
+  ]);
+  assert.ok(Number.isNaN(parseWastewaterRows(dup).get('UT').at(-1).rsv), 'two real sites, not three');
+  // A value repeated only twice is not treated as stuck.
+  const twice = W4.slice(0, 2).flatMap((w) => ['ID:1', 'ID:2', 'ID:3'].map((id) => wwRow('Utah', id, 'State_Territory', 'RSV', '4.5', w)));
+  assert.equal(parseWastewaterRows(twice).get('UT').at(-1).rsv, 4.5);
 });
 
 test('assembleLiveSignals keeps the last LIVE_WEEKS weeks and takes the peak pathogen for wastewater', () => {
