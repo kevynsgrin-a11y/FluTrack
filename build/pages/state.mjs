@@ -107,7 +107,14 @@ export function statePage(ctx, state) {
     body,
     scripts: ['/assets/js/app.js', '/assets/js/sticky-status.js'],
     ogType: 'article',
-    ogImage: `/assets/og/${state.slug}.svg`,
+    // No per-page ogImage: layout.mjs falls back to /assets/og-default.png.
+    // The per-state card is an SVG, and no major social or chat consumer renders
+    // SVG in a link preview — so pointing at it produced a BLANK card on every
+    // share, while the page still declared og:image:width 1200 / height 630.
+    // A rasterised per-state PNG is not the fix either: the card encodes a
+    // threat reading that changes weekly, so a committed PNG would freeze it and
+    // start contradicting the page. A dataless brand card is correct until the
+    // cards are generated per request.
     jsonld: [breadcrumbLd(crumbs), statePageLd(state, weekEnding), faqLd(faqs.map((f) => ({ q: f.q, a: stripTags(f.a) })))],
   };
 }

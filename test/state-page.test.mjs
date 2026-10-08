@@ -8,6 +8,7 @@ import { states } from '../src/scripts/states-data.js';
 import { stateChip } from '../src/scripts/render.js';
 import { site } from '../build/lib/site.mjs';
 import { adSlot } from '../build/lib/partials.mjs';
+import { layout } from '../build/lib/layout.mjs';
 
 const snap = generateSnapshot();
 
@@ -39,10 +40,25 @@ test('a state report is emitted at the documented URL contract', () => {
   const page = statePage(ctx, state);
   assert.equal(page.path, '/state/california/');
   assert.equal(page.ogType, 'article');
-  assert.equal(page.ogImage, '/assets/og/california.svg');
+  // Deliberately no per-page ogImage: layout.mjs falls back to the 1200x630
+  // og-default.png. This used to assert '/assets/og/california.svg', which no
+  // social or chat consumer renders in a link preview, so every share was blank.
+  assert.equal(page.ogImage, undefined);
   assert.match(page.title, /^Flu in California: current activity level & weekly trend$/);
   assert.ok(page.description.includes('California'));
   assert.ok(page.scripts.includes('/assets/js/app.js'));
+});
+
+test('the rendered state page advertises a share card format that consumers render', () => {
+  // The whole point of dropping the ogImage override: the tag must not point at
+  // an SVG, and the dimensions the head declares must be true of what it points at.
+  const html = layout(statePage(ctx, find('CA')));
+  const og = html.match(/property="og:image" content="([^"]+)"/);
+  assert.ok(og, 'og:image is emitted');
+  assert.doesNotMatch(og[1], /\.svg$/, 'no SVG share card');
+  assert.match(og[1], /\/assets\/og-default\.png$/);
+  assert.match(html, /property="og:image:width" content="1200"/);
+  assert.match(html, /property="og:image:height" content="630"/);
 });
 
 test('every jurisdiction renders a state report at its own slug', () => {
