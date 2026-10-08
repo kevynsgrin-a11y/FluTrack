@@ -68,10 +68,16 @@ function ingestSnapshot(store, snap) {
 
 function ingestLive(store, live) {
   store.weekEnding = live.weekEnding || store.weekEnding;
+  store.liveStates = new Set();
   for (const [abbr, sig] of live.signalsByAbbr) {
     // Only overwrite when the live bundle actually has data for the state.
-    if (hasData(sig)) store.signals.set(abbr, sig);
+    if (hasData(sig)) {
+      store.signals.set(abbr, sig);
+      store.liveStates.add(abbr);
+    }
   }
+  // The rollup is live because it is computed from the states that are.
+  if (store.liveStates.size) store.liveStates.add('US');
   store.signals.set('US', nationalSignals(states.map((s) => store.signals.get(s.abbr)).filter(Boolean)));
 }
 
@@ -91,7 +97,14 @@ function render(store, abbr) {
   const signals = store.signals.get(st.abbr) || store.signals.get('US');
   if (!signals) return;
   const model = computeModel(signals);
-  const opts = { weekEnding: store.weekEnding, provenance: store.provenance };
+  // Date and badge are per state, not global: a refresh that replaced 30 states
+  // must not stamp the live CDC week, or the live badge, onto the 21 whose
+  // numbers still come from the sample snapshot.
+  const isLive = Boolean(store.provenance?.live) && (store.liveStates?.has(st.abbr) ?? false);
+  const opts = {
+    weekEnding: signals.weekEnding || store.weekEnding,
+    provenance: { ...store.provenance, live: isLive },
+  };
 
   setRegion('threat-card', threatCard(st, model, opts));
   setRegion('pathogen-tiles', pathogenTiles(model));

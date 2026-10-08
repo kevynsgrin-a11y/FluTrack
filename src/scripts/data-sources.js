@@ -43,6 +43,11 @@ export const DATASETS = Object.freeze({
     fields: {
       week: ['week_end', 'week_end_date', 'weekenddate', 'date'],
       geography: ['geography', 'state', 'geography_name'],
+      // vutn-jzwm is LONG format: one row per (week, geography, pathogen).
+      pathogen: ['pathogen', 'pathogen_name'],
+      percent: ['percent_visits', 'percent'],
+      // Wide-format columns, kept first in priority so an upstream revert to a
+      // one-row-per-week shape keeps working without a code change.
       combined: ['percent_visits_combined', 'percent_combined'],
       influenza: ['percent_visits_influenza', 'percent_influenza'],
       covid: ['percent_visits_covid', 'percent_covid'],
@@ -57,7 +62,7 @@ export const DATASETS = Object.freeze({
     fields: {
       week: ['week_end', 'week_ending', 'weekend', 'date'],
       geography: ['geography', 'state', 'geography_name'],
-      levelLabel: ['activity_level_label', 'ari_activity_level', 'activity_level'],
+      levelLabel: ['label', 'activity_level_label', 'ari_activity_level', 'activity_level'],
     },
   },
   // CDC NWSS Wastewater Viral Activity Level (WVAL). Public domain.
@@ -67,14 +72,24 @@ export const DATASETS = Object.freeze({
     license: 'Public Domain (U.S. Government)',
     fields: {
       week: ['week_end', 'date_period', 'week_ending', 'reference_date', 'date'],
-      geography: ['state', 'wwtp_jurisdiction', 'geography'],
-      pathogen: ['pathogen', 'pathogen_name'],
-      wval: ['wval', 'wva_level', 'activity_level', 'value'],
+      geography: ['state_territory', 'state', 'wwtp_jurisdiction', 'geography'],
+      pathogen: ['pathogen_target', 'pathogen', 'pathogen_name'],
+      wval: ['site_wval', 'wval', 'wva_level', 'activity_level', 'value'],
       // provenance fields used to enforce the non-commercial exclusion.
       provenance: ['data_source', 'source', 'reporting_source', 'provider', 'network'],
     },
   },
 });
+
+/**
+ * Minimum number of states that must receive at least one real upstream value
+ * before a refresh may be presented as live. Three fulfilled HTTP requests used
+ * to be enough, so a schema drift that emptied every series still flipped the
+ * badge to "Live CDC data" over unchanged sample numbers.
+ */
+export const MIN_LIVE_STATES = 25;
+
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Regex identifying non-commercial (CC BY-NC 4.0) wastewater sources to exclude. */
 const NONCOMMERCIAL_SOURCE = /scan|wastewaterscan|verily|stanford|emory/i;
@@ -121,9 +136,15 @@ async function fetchJson(url, { signal } = {}) {
   const payload = await res.json();
   // The ingest worker wraps warm payloads: { api, data, fetchedAt, stale }. Unwrap
   // transparently so every adapter below keeps seeing raw Socrata rows.
-  return payload && typeof payload === 'object' && payload.api && 'data' in payload
-    ? payload.data
-    : payload;
+  if (payload && typeof payload === 'object' && payload.api && 'data' in payload) {
+    // The worker keeps serving past its TTL and flags it. Nothing used to read
+    // this, so an expired payload could still be badged "Live CDC data".
+    if (payload.stale === true) {
+      throw new Error(`stale ingest envelope for ${url} (ageSeconds=${payload.ageSeconds})`);
+    }
+    return payload.data;
+  }
+  return payload;
 }
 
 // --- Per-dataset live adapters -------------------------------------------- //
@@ -134,21 +155,45 @@ async function fetchEdVisits(signal) {
     socrataUrl(ds.id, { $limit: 60000, $order: `${ds.fields.week[0]} DESC` }),
     { signal }
   );
-  const byState = new Map();
+  // One row per (week, geography, pathogen) upstream, so accumulate per
+  // (state, week) and fold the pathogen rows into a single record.
+  const byStateWeek = new Map();
   for (const row of rows) {
-    const geo = pickField(row, ds.fields.geography);
-    const st = resolveState(geo);
+    const st = resolveState(pickField(row, ds.fields.geography));
     if (!st) continue;
     const week = String(pickField(row, ds.fields.week) || '').slice(0, 10);
-    const rec = {
-      week,
-      combined: numeric(pickField(row, ds.fields.combined)),
-      influenza: numeric(pickField(row, ds.fields.influenza)),
-      covid: numeric(pickField(row, ds.fields.covid)),
-      rsv: numeric(pickField(row, ds.fields.rsv)),
-    };
-    if (!byState.has(st.abbr)) byState.set(st.abbr, []);
-    byState.get(st.abbr).push(rec);
+    if (!week) continue;
+    const key = `${st.abbr}|${week}`;
+    let rec = byStateWeek.get(key);
+    if (!rec) {
+      rec = { abbr: st.abbr, week, combined: NaN, influenza: NaN, covid: NaN, rsv: NaN };
+      byStateWeek.set(key, rec);
+    }
+    // Wide format wins when present.
+    const wide = numeric(pickField(row, ds.fields.combined));
+    if (Number.isFinite(wide)) {
+      rec.combined = wide;
+      rec.influenza = numeric(pickField(row, ds.fields.influenza));
+      rec.covid = numeric(pickField(row, ds.fields.covid));
+      rec.rsv = numeric(pickField(row, ds.fields.rsv));
+      continue;
+    }
+    const which = normalizePathogen(pickField(row, ds.fields.pathogen));
+    const pct = numeric(pickField(row, ds.fields.percent));
+    if (which !== 'combined' && Number.isFinite(pct)) rec[which] = pct;
+  }
+
+  const byState = new Map();
+  for (const rec of byStateWeek.values()) {
+    if (!Number.isFinite(rec.combined)) {
+      // vutn-jzwm publishes no combined column: the combined respiratory share
+      // of ED visits for a week is the sum of the three reported pathogen
+      // shares. Weeks reporting none stay NaN and are filtered downstream.
+      const parts = [rec.influenza, rec.covid, rec.rsv].filter(Number.isFinite);
+      rec.combined = parts.length ? Math.round(parts.reduce((a, b) => a + b, 0) * 100) / 100 : NaN;
+    }
+    if (!byState.has(rec.abbr)) byState.set(rec.abbr, []);
+    byState.get(rec.abbr).push(rec);
   }
   return byState;
 }
@@ -263,12 +308,49 @@ export async function fetchLiveSignals({ timeoutMs = 12000 } = {}) {
     });
   }
 
-  return { signalsByAbbr, weekEnding: latestWeek, sources };
+  // A refresh is live only if it actually carries values. Fetches that resolve
+  // but yield nothing (schema drift, an empty upstream week) must fall back to
+  // the sample snapshot rather than relabel it.
+  const replaced = [...signalsByAbbr.values()].filter(hasUsableSignal);
+  if (!ISO_DATE.test(latestWeek)) {
+    throw new Error(
+      `live CDC refresh rejected: no valid week-ending date (got ${JSON.stringify(latestWeek)})`
+    );
+  }
+  if (replaced.length < MIN_LIVE_STATES) {
+    throw new Error(
+      `live CDC refresh rejected: only ${replaced.length} of ${states.length} states ` +
+        `received a usable value (floor ${MIN_LIVE_STATES}); sources=${sources.join(', ')}`
+    );
+  }
+
+  return { signalsByAbbr, weekEnding: latestWeek, sources, liveStateCount: replaced.length };
+}
+
+/** True when a per-state signal carries at least one real upstream value. */
+export function hasUsableSignal(sig) {
+  if (!sig) return false;
+  return (
+    Number.isFinite(sig.ariLevel) ||
+    (sig.edCombinedSeries && sig.edCombinedSeries.length > 0) ||
+    (sig.wastewaterSeries && sig.wastewaterSeries.length > 0)
+  );
 }
 
 function labelFromRow(row) {
   // Deferred import avoids a cycle; labelToLevel is pure.
-  const map = { 'very low': 0, minimal: 0, low: 1, moderate: 2, medium: 2, high: 3, 'very high': 4 };
+  const map = {
+    'very low': 0,
+    minimal: 0,
+    low: 1,
+    moderate: 2,
+    medium: 2,
+    high: 3,
+    'very high': 4,
+    // CDC's ARI scale tops out above "Very High"; without this the most severe
+    // week upstream can publish read as "no data".
+    'extremely high': 4,
+  };
   const key = String(row.label || '').trim().toLowerCase();
   if (key in map) return map[key];
   const n = Number(row.label);
