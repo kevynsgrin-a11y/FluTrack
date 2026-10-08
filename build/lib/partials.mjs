@@ -61,8 +61,22 @@ export function breadcrumbs(crumbs) {
   return `<nav class="breadcrumbs" aria-label="Breadcrumb">${items}</nav>`;
 }
 
-/** Reserved integration boundary: 970×90 desktop and 320×100 mobile. */
+/**
+ * Reserved integration boundary: 970×90 desktop and 320×100 mobile.
+ *
+ * All-or-nothing, the same way seasonKitModule() is. Until an ad network
+ * publisher ID is configured there is no creative to place, so the slot renders
+ * as a collapsed boundary: `data-empty="true"` triggers the rules already in
+ * src/styles/main.css, and the label and the landmark name are omitted. Without
+ * this the default `.ad-slot` style applied and every page showed a 90px hatched
+ * box captioned "Advertisement" — 110 of them across 55 pages — each one an
+ * <aside> named "Advertisement" in the accessibility tree.
+ */
 export function adSlot(slot) {
+  const configured = Boolean(site.ads && site.ads.publisherId);
+  if (!configured) {
+    return `<aside class="ad-slot" data-empty="true" data-ad-slot="${escapeHtml(slot)}"></aside>`;
+  }
   return `<aside class="ad-slot" data-ad-slot="${escapeHtml(slot)}" aria-label="Advertisement"><span class="ad-slot__label">Advertisement</span></aside>`;
 }
 

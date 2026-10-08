@@ -7,6 +7,7 @@ import { nationalSignals } from '../src/scripts/aggregate.js';
 import { states } from '../src/scripts/states-data.js';
 import { stateChip } from '../src/scripts/render.js';
 import { site } from '../build/lib/site.mjs';
+import { adSlot } from '../build/lib/partials.mjs';
 
 const snap = generateSnapshot();
 
@@ -203,4 +204,16 @@ test('report generation is deterministic', () => {
   const a = statePage(ctx, find('CO'));
   const b = statePage(ctx, find('CO'));
   assert.deepEqual(a, b, 'the same state renders byte-identically every build');
+});
+
+test('an unconfigured ad slot collapses instead of rendering an empty labelled box', () => {
+  // src/styles/main.css has collapse rules for .ad-slot[data-empty='true'], but
+  // nothing ever set the attribute, so the default 90px hatched box applied and
+  // every page showed boxes captioned "Advertisement" with no creative in them.
+  assert.equal(site.ads.publisherId, '', 'no ad network is configured yet');
+  const html = adSlot('state-mid');
+  assert.match(html, /data-empty="true"/);
+  assert.doesNotMatch(html, /aria-label="Advertisement"/, 'a collapsed slot is not a named landmark');
+  assert.doesNotMatch(html, /ad-slot__label/, 'a collapsed slot carries no visible caption');
+  assert.match(html, /data-ad-slot="state-mid"/, 'the integration boundary is preserved');
 });

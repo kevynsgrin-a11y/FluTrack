@@ -80,6 +80,14 @@ export const site = {
   analytics: {
     ga4MeasurementId: 'G-65H1FJWYLR',
   },
+  // Ad network publisher ID. While this is empty, adSlot() marks every slot
+  // data-empty="true": the collapse rules in src/styles/main.css reduce it to
+  // zero height, drop the hatching and hide the label, and the slot stops
+  // advertising itself as a landmark. So a reserved integration boundary never
+  // renders as an empty box captioned "Advertisement".
+  ads: {
+    publisherId: '',
+  },
   // The CDC data cadence, surfaced in the UI to set expectations honestly.
   dataCadence: 'Weekly (CDC surveillance systems publish on Fridays)',
   // Content/legal-page revision date (for sitemap <lastmod>). Bump when copy changes.
