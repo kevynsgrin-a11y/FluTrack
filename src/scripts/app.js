@@ -2,20 +2,25 @@
 // FluTrack app controller.
 //
 // Lifecycle:
-//   1. Server-rendered HTML is already on screen (sample snapshot).
-//   2. Load the bundled snapshot → build a data store → (re)render selection.
-//   3. Attempt a live CDC refresh in the browser → on success, swap to live
-//      data and flip the provenance badge to "Live".
+//   1. Server-rendered HTML is already on screen — pre-rendered at build time
+//      from live CDC data, or from the labeled sample if the feed was down.
+//   2. Load the snapshot the page was built from → build a data store →
+//      (re)render selection. Its `kind` decides the provenance badge, so a
+//      live pre-render stays "Live CDC data" instead of flashing to sample.
+//   3. Refresh from the live CDC feed in the browser only when the shipped
+//      snapshot is sample data or a newer CDC week may exist
+//      (shouldRefreshLive) — otherwise it would re-download the same week.
 //   4. Wire the state picker + geolocation (home page only).
 //
 // Rendering reuses the exact same functions as the build, so re-renders never
 // mismatch the static markup.
 // ===========================================================================
 
-import { loadSnapshot, fetchLiveSignals } from './data-sources.js';
+import { loadSnapshot, fetchLiveSignals, hasSignalData, shouldRefreshLive } from './data-sources.js';
 import { computeModel } from './model.js';
 import { nationalSignals } from './aggregate.js';
 import { threatCard, pathogenTiles, signalRows, levelToken, trendChip } from './render.js';
+import { takeawaysBlock } from './takeaways.js';
 import { states, stateByAbbr } from './states-data.js';
 import { formatDate, formatChange } from './util.js';
 
@@ -34,8 +39,9 @@ async function boot() {
   const store = { signals: new Map(), weekEnding: '', provenance: { live: false } };
 
   // --- 1. Snapshot (always available) ------------------------------------
+  let snap = null;
   try {
-    const snap = await loadSnapshot('');
+    snap = await loadSnapshot('');
     ingestSnapshot(store, snap);
   } catch (e) {
     console.warn('[FluTrack] snapshot load failed', e);
@@ -47,19 +53,25 @@ async function boot() {
   if (!isStatePage) wirePicker(store, (abbr) => (selection = abbr));
 
   // --- 2. Live refresh (progressive enhancement) -------------------------
+  if (!shouldRefreshLive(snap)) return;
   try {
+    // fetchLiveSignals() only resolves when >= 25 states carry real data and
+    // the week is valid, so a successful result here is genuinely live.
     const live = await fetchLiveSignals();
+    // Never step backwards: a lagging cache must not replace a newer pre-render.
+    if (store.provenance.live && live.weekEnding < store.weekEnding) return;
     ingestLive(store, live);
     store.provenance = { live: true, sources: live.sources };
     render(store, selection);
     announceLive(live);
   } catch (e) {
-    console.info('[FluTrack] live CDC feed unavailable, showing sample data', e?.message || e);
+    console.info(`[FluTrack] live CDC feed unavailable, keeping the ${store.provenance.live ? 'build-time CDC data' : 'sample data'}`, e?.message || e);
   }
 }
 
 function ingestSnapshot(store, snap) {
   store.weekEnding = snap.weekEnding;
+  store.provenance = snap.kind === 'live' ? { live: true, sources: snap.sources || [] } : { live: false };
   for (const [abbr, sig] of Object.entries(snap.states || {})) {
     store.signals.set(abbr, sig);
   }
@@ -67,18 +79,15 @@ function ingestSnapshot(store, snap) {
 }
 
 function ingestLive(store, live) {
+  // Over SAMPLE data every state is replaced — one with no live readings shows
+  // "No data" rather than keeping a sample figure under a "Live" badge. Over a
+  // live pre-render, a state the refresh lacks keeps its build-time CDC data.
+  const replaceAll = !store.provenance.live;
   store.weekEnding = live.weekEnding || store.weekEnding;
   for (const [abbr, sig] of live.signalsByAbbr) {
-    // Only overwrite when the live bundle actually has data for the state.
-    if (hasData(sig)) store.signals.set(abbr, sig);
+    if (replaceAll || hasSignalData(sig)) store.signals.set(abbr, sig);
   }
   store.signals.set('US', nationalSignals(states.map((s) => store.signals.get(s.abbr)).filter(Boolean)));
-}
-
-function hasData(sig) {
-  return (sig.edCombinedSeries && sig.edCombinedSeries.length) ||
-    (sig.wastewaterSeries && sig.wastewaterSeries.length) ||
-    Number.isFinite(sig.ariLevel);
 }
 
 function resolveState(abbr) {
@@ -96,6 +105,13 @@ function render(store, abbr) {
   setRegion('threat-card', threatCard(st, model, opts));
   setRegion('pathogen-tiles', pathogenTiles(model));
   setRegion('signal-rows', signalRows(signals));
+  // State pages: plain-English takeaways, only ever written from live data.
+  if (!st.isNational && document.querySelector('[data-region="takeaways"]')) {
+    const peers = states
+      .filter((s) => s.hhsRegion === st.hhsRegion && s.abbr !== st.abbr)
+      .map((s) => ({ name: s.name, level: computeModel(store.signals.get(s.abbr) || {}).level }));
+    setRegion('takeaways', takeawaysBlock(st, model, signals, { live: store.provenance.live, peers, weekEnding: store.weekEnding }));
+  }
 
   // Home-only regions.
   setText('state-name', st.isNational ? 'the U.S.' : st.name);

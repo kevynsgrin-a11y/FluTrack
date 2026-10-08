@@ -1,0 +1,79 @@
+name: Weekly CDC rebuild
+
+# Pages are pre-rendered from the live CDC feed at build time
+# (build/lib/live-snapshot.mjs), so a production build is what moves the data
+# that crawlers and first-paint visitors see. CDC publishes on Fridays for the
+# week ending the previous Saturday; this runs Saturday morning (US), and again
+# Monday to catch a holiday-delayed publish.
+#
+# It never deploys sample data: the preflight build uses LIVE_PRERENDER=require
+# and fails red if the feed is down or stale, leaving last week's live deploy in
+# place. It deploys only when the feed carries a newer week than production
+# (build/rebuild-gate.mjs), by POSTing a Cloudflare Pages deploy hook.
+#
+# One-time setup — see README "Weekly data refresh": Cloudflare Pages →
+# flufollower → Settings → Builds → Deploy hooks → add a hook on branch `main`,
+# then save its URL as the repository secret CF_PAGES_DEPLOY_HOOK.
+
+on:
+  schedule:
+    - cron: '17 14 * * 6' # Saturday 14:17 UTC
+    - cron: '17 14 * * 1' # Monday 14:17 UTC (catch-up)
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Rebuild production even if it already shows the newest CDC week
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekly-rebuild
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # Same code path production runs, but required: a failed or stale feed
+      # stops here instead of producing a sample-data build.
+      - name: Preflight — build from the live CDC feed
+        env:
+          LIVE_PRERENDER: require
+        run: node build/build.mjs
+
+      - name: QA — links, assets, SEO tags, provenance
+        run: node build/check.mjs
+
+      - name: Compare with production
+        id: gate
+        run: node build/rebuild-gate.mjs ${{ inputs.force && '--force' || '' }}
+
+      - name: Trigger Cloudflare Pages production build
+        if: steps.gate.outputs.deploy == 'true'
+        env:
+          DEPLOY_HOOK: ${{ secrets.CF_PAGES_DEPLOY_HOOK }}
+          WEEK: ${{ steps.gate.outputs.week }}
+        run: |
+          if [ -z "$DEPLOY_HOOK" ]; then
+            echo "::error title=CF_PAGES_DEPLOY_HOOK is not set::CDC week $WEEK is ready but production cannot be rebuilt. Create a deploy hook (Cloudflare Pages → flufollower → Settings → Builds → Deploy hooks, branch main) and save its URL as the repository secret CF_PAGES_DEPLOY_HOOK."
+            exit 1
+          fi
+          curl --fail --silent --show-error --retry 3 --retry-delay 5 -X POST "$DEPLOY_HOOK" -o /dev/null
+          echo "Triggered a production rebuild for CDC week ending $WEEK." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Summary
+        if: steps.gate.outputs.deploy != 'true'
+        env:
+          REASON: ${{ steps.gate.outputs.reason }}
+        run: echo "No rebuild needed — $REASON." >> "$GITHUB_STEP_SUMMARY"

@@ -29,10 +29,23 @@ jobs:
           node-version: 20
 
       # No dependencies to install — FluTrack has zero runtime/build deps.
-      - name: Build site
+      # The sample-data fallback is what ships whenever the CDC feed is down,
+      # so it is built and QA'd on every run, deterministically.
+      - name: Build site (sample-data fallback)
+        env:
+          LIVE_PRERENDER: 'off'
         run: node build/build.mjs
 
-      - name: QA — links, assets, SEO tags
+      - name: QA — sample build
+        run: node build/check.mjs
+
+      # The default path production takes: live CDC pre-render, falling back to
+      # sample if the feed is unreachable from the runner. check.mjs verifies
+      # every badge matches whichever data was actually shipped.
+      - name: Build site (live CDC pre-render)
+        run: node build/build.mjs
+
+      - name: QA — links, assets, SEO tags, provenance
         run: node build/check.mjs
 
       - name: Unit + integration tests
