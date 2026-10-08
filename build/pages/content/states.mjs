@@ -1,5 +1,6 @@
-import { escapeHtml } from '../../../src/scripts/util.js';
+import { escapeHtml, formatDate } from '../../../src/scripts/util.js';
 import { usMap } from '../../../src/scripts/map-render.js';
+import { provenanceBadge } from '../../../src/scripts/render.js';
 import { signupBand, breadcrumbs } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
@@ -11,12 +12,21 @@ export default function states(ctx) {
     return { abbr: s.abbr, name: s.name, slug: s.slug, level: m.level, label: m.label };
   });
   const chips = ctx.states.map((s) => ctx.render.stateChip(s, ctx.models.get(s.abbr).model)).join('\n');
+  // This page publishes a colour-coded level and a numeric rank for all 51
+  // jurisdictions and carried no provenance marker at all, while every other
+  // number-bearing page carries one — contradicting the site's own Editorial
+  // Policy ("Every number, level and map colour is either derived from a
+  // reported value or labelled as sample data"). It also loads neither app.js
+  // nor any live refresh, so the reading here is whatever was built in: a
+  // static badge is the accurate one.
+  const asOf = formatDate(ctx.weekEnding);
   const body = `
   <section class="section section--tight state-masthead">
     <div class="container">
       ${breadcrumbs(crumbs)}
       <h1>US flu map: respiratory activity by state</h1>
       <p class="lede" style="margin-top: var(--space-sm); max-width: 46rem">The US flu map: current flu, RSV and COVID-19 activity for all 50 states and DC. Pick your state for a plain-English threat level and weekly trend, built on public-domain CDC surveillance data.</p>
+      <p style="margin-top: var(--space-sm)">${provenanceBadge(ctx.provenance)}${asOf ? ` <span class="muted">as of ${escapeHtml(asOf)}</span>` : ''}</p>
     </div>
   </section>
   <section class="section" style="padding-top: var(--space-xl)"><div class="container"><div data-region="us-map">${usMap(mapEntries, {})}</div></div></section>

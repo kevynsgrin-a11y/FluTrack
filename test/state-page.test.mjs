@@ -9,6 +9,8 @@ import { stateChip } from '../src/scripts/render.js';
 import { site } from '../build/lib/site.mjs';
 import { adSlot } from '../build/lib/partials.mjs';
 import { layout } from '../build/lib/layout.mjs';
+import statesPage from '../build/pages/content/states.mjs';
+import { disclaimers } from '../build/lib/site.mjs';
 
 const snap = generateSnapshot();
 
@@ -59,6 +61,17 @@ test('the rendered state page advertises a share card format that consumers rend
   assert.match(og[1], /\/assets\/og-default\.png$/);
   assert.match(html, /property="og:image:width" content="1200"/);
   assert.match(html, /property="og:image:height" content="630"/);
+});
+
+test('the all-states map labels its own figures as sample data', () => {
+  // /states/ publishes a colour-coded level and a numeric rank for all 51
+  // jurisdictions. It carried no provenance marker at all, while every other
+  // number-bearing page carried one — and it loads neither app.js nor any live
+  // refresh, so what is built in is what a visitor sees.
+  const page = statesPage(makeCtx({ disclaimers }));
+  assert.match(page.body, /class="badge badge--cached"/, 'a provenance badge is rendered');
+  assert.match(page.body, /Sample data/);
+  assert.match(page.body, /as of [A-Z][a-z]+ \d+, \d{4}/, 'the data date is stated');
 });
 
 test('every jurisdiction renders a state report at its own slug', () => {
