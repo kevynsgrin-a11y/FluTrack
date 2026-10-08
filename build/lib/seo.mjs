@@ -24,6 +24,23 @@ export function organizationLd() {
   if (site.social && site.social.url) {
     org.sameAs = [site.social.url];
   }
+  // The accountable entity and a locatable address are the E-E-A-T signals a
+  // health-adjacent site is judged on, and /changelog/ tells readers they are
+  // published in the structured data. They were not: the config that held them
+  // was never imported by this module. Emitted only when complete, so a partial
+  // record never becomes a half-true claim.
+  if (site.publisher.legalName) org.legalName = site.publisher.legalName;
+  const a = site.publisher.address;
+  if (a && a.street && a.locality && a.region && a.postalCode) {
+    org.address = {
+      '@type': 'PostalAddress',
+      streetAddress: a.street,
+      addressLocality: a.locality,
+      addressRegion: a.region,
+      postalCode: a.postalCode,
+      ...(a.country ? { addressCountry: a.country } : {}),
+    };
+  }
   return org;
 }
 

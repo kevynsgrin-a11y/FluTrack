@@ -4,7 +4,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { site } from '../build/lib/site.mjs';
+import { site, hasPublisherEmail } from '../build/lib/site.mjs';
 import {
   organizationLd,
   websiteLd,
@@ -26,11 +26,34 @@ test('organizationLd describes the site against schema.org and its production or
   assert.equal(org.description, site.shortDescription);
 });
 
-test('organizationLd omits a placeholder .example publisher email', () => {
-  // RFC-2606 `.example` is not deliverable; advertising it in structured data
-  // would be a false contact claim.
-  assert.match(site.publisher.email, /\.example$/);
-  assert.equal('email' in organizationLd(), false);
+test('organizationLd advertises the publisher email now that it is deliverable', () => {
+  // This test used to assert the opposite, because the build pipeline read a
+  // config whose publisher email was the RFC-2606 placeholder hello@flutrack
+  // .example. The richer config carrying the verified mailbox was never
+  // imported by the pipeline, so the site shipped a contactless Organization
+  // node. The two configs are now one module.
+  assert.equal(hasPublisherEmail(), true);
+  assert.equal(organizationLd().email, site.publisher.email);
+});
+
+test('a reserved-domain address is still refused as a contact claim', () => {
+  // The guard is what keeps a placeholder out of structured data; it must hold
+  // for every RFC-2606 reserved domain, case-insensitively.
+  for (const bad of ['hello@flutrack.example', 'x@y.invalid', 'x@y.test', 'x@y.localhost', 'X@Y.EXAMPLE']) {
+    assert.equal(hasPublisherEmail(bad), false, bad);
+  }
+  assert.equal(hasPublisherEmail('hello@flufollower.com'), true);
+});
+
+test('organizationLd names the accountable entity and a complete postal address', () => {
+  const org = organizationLd();
+  assert.equal(org.legalName, site.publisher.legalName);
+  assert.equal(org.address['@type'], 'PostalAddress');
+  assert.equal(org.address.streetAddress, site.publisher.address.street);
+  assert.equal(org.address.addressLocality, site.publisher.address.locality);
+  assert.equal(org.address.addressRegion, site.publisher.address.region);
+  assert.equal(org.address.postalCode, site.publisher.address.postalCode);
+  assert.equal(org.address.addressCountry, site.publisher.address.country);
 });
 
 test('organizationLd omits sameAs unless a real social profile URL is configured', () => {
