@@ -106,8 +106,11 @@ export default function methodology(ctx) {
       <li><strong>Wastewater.</strong> NWSS publishes a viral activity level for each sampling site. After
       sites from non-commercially licensed networks are excluded, a state's weekly reading for each virus
       is the <strong>median</strong> across its reporting sites, so a single small sewershed cannot set the
-      whole state's value. The composite wastewater signal is the highest of the three virus medians. A
-      state with no eligible site that week has no wastewater signal, and its level rests on the others.</li>
+      whole state's value. Two safeguards back that up: a reading needs <strong>at least three</strong>
+      eligible sites that week, and a site that repeats the identical value above the 1.0 floor for three
+      or more reports in a row is treated as carrying a stale value forward and left out. The composite
+      wastewater signal is the highest of the three virus medians. A state without enough eligible sites
+      that week has no wastewater signal, and its level rests on the others.</li>
       <li><strong>Laboratory test positivity.</strong> There is no live adapter for NREVSS yet, so a live
       reading rests on up to three signals; only the illustrative sample models positivity.</li>
       <li><strong>Trends.</strong> The twelve most recent reported weeks drive each trend and sparkline.</li>
