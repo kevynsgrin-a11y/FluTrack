@@ -45,6 +45,7 @@ export function statePage(ctx, state) {
           <div data-region="threat-card" data-state="${escapeHtml(state.abbr)}" data-week="${escapeHtml(weekEnding)}">
             ${threatCard(state, model, { weekEnding, provenance })}
           </div>
+          ${weekInBrief(state, model, weekEnding)}
           ${trendDisclaimer()}
           <div data-region="takeaways">${takeawaysBlock(state, model, signals, { live: Boolean(provenance?.live), peers, weekEnding })}</div>
           <div>
@@ -129,6 +130,39 @@ function stateIntro(state, neighbors) {
   const names = neighbors.slice(0, 4).map((s) => s.name);
   const neighborText = names.length ? ` You can also compare nearby states such as ${listJoin(names)}.` : '';
   return `FluTrack blends four public CDC surveillance signals for ${state.name} — emergency-department visits, wastewater viral activity, laboratory test positivity, and the Acute Respiratory Illness (ARI) activity level — into the single, plain-English influenza threat level shown here, refreshed every week of the season.${neighborText}`;
+}
+
+// Plain-English "what this means" bullets — descriptive of the data only
+// (no advice), derived entirely from the already-computed model. This is the
+// copy layer the audited state-flu SERP winners (news) get from writing and
+// the state health-dept dashboards lack.
+const PATHOGEN_NAMES = { influenza: 'Flu', covid: 'COVID-19', rsv: 'RSV' };
+function weekInBrief(state, model, weekEnding) {
+  const dirs = { rising: 'rising', falling: 'falling', flat: 'holding steady' };
+  const trendWord = dirs[model.trend?.direction] ?? 'holding steady';
+  const trendTail = model.trend && model.trend.direction !== 'flat' ? ` (${formatChange(model.trend.changePct)} week over week)` : '';
+  const entries = ['influenza', 'covid', 'rsv']
+    .map((key) => ({ key, name: PATHOGEN_NAMES[key], p: model.pathogens?.[key] }))
+    .filter((e) => e.p && e.p.label);
+  const top = [...entries].sort((a, b) => (b.p.level ?? -1) - (a.p.level ?? -1) || (b.p.trend?.changePct ?? 0) - (a.p.trend?.changePct ?? 0))[0];
+  const riser = [...entries].sort((a, b) => (b.p.trend?.changePct ?? -99) - (a.p.trend?.changePct ?? -99))[0];
+  const bullets = [
+    `<li>Combined flu, RSV and COVID-19 activity in ${escapeHtml(state.name)} is <strong>${escapeHtml(model.label)}</strong> and <strong>${trendWord}</strong>${trendTail}.</li>`,
+  ];
+  if (top) {
+    const t = top.p.trend;
+    bullets.push(`<li><strong>${top.name} is contributing the most right now</strong> (${escapeHtml(top.p.label)}${t && t.direction !== 'flat' ? `, ${dirs[t.direction] ?? 'holding steady'}${t.changePct ? ' ' + formatChange(t.changePct) : ''}` : ''}).</li>`);
+  }
+  if (riser && riser.p.trend && riser.p.trend.direction === 'rising' && riser.p.trend.changePct > 5) {
+    bullets.push(`<li>The fastest riser this week is <strong>${riser.name}</strong> at ${formatChange(riser.p.trend.changePct)} week over week.</li>`);
+  } else {
+    bullets.push(`<li>No virus is rising sharply this week in ${escapeHtml(state.name)}.</li>`);
+  }
+  bullets.push(`<li>This read covers the week ending <strong>${escapeHtml(formatDate(weekEnding))}</strong>; the page updates weekly as CDC surveillance lands.</li>`);
+  return `<div class="card" style="margin-block: var(--space-lg)" data-region="week-in-brief">
+    <h2 style="font-size: var(--step-1)">What this means in ${escapeHtml(state.name)} this week</h2>
+    <ul class="stack" style="--flow: var(--space-sm); margin-top: var(--space-sm); padding-left: 1.1rem">${bullets.join('')}</ul>
+  </div>`;
 }
 function listJoin(items) { if (items.length <= 1) return items[0] || ''; return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`; }
 function neighborsFor(ctx, state) { return ctx.states.filter((s) => s.hhsRegion === state.hhsRegion && s.abbr !== state.abbr).slice(0, 6); }
