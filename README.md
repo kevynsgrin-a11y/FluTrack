@@ -14,20 +14,22 @@ The 2025–26 "quad-demic" left consumers wanting a fast, local, jargon-free rea
 
 ## Architecture at a glance
 
-FluTrack is a **static site** (Cloudflare Pages-ready) with **zero runtime dependencies** and a tiny custom build. Data is fetched **client-side, in the visitor's browser**, directly from the CDC's public Socrata API — so the site is cheap to host and always current, with a bundled sample snapshot as an instant, clearly-labeled fallback.
+FluTrack is a **static site** (Cloudflare Pages-ready) with **zero runtime dependencies** and a tiny custom build. CDC data is fetched **at build time** and baked into every page, and production is rebuilt weekly when CDC publishes — so crawlers and first-paint visitors see the current week, not a placeholder. A bundled sample snapshot is the clearly-labeled fallback when the feed is down.
 
 ```
-Browser ──▶ data.cdc.gov (Socrata/SODA, public domain, open CORS)
-   │            └─ live refresh (progressive enhancement)
-   └──▶ /data/snapshot.json (bundled sample; instant first paint + offline fallback)
+Build (weekly) ──▶ CDC Socrata (via the ingest worker's warm copies, public domain)
+   └─ every page + /data/snapshot.json pre-rendered from live data (sample fallback)
+Browser ──▶ /data/snapshot.json (the build's own data; instant first paint + offline)
+   └─ live refresh only if the shipped data is sample or ≥ 13 days old
 ```
 
 | Layer | Files | Notes |
 |------|-------|-------|
 | Scoring model | `src/scripts/threat-index.js` | Pure, tested. The unified 0–4 threat level. |
-| Data adapters | `src/scripts/data-sources.js` | CDC Socrata fetch + **WastewaterSCAN exclusion**. |
+| Data adapters | `src/scripts/data-sources.js` | CDC Socrata fetch + parsing, shared by build and browser; **WastewaterSCAN exclusion**. |
+| Live pre-render | `build/lib/live-snapshot.mjs` | `LIVE_PRERENDER` policy: live, sample fallback, or fail. |
 | Rendering | `src/scripts/render.js` | Pure HTML functions shared by **build and browser** (identical markup). |
-| App controller | `src/scripts/app.js` | Snapshot → live upgrade, state picker, geolocation. |
+| App controller | `src/scripts/app.js` | Hydrates from the shipped snapshot, refreshes only when stale; state picker, geolocation. |
 | Design system | `src/styles/*.css` | Tokens, light/dark, severity scale, components. |
 | Build | `build/build.mjs` | Emits `dist/` — home, 51 state pages, content pages, SEO, PWA. |
 | Consent gate | `src/scripts/consent.js` | Default-deny gate for non-essential storage; honors GPC. |
@@ -42,7 +44,7 @@ FluTrack uses **only U.S. Government public-domain** feeds:
 
 - **NSSP** — Emergency-department visits for flu/RSV/COVID (`vutn-jzwm`) and ARI activity level (`f3zz-zga5`).
 - **NWSS** — Wastewater Viral Activity Level / WVAL (`atcp-73re`), an early indicator.
-- **NREVSS** — Laboratory test positivity.
+- **NREVSS** — Laboratory test positivity (modeled in the sample only — no live adapter yet, so a live reading rests on up to three signals).
 
 **It deliberately excludes WastewaterSCAN / SCAN / Verily data**, which is licensed **CC BY-NC 4.0 (non-commercial)** and cannot be used on a monetized site. The exclusion is enforced defensively in code (`excludeNonCommercial` in `data-sources.js`) and covered by tests. See [`/data-sources/`](build/pages/content/data-sources.mjs).
 
@@ -57,7 +59,7 @@ npm run build          # build the static site into dist/
 npm run serve          # preview dist/ at http://localhost:8788
 npm run dev            # build + serve
 npm test               # run the unit + integration tests
-npm run build:snapshot # regenerate the bundled sample data
+npm run build:snapshot # regenerate the bundled sample (the offline fallback)
 ```
 
 No `npm install` is needed — there are no dependencies. Requires Node ≥ 20.
@@ -80,6 +82,43 @@ Optional bindings for live surge-alert delivery (Settings → Functions):
 - Env var **`ALERTS_WEBHOOK_URL`** — forwards signups to an email provider/automation.
 
 Without the KV binding, `/api/subscribe` returns `501` and the form shows a friendly "not switched on" message — the site remains fully functional. KV is required rather than optional because the rate limiter is backed by it; a webhook-only deployment would accept unlimited unauthenticated submissions with arbitrary recipient addresses.
+
+### Live data at build time
+
+Every build fetches the CDC feed (via the ingest worker's warm copies) and
+pre-renders all pages from it — the threat cards, the "This week in plain
+English" takeaways, share cards and `/data/snapshot.json`. `LIVE_PRERENDER`
+sets the policy (`build/lib/live-snapshot.mjs`):
+
+| Value | Behaviour |
+|---|---|
+| `auto` *(default)* | Live CDC data; if the feed is unreachable, stale (> 21 days) or covers fewer than 25 states, fall back to the bundled sample, which every page labels **Sample data** and which renders no takeaways. |
+| `require` | Live or fail the build — Cloudflare keeps serving the previous deployment. Use for production. |
+| `off` | Sample only, no network (deterministic offline builds). |
+
+`build/check.mjs` fails the build if any page's provenance badge, share card or
+takeaways block disagrees with the data actually shipped. In the browser,
+`app.js` re-fetches the live feed only when the shipped snapshot is sample
+data or ≥ 13 days old (a newer CDC week may exist) — otherwise the pre-render
+already is the newest week.
+
+### Weekly data refresh
+
+Because the data is baked in at build time, a build is what refreshes it.
+`.github/workflows/weekly-rebuild.yml` runs every Saturday (CDC publishes on
+Fridays) and Monday (catch-up for holiday weeks): it builds with
+`LIVE_PRERENDER=require`, runs QA, and — only if the feed carries a newer CDC
+week than production serves — POSTs a Cloudflare Pages deploy hook. It never
+deploys sample data. Run it on demand from the Actions tab (`force` rebuilds
+even when production is current).
+
+**One-time setup:** Cloudflare dashboard → Workers & Pages → `flufollower` →
+Settings → Builds → **Deploy hooks** → add a hook for branch `main`, then save
+the URL as the GitHub repository secret **`CF_PAGES_DEPLOY_HOOK`** (Settings →
+Secrets and variables → Actions). Until it exists the workflow fails with that
+instruction rather than silently skipping. GitHub pauses scheduled workflows
+in a repository with no activity for 60 days; re-enable it from the Actions tab
+if that happens.
 
 ### Cloudflare Web Analytics and the CSP
 
@@ -109,7 +148,8 @@ src/
   scripts/        Client + shared ES modules (threat-index, render, app, …)
   styles/         Design system (tokens, base, components, main)
   assets/         Committed PNG icons + OG card
-  data/           snapshot.json (generated)
+  data/           snapshot.json — bundled SAMPLE data, the fallback when the
+                  CDC feed is unreachable at build time
 functions/api/    Cloudflare Pages Functions
 test/             node:test unit + integration tests
 docs/             Architecture, audits, and the release checklist

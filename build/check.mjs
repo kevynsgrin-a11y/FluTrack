@@ -70,6 +70,36 @@ for (const req of ['sitemap.xml', 'robots.txt', 'manifest.webmanifest', '_header
   if (!existsSync(join(dist, req))) errors.push(`missing required artifact: ${req}`);
 }
 
+// --- Provenance: every badge must match the data actually shipped ------- //
+// Pages are pre-rendered from either live CDC data or the bundled sample
+// (build/lib/live-snapshot.mjs). A page that says "Live CDC data" over sample
+// numbers — or "Sample data" over real ones — is a false statement about the
+// data, so the shipped snapshot and every rendered badge must agree.
+if (existsSync(join(dist, 'data/snapshot.json'))) {
+  const snap = JSON.parse(readFileSync(join(dist, 'data/snapshot.json'), 'utf8'));
+  const live = snap.kind === 'live';
+  if (!['live', 'sample'].includes(snap.kind)) errors.push(`data/snapshot.json: unknown kind "${snap.kind}"`);
+  if (live && !/^\d{4}-\d{2}-\d{2}$/.test(snap.weekEnding || '')) errors.push('data/snapshot.json: live snapshot without a valid weekEnding');
+  if (live && !(snap.statesWithData >= 25)) errors.push(`data/snapshot.json: live snapshot covers only ${snap.statesWithData} states`);
+  const LIVE_BADGE = 'class="badge badge--live"';
+  const SAMPLE_BADGE = 'class="badge badge--cached"';
+  let pages = 0;
+  for (const file of htmlFiles.filter((f) => /[\\/]state[\\/][^\\/]+[\\/]index\.html$/.test(f) || f === join(dist, 'index.html'))) {
+    const rel = file.replace(dist, '');
+    const html = readFileSync(file, 'utf8');
+    pages += 1;
+    if (live && html.includes(SAMPLE_BADGE)) errors.push(`${rel}: "Sample data" badge on a page rendered from live CDC data`);
+    if (!live && html.includes(LIVE_BADGE)) errors.push(`${rel}: "Live CDC data" badge on a page rendered from sample data`);
+    if (!html.includes(live ? LIVE_BADGE : SAMPLE_BADGE)) errors.push(`${rel}: threat card carries no provenance badge`);
+  }
+  const ogDir = join(dist, 'assets', 'og');
+  for (const f of existsSync(ogDir) ? readdirSync(ogDir) : []) {
+    const svg = readFileSync(join(ogDir, f), 'utf8');
+    if (live === svg.includes('>Sample data<')) errors.push(`assets/og/${f}: share card provenance does not match the ${snap.kind} snapshot`);
+  }
+  console.log(`Provenance: ${snap.kind} snapshot (week ending ${snap.weekEnding}); ${pages} page badge(s) and share cards agree.`);
+}
+
 // --- No placeholder copy may ever reach a visitor ---------------------- //
 // The season-kit module shipped 204 visible "[COPY NEEDED: …]" strings across
 // 51 state pages, rendered rather than hidden. partials.seasonKitModule() now
