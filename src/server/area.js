@@ -220,6 +220,7 @@ function chip(entry, now) {
   return {
     source: entry.source,
     system: entry.system,
+    short: SOURCES[entry.source]?.short || entry.system,
     label: entry.label,
     dataset: entry.dataset,
     week_ending: entry.week_ending,

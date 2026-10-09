@@ -8,6 +8,7 @@
 
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
 
@@ -317,6 +318,74 @@ if (existsSync(join(dist, 'data/snapshot.json'))) {
     `Cache rules: ${cacheRules.length} pattern(s), ${served.length} emitted file(s), ` +
       `${overlaps === 0 ? 'no overlaps' : `${overlaps} OVERLAP(S)`}.`
   );
+}
+
+// --- Globe budget and lazy loading --------------------------------------- //
+// The landing globe (src/scripts/globe.js) is a decorative payoff after the
+// result card. Hard budget: its JS + the vendored geo library + geometry must
+// stay <= 45 KB gzipped, and NONE of it may load with a page. Pages may only
+// reach it through dynamic import() (report-boot → report-widget → globe), so
+// this walks every page's static module graph and fails if any of the lazy
+// files is reachable from the first load.
+{
+  const GLOBE_BUDGET = 45 * 1024;
+  const globeFiles = ['assets/js/globe.js', 'assets/js/geo-vendor.js', 'assets/js/states-data.js', 'assets/geo/land-110m.json', 'assets/geo/us-states.json'];
+  let total = 0;
+  for (const rel of globeFiles) {
+    const p = join(dist, rel);
+    if (!existsSync(p)) {
+      errors.push(`globe: missing ${rel}`);
+      continue;
+    }
+    total += gzipSync(readFileSync(p), { level: 9 }).length;
+  }
+  if (total > GLOBE_BUDGET) errors.push(`globe: ${(total / 1024).toFixed(1)} KB gzipped exceeds the 45 KB budget`);
+
+  const LAZY = new Set(['globe.js', 'geo-vendor.js', 'report-widget.js', 'report-render.js']);
+  const staticImports = (file) => {
+    const p = join(dist, 'assets', 'js', file);
+    if (!existsSync(p)) return [];
+    const src = readFileSync(p, 'utf8');
+    return [...src.matchAll(/(?:^|[;\n])\s*import\s+(?:[^'"()]*?\s+from\s+)?['"]\.\/([\w.-]+\.js)['"]/g)].map((m) => m[1]);
+  };
+  let pagesChecked = 0;
+  for (const file of htmlFiles) {
+    const html = readFileSync(file, 'utf8');
+    const entries = [...html.matchAll(/<script[^>]+src="\/assets\/js\/([\w.-]+\.js)"/g)].map((m) => m[1]);
+    const seen = new Set();
+    const queue = [...entries];
+    while (queue.length) {
+      const f = queue.shift();
+      if (seen.has(f)) continue;
+      seen.add(f);
+      queue.push(...staticImports(f));
+    }
+    for (const f of seen) {
+      if (LAZY.has(f)) errors.push(`${file.replace(dist, '')}: ${f} is loaded with the page; it must only be reached by a dynamic import()`);
+    }
+    if (/\/assets\/geo\/|geo-vendor\.js|globe\.js/.test(html)) errors.push(`${file.replace(dist, '')}: references globe assets directly (must load lazily)`);
+    pagesChecked += 1;
+  }
+  console.log(`Globe: ${(total / 1024).toFixed(1)} KB gzipped of a 45 KB budget; lazy on ${pagesChecked} page(s).`);
+}
+
+// --- Turnstile is allowed exactly where it is used ------------------------ //
+{
+  const headersText = existsSync(join(dist, '_headers')) ? readFileSync(join(dist, '_headers'), 'utf8') : '';
+  const csp = (headersText.match(/^\s*Content-Security-Policy:\s*(.+)$/m) || [])[1] || '';
+  for (const d of ['script-src', 'frame-src']) {
+    const have = ((csp.match(new RegExp(`(?:^|;)\\s*${d}\\s+([^;]*)`)) || [])[1] || '').split(/\s+/);
+    if (!have.includes('https://challenges.cloudflare.com')) errors.push(`_headers: CSP ${d} is missing https://challenges.cloudflare.com (Turnstile)`);
+  }
+}
+
+// --- Community output never says "outbreak" ------------------------------ //
+// Community reports are unverified; no page or template may call them one.
+for (const file of htmlFiles) {
+  const html = readFileSync(file, 'utf8');
+  for (const m of html.matchAll(/<div class="result__row result__row--community"[\s\S]*?<\/div>/g)) {
+    if (/outbreak/i.test(m[0])) errors.push(`${file.replace(dist, '')}: community block uses the word "outbreak"`);
+  }
 }
 
 console.log(`Checked ${htmlFiles.length} HTML pages.`);

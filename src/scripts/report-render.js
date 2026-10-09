@@ -22,7 +22,7 @@ export function sourceChip(chip) {
   if (!chip) return '';
   const age = Number.isFinite(chip.age_days) ? chip.age_days : null;
   const ageBadge = age == null ? '' : `<span class="age-badge"${chip.stale ? ' data-stale="true"' : ''}>${age} day${age === 1 ? '' : 's'} old</span>`;
-  return `<li class="source-chip"><span>CDC ${esc(chip.system)}</span><span>week ending ${esc(fmtDate(chip.week_ending))}</span>${
+  return `<li class="source-chip"><span>CDC ${esc(chip.short || chip.system)}</span><span>week ending ${esc(fmtDate(chip.week_ending))}</span>${
     chip.fetched_at ? `<span>updated ${esc(fmtDate(chip.fetched_at))}</span>` : ''
   }${ageBadge}</li>`;
 }
