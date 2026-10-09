@@ -96,7 +96,7 @@ https://ingest.oakandmain.dev/data/cdc-socrata/resource/f3zz-zga5.json?$limit=20
 https://ingest.oakandmain.dev/data/cdc-socrata/resource/atcp-73re.json?$limit=60000&$order=week_end+DESC
 ```
 
-Final local snapshot generation/request: **2026-10-09T13:18:35.899Z**. Latest reporting week: **2026-09-26**. These are different facts.
+Final local snapshot generation/request: **2026-10-09T13:26:51.448Z**. Latest reporting week: **2026-09-26**. These are different facts.
 
 | Measure | Dataset | Active observation period | Upstream retrieval | Upstream update field | Official publication date | Contributing jurisdictions |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -237,7 +237,7 @@ The [official Socrata status page](https://status.socrata.com/) was checked Octo
 
 The exposure is verified: the three TrueAPI CDC/Socrata feeds used by the site are scheduled every six hours, while the independent FluTrack Worker reads six CDC/Socrata datasets directly. No particular CDC delay or failed public-site refresh caused by this incident was established. The code therefore continues to qualify readings by their actual observation periods and publication/update/retrieval evidence rather than treating HTTP 200, `fetchedAt` or 51 keys as proof of fresh observations. No migration deadline or ingestion-path change follows from this incident.
 
-The configured Friday Worker ingestion at **18:00 UTC / 11 a.m. PDT** is later than this verification. A post-run freshness audit remains pending: compare each source's observation period, publisher update timestamp, ingestion result, served week and stale/fetchedAt metadata against its own publication cadence. That future audit cannot be represented as completed in this report. The existing workflow and credentials are unchanged.
+The configured Friday Worker ingestion at **18:00 UTC / 11 a.m. PDT** is later than this verification. TrueAPI's six-hour mirror schedule runs at minute 11, including **18:11 UTC**; audit each path after its own run completes. A post-run freshness audit remains pending: compare each source's observation period, publisher update timestamp, ingestion result, served week and stale/fetchedAt metadata against its own publication cadence. That future audit cannot be represented as completed in this report. The existing workflow and credentials are unchanged.
 
 Pre-release live home, Alabama, Arizona, Iowa, Atlanta and snapshot requests returned 200 around 12:48 UTC. Production still served the old build generated at **2026-10-09T05:20:43.117Z**, with September 26 observations and the confirmed false “holding steady” statements. This established the deployed defect, not verification of the pending fix.
 

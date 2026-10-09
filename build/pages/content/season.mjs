@@ -24,7 +24,7 @@ export default function season(ctx) {
 
   ${prose(`
     <h2>When flu season starts — and when it peaks</h2>
-    <p>The pattern the Centers for Disease Control and Prevention describe each year is consistent: influenza activity in the United States is low through late summer, most often begins to increase in <strong>October and November</strong>, and peaks <strong>most often between December and February</strong>, with activity sometimes continuing into May. The CDC's respiratory reporting season is built around that shape — weekly surveillance runs from early October (roughly MMWR week 40) through late May (week 20).</p>
+    <p>The pattern the Centers for Disease Control and Prevention describe each year is consistent: influenza activity in the United States is low through late summer, most often begins to increase in <strong>October and November</strong>, and peaks <strong>most often between December and February</strong>, with activity sometimes continuing into May. These seasonal expectations do not limit CDC respiratory surveillance to those months: the feeds also contain summer observations. Each source's publication cadence and reported observation period govern the reading, rather than the seasonal calendar.</p>
     <p>No two seasons are identical. Some rise early and peak over the holidays; others stay quiet until January and peak in February, which is the single most common peak month. The year's timing is only knowable in retrospect — which is why this site shows what the current data says, not what a season is "supposed" to do.</p>
 
     <h2>What FluTrack shows during the season</h2>
