@@ -13,7 +13,7 @@ import {
   MAX_WVAL,
 } from '../workers/ingest/src/normalize.js';
 import { runSource, sourceDefs, epiweek } from '../workers/ingest/src/pull.js';
-import { runIngest, writeKvForStates, authorized } from '../workers/ingest/src/index.js';
+import { runIngest, writeKvForStates, authorized, loopback } from '../workers/ingest/src/index.js';
 import worker from '../workers/ingest/src/index.js';
 import { dailyMaintenance, rebuildAggregates, purgeOldReports, quarantineAnomalies } from '../workers/ingest/src/maintenance.js';
 import { upsertOfficial, upsertStatements, loadOfficialRows, docsFromRows, sqlLiteral } from '../src/server/official-store.js';
@@ -220,6 +220,28 @@ test('per-state KV rebuild writes the state and its counties from D1', async () 
   assert.ok(env.OFFICIAL_CACHE.ops < 1000, 'one state stays far under the KV per-invocation cap');
   const rows = await loadOfficialRows(env.DB, ['CA'], NOW);
   assert.equal(docsFromRows(rows, NOW).size, 1);
+});
+
+test('KV is rebuilt one state per invocation through the ctx.exports loopback', async () => {
+  const env = { DB: d1(), OFFICIAL_CACHE: kv(), INGEST_TOKEN: 'tok' };
+  const calls = [];
+  const ctx = {
+    exports: {
+      default: {
+        async fetch(url, init) {
+          calls.push({ url, auth: init.headers.Authorization, states: JSON.parse(init.body).states });
+          return Response.json({ written: 2 });
+        },
+      },
+    },
+  };
+  const summary = await runIngest(env, { ctx, fetchImpl: async () => new Response('down', { status: 500 }), now: NOW });
+  assert.equal(calls.length, 51);
+  assert.ok(calls.every((c) => c.url.endsWith('/__kv') && c.auth === 'Bearer tok' && c.states.length === 1));
+  assert.equal(summary.kv_docs, 102);
+  assert.deepEqual(summary.kv_failed, []);
+  assert.equal(loopback({ SELF: 'self' }, {}), 'self', 'an explicit SELF binding still works');
+  assert.equal(loopback({}, {}), null, 'neither → rebuild in-process');
 });
 
 // --- Worker HTTP surface ---------------------------------------------------- //

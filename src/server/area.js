@@ -73,9 +73,13 @@ const countiesOf = (abbr) => {
 export async function refreshState(env, abbr, { fetchImpl = fetch, now = new Date() } = {}) {
   const kv = env.OFFICIAL_CACHE;
   const lockKey = `pull-lock:${abbr}`;
+  let locked = false;
   try {
     if (kv && (await kv.get(lockKey))) return null; // someone else is already pulling it
-    if (kv) await kv.put(lockKey, '1', { expirationTtl: 60 });
+    if (kv) {
+      await kv.put(lockKey, '1', { expirationTtl: 60 });
+      locked = true;
+    }
     const results = await Promise.all(stateSourceDefs(abbr, now).map((d) => runSource(d, { env, fetchImpl, now, timeoutMs: 8000 })));
     const rows = results.filter((r) => r.ok).flatMap((r) => r.rows);
     let docs;
@@ -95,7 +99,8 @@ export async function refreshState(env, abbr, { fetchImpl = fetch, now = new Dat
   } catch (e) {
     return null;
   } finally {
-    if (kv) await kv.delete(lockKey).catch(() => {});
+    // Only the request that took the lock releases it.
+    if (locked) await kv.delete(lockKey).catch(() => {});
   }
 }
 

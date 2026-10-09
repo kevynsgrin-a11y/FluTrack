@@ -129,11 +129,33 @@ even when production is current).
    GitHub repository secret **`CF_PAGES_DEPLOY_HOOK`** (Settings → Secrets and
    variables → Actions). Until it exists the workflow fails with that
    instruction rather than silently skipping.
-2. Same project → Settings → **Variables and Secrets** → *Production* → add
-   `LIVE_PRERENDER` = `require`. A push-triggered production build during a
-   feed outage then fails and Cloudflare keeps serving the last live deploy,
-   instead of replacing it with sample data. Leave Preview on the default
-   (`auto`) so branch previews still build when the feed is down. GitHub pauses scheduled workflows
+2. Set `LIVE_PRERENDER` = `require` for **production** builds. A push-triggered
+   production build during a feed outage then fails and Cloudflare keeps
+   serving the last live deploy, instead of replacing it with sample data.
+   Leave Preview on the default (`auto`) so branch previews still build when
+   the feed is down. Since `wrangler.toml` carries the project's bindings, it
+   is the source of truth for its variables and the dashboard shows them
+   read-only, so this is a change to `wrangler.toml`. A production-only
+   override must repeat the bindings (Cloudflare treats `vars`, `d1_databases`
+   and `kv_namespaces` as non-inheritable):
+
+   ```toml
+   [env.production.vars]
+   FEATURE_REPORT = "true"
+   LIVE_PRERENDER = "require"
+
+   [[env.production.d1_databases]]
+   binding = "DB"
+   database_name = "flutrack-db"
+   database_id = "f3349920-cdfd-4513-b5f3-53f25bb25301"
+
+   [[env.production.kv_namespaces]]
+   binding = "OFFICIAL_CACHE"
+   id = "91b560ebf86148e0b8c9cc29b1aa48cc"
+   ```
+
+   Every build logs the variables it saw (`report form: …; FEATURE_REPORT=…`),
+   so the deploy log confirms the override took. GitHub pauses scheduled workflows
 in a repository with no activity for 60 days; re-enable it from the Actions tab
 if that happens.
 

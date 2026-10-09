@@ -13,7 +13,7 @@ owns the cron triggers. Commands assume the repo root and a logged-in
 | KV `OFFICIAL_CACHE` (`91b560ebf86148e0b8c9cc29b1aa48cc`) | **Created** |
 | Pages bindings `DB`, `OFFICIAL_CACHE`, var `FEATURE_REPORT` | In `wrangler.toml` — applied by the next Pages build |
 | `/api/area`, `/api/official` | Work from the first deploy: a missing state document is pulled from CDC on demand and stored |
-| Turnstile widget + `TURNSTILE_SECRET` | **Not created** (this session's Cloudflare token could not write) → report form shows "opens soon", `/api/report` returns 503 |
+| Turnstile widget, `TURNSTILE_SECRET`, `TURNSTILE_SITE_KEY` | **Not created** (this session's Cloudflare token could not write) → report form shows "opens soon", `/api/report` returns 503 |
 | `flutrack-ingest` Worker + `INGEST_TOKEN` | **Not deployed** (same reason) → no scheduled pulls, no daily maintenance |
 | D1 `zip_crosswalk` seed | Not seeded; lookups use the static `/data/zip3/*.json` shards until it is |
 
@@ -29,13 +29,22 @@ npx wrangler kv namespace create OFFICIAL_CACHE        # put the id in both wran
 
 1. Cloudflare dashboard → **Turnstile** → **Add widget**: name `flufollower-report`,
    hostnames `flufollower.com` and `flufollower.pages.dev`, mode **Managed**.
-2. Site key (public) → `build/lib/site.mjs` → `turnstile.siteKey: '0x4AAAA…'`
-   (or a `TURNSTILE_SITE_KEY` build variable). Commit, PR, merge.
-3. Secret key:
+2. Secret key (do this first, so the form never ships without it):
    ```bash
    npx wrangler pages secret put TURNSTILE_SECRET --project-name flufollower
    ```
-4. Verify: the home page shows the report form (not "opens soon"); a report from
+3. Site key (public) → one line in the root `wrangler.toml`, then PR + merge:
+   ```toml
+   [vars]
+   FEATURE_REPORT = "true"
+   TURNSTILE_SITE_KEY = "0x4AAAA…"
+   ```
+   `wrangler.toml` is the Pages project's source of truth, so its `[vars]` are
+   the build's environment too: `build/lib/site.mjs` reads
+   `TURNSTILE_SITE_KEY`, and the dashboard shows these variables read-only.
+   (Committing the key directly to `turnstile.siteKey` in `site.mjs` also works.)
+4. Check the deploy log line `report form: ON (Turnstile site key set)`.
+5. Verify: the home page shows the report form (not "opens soon"); a report from
    a phone returns the result card with "Thanks — your report was counted."
 
 ## 3. Ingest Worker (scheduled pulls + daily maintenance)
@@ -48,10 +57,10 @@ npx wrangler secret put SODA_APP_TOKEN          # optional, data.cdc.gov app tok
 # optional, only with DELPHI_FLUVIEW = "true":  npx wrangler secret put DELPHI_API_KEY
 ```
 
-The first deploy may reject the `SELF` service binding because the script does
-not exist yet: comment out the `[[services]]` block, deploy, restore it, deploy
-again. (Without `SELF` the Worker still works — it writes KV in-process, which
-can exceed KV's 1,000-operations-per-invocation cap on a full national pull.)
+After a pull the Worker rebuilds KV one state per invocation through its own
+loopback binding (`ctx.exports`, compatibility flag `enable_ctx_exports` in its
+`wrangler.toml`), so no service binding has to exist before the first deploy and
+no invocation comes near KV's 1,000-operations cap.
 
 Trigger one ingest and seed the crosswalk:
 
