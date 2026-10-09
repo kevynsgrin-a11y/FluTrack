@@ -15,6 +15,8 @@ import { computeModel } from '../src/scripts/model.js';
 import { readingStatus } from '../src/scripts/reading-provenance.js';
 import { hasSignalData, MIN_LIVE_STATES } from '../src/scripts/data-sources.js';
 import { states } from '../src/scripts/states-data.js';
+import { formatDate } from '../src/scripts/util.js';
+import { ageDays, MAX_REPORT_AGE_DAYS } from './lib/epidemic-trend.mjs';
 
 const dist = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 const errors = [];
@@ -418,6 +420,79 @@ for (const file of htmlFiles) {
   const html = readFileSync(file, 'utf8');
   for (const m of html.matchAll(/<div class="result__row result__row--community"[\s\S]*?<\/div>/g)) {
     if (/outbreak/i.test(m[0])) errors.push(`${file.replace(dist, '')}: community block uses the word "outbreak"`);
+  }
+}
+
+// --- CDC epidemic trend: every block must match the record it was built from --- //
+// The blocks are static and the browser never re-renders them, so the only way
+// they can mislead is by disagreeing with dist/data/epidemic-trends.json. This
+// ties each page to that record, and checks the house rules the renderer keeps.
+{
+  const recordPath = join(dist, 'data', 'epidemic-trends.json');
+  const record = existsSync(recordPath) ? JSON.parse(readFileSync(recordPath, 'utf8')) : null;
+  const BLOCK = /<section class="epi"[^>]*data-block="epidemic-trend"[^>]*>[\s\S]*?<\/section>/g;
+  const LINE = /<p[^>]*data-block="epidemic-trend-national"[^>]*>[\s\S]*?<\/p>/;
+  const ALARM = /\b(surge|surging|outbreak|spike|alarm|skyrocket)\b/i;
+  const text = (html) => html.replace(/<[^>]+>/g, ' ');
+
+  if (record) {
+    if (record.schema !== 'flutrack-epidemic-trends/1') errors.push(`data/epidemic-trends.json: unexpected schema "${record.schema}"`);
+    const age = ageDays(record.reportDate);
+    if (!(age <= MAX_REPORT_AGE_DAYS)) errors.push(`data/epidemic-trends.json: report ${record.reportDate} is ${age} days old (limit ${MAX_REPORT_AGE_DAYS})`);
+    if (record.counts.shown !== Object.keys(record.states).length) errors.push('data/epidemic-trends.json: counts.shown does not match the states listed');
+    if (record.counts.up + record.counts.flat + record.counts.down !== record.counts.shown) errors.push('data/epidemic-trends.json: direction counts do not add up to counts.shown');
+  }
+
+  for (const st of states) {
+    const file = join(dist, 'state', st.slug, 'index.html');
+    if (!existsSync(file)) continue;
+    const html = readFileSync(file, 'utf8');
+    const rel = `/state/${st.slug}/index.html`;
+    const blocks = html.match(BLOCK) || [];
+    if (blocks.length > 1) errors.push(`${rel}: ${blocks.length} epidemic-trend blocks (expected at most 1)`);
+    const [block] = blocks;
+    const status = block?.match(/data-status="([^"]+)"/)?.[1];
+    const category = block?.match(/data-category="([^"]+)"/)?.[1];
+    if (!record) {
+      if (block) errors.push(`${rel}: has an epidemic-trend block, but no data/epidemic-trends.json was written`);
+      continue;
+    }
+    const estimate = record.states[st.abbr];
+    const expected = estimate ? 'shown' : record.withheld[st.abbr] ? 'withheld' : record.notEstimated[st.abbr] ? 'not-estimated' : null;
+    if (expected === null) {
+      if (block) errors.push(`${rel}: has an epidemic-trend block, but the record has nothing for ${st.abbr}`);
+      continue;
+    }
+    if (!block) { errors.push(`${rel}: the record says ${st.abbr} is ${expected}, but the page has no epidemic-trend block`); continue; }
+    if (status !== expected) errors.push(`${rel}: block status "${status}", record says "${expected}"`);
+    if (expected === 'shown') {
+      if (category !== estimate.category) errors.push(`${rel}: block category "${category}", record says "${estimate.category}"`);
+      for (const [what, needle] of [['report date', formatDate(record.reportDate)], ['training-data end', formatDate(record.trainingDataEnd)], ['category label', estimate.label], ['Rt estimate', estimate.median.toFixed(2)]]) {
+        if (!block.includes(needle)) errors.push(`${rel}: block is missing the ${what} "${needle}"`);
+      }
+    } else if (category) {
+      errors.push(`${rel}: a ${expected} block must not carry a category ("${category}")`);
+    }
+    if (/level-token|data-sev=/.test(block)) errors.push(`${rel}: the epidemic-trend block uses the FluTrack severity scale (direction is not severity)`);
+    if (ALARM.test(text(block))) errors.push(`${rel}: the epidemic-trend block uses alarm language`);
+  }
+
+  const homeHtml = existsSync(join(dist, 'index.html')) ? readFileSync(join(dist, 'index.html'), 'utf8') : '';
+  const line = homeHtml.match(LINE)?.[0];
+  if (record && record.counts.shown && !line) errors.push('/index.html: the record has shown states but the national epidemic-trend line is missing');
+  if (!record && line) errors.push('/index.html: has a national epidemic-trend line, but no data/epidemic-trends.json was written');
+  if (line && record) {
+    const t = text(line).replace(/\s+/g, ' ');
+    if (!t.includes(formatDate(record.reportDate))) errors.push('/index.html: national line is missing the report date');
+    if (!t.includes(`In ${record.counts.shown} of `)) errors.push(`/index.html: national line does not state ${record.counts.shown} shown jurisdictions`);
+    if (!t.includes(`${record.counts.flat} not changing`)) errors.push(`/index.html: national line does not state ${record.counts.flat} not changing`);
+    if (ALARM.test(t)) errors.push('/index.html: the national epidemic-trend line uses alarm language');
+  }
+  // Only the state pages and the home page may carry these blocks.
+  for (const file of htmlFiles) {
+    const rel = file.replace(dist, '');
+    if (rel === '/index.html' || rel.startsWith('/state/')) continue;
+    if (/data-block="epidemic-trend/.test(readFileSync(file, 'utf8'))) errors.push(`${rel}: carries an epidemic-trend block it should not`);
   }
 }
 

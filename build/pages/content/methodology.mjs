@@ -2,6 +2,8 @@ import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand, breadcrumbs, revisedOn, revisedLabel } from '../../lib/partials.mjs';
 import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
+import { CATEGORIES, DOCUMENTED_ED_GAPS, MAX_REPORT_AGE_DAYS } from '../../lib/epidemic-trend.mjs';
+import { states } from '../../lib/states.mjs';
 
 /**
  * /methodology/ — the primary trust page.
@@ -12,6 +14,14 @@ import { breadcrumbLd, faqLd } from '../../lib/seo.mjs';
  * bands, and the ±8% trend rule. Everything here is descriptive of the DATA —
  * no advice, no diagnosis, no prediction.
  */
+const TREND_CATEGORY_ORDER = ['growing', 'likely_growing', 'not_changing', 'likely_declining', 'declining'];
+
+/** "Iowa and South Dakota", from the same list the build uses to withhold a category. */
+const gappedStateNames = Object.keys(DOCUMENTED_ED_GAPS)
+  .map((abbr) => states.find((s) => s.abbr === abbr)?.name)
+  .filter(Boolean)
+  .join(' and ');
+
 export default function methodology(ctx) {
   const { site, disclaimers } = ctx;
 
@@ -266,6 +276,32 @@ export default function methodology(ctx) {
     missing observations, insufficient history and stale readings cannot support a current-week conclusion.
     See <a href="/data-sources/">data sources</a> for the specific CDC systems behind
     each signal.</p>
+
+    <h2 id="epidemic-trend">The CDC's epidemic trend: direction, kept separate</h2>
+    <p>State pages also show the CDC's own estimate of whether COVID-19 infections are growing, from the CDC's Center for Forecasting and Outbreak Analytics. It is <strong>not</strong> an input to the combined respiratory index and cannot change it. The CDC estimates the time-varying reproduction number (Rt) from emergency-department visits reported through NSSP, then assigns a category from the share of that estimated range that lies above 1:</p>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">CDC category</th>
+            <th scope="col">Share of the estimated Rt range above 1</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${TREND_CATEGORY_ORDER.map((key) => `<tr><th scope="row">${escapeHtml(CATEGORIES[key].label)}</th><td>${escapeHtml(CATEGORIES[key].band.charAt(0).toUpperCase() + CATEGORIES[key].band.slice(1))}</td></tr>`).join('\n          ')}
+        </tbody>
+      </table>
+    </div>
+    <p>The CDC says these categories show direction only and do not reflect the burden of disease, and that they should be read alongside other measures. FluTrack's rules for showing one:</p>
+    <ul>
+      <li><strong>The CDC's labels, not ours.</strong> The category and figures are the CDC's, under the CDC's names. They are never scored, coloured or worded like FluTrack's five levels, and never averaged into the index.</li>
+      <li><strong>Two dates.</strong> The model report's date and the end of the emergency-department data it used are different facts, and both are shown. A report more than ${MAX_REPORT_AGE_DAYS} days old is not shown.</li>
+      <li><strong>Only with the data it rests on.</strong> If the CDC's own notes say the emergency-department data are unavailable for a state (they currently say so for ${escapeHtml(gappedStateNames)}), or FluTrack has no usable COVID-19 emergency-department series for it, the category is withheld and the page says why. A state the CDC did not estimate says that instead.</li>
+      <li><strong>Side by side, not combined.</strong> Beside the CDC's category the page lists FluTrack's own COVID-19 readings, each with its own direction from the rule used elsewhere on this page: the latest observation against the mean of up to three prior observations of that one measurement. When one points up and another down, the page says they point in different directions. It does not net them into a single trend, and a rising reading beside &ldquo;not changing&rdquo; is not a disagreement.</li>
+      <li><strong>Not independent of the emergency-department share.</strong> The CDC's model uses the same NSSP emergency-department data as that share, so their agreement is not confirmation, and the page says so.</li>
+      <li><strong>Never required, never invented.</strong> The build fetches the CDC's file directly and checks its schema, dates, and that each category matches its own probability. If that fails, the blocks are left out rather than filled with sample values, and pages built from sample data carry none.</li>
+    </ul>
+    <p>The figures behind every block are published as <code>/data/epidemic-trends.json</code>. A level can be high while a direction is declining, or low while it is growing: the CDC notes that Rt below 1 does not mean transmission is low, only that infections are declining.</p>
 
     <h2 id="check-your-area">Check your area: county data and community reports</h2>
     <p>The home page's “Check your area” card puts the official data first. It shows, for your state, the FluTrack level described on this page and the CDC's NHSN flu hospital-admission level and rate per 100,000 people with its last four weeks; and, for your county, the CDC NWSS wastewater viral activity level (WVAL) for influenza A. A county's wastewater reading is the median sampling site among the public-domain sites serving it, with that site's CDC category. A county with no such site says so rather than showing zero, and a reading more than 14 days past its week ending is shown as “no recent data”. The CDC changed how WVAL is calculated on 14 August 2026, so a wastewater trend line never joins values from before and after that date. Every figure carries its CDC system, the week it covers and when we fetched it, and the card flags data more than 14 days old.</p>

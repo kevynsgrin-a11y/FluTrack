@@ -28,6 +28,7 @@ Browser ──▶ /data/snapshot.json (the build's own data; instant first paint
 | Scoring model | `src/scripts/threat-index.js` | Pure, tested. The unified 0–4 threat level. |
 | Data adapters | `src/scripts/data-sources.js` | CDC Socrata fetch + parsing, shared by build and browser; **WastewaterSCAN exclusion**. |
 | Live pre-render | `build/lib/live-snapshot.mjs` | `LIVE_PRERENDER` policy: live, sample fallback, or fail. |
+| Epidemic trend | `build/lib/epidemic-trend.mjs`, `build/lib/epidemic-trend-render.mjs` | CDC's COVID-19 Rt category: a validated, fail-soft build-time fetch, a per-state show/withhold plan, the state-page block and the home-page line. Direction only; never part of the index. |
 | Rendering | `src/scripts/render.js` | Pure HTML functions shared by **build and browser** (identical markup). |
 | App controller | `src/scripts/app.js` | Hydrates from the shipped snapshot, refreshes only when stale; state picker, geolocation. |
 | Design system | `src/styles/*.css` | Tokens, light/dark, severity scale, components. |
@@ -49,6 +50,7 @@ FluTrack uses **only U.S. Government public-domain** feeds:
 - **NSSP** — Emergency-department visits for flu/RSV/COVID (`vutn-jzwm`) and ARI activity level (`f3zz-zga5`).
 - **NWSS** — Wastewater Viral Activity Level / WVAL (`atcp-73re`), an early indicator.
 - **NREVSS** — Laboratory test positivity (modeled in the sample only — no live adapter yet, so a live reading rests on up to three signals).
+- **CFA Rt** — CDC's COVID-19 epidemic-trend estimate (`rt-map/1.0.0`), a *direction* signal (Growing … Declining) estimated from NSSP ED visits. It is fetched directly from cdc.gov at build time, shown beside a state's readings and never part of the combined index. See [Epidemic trend](#cdc-epidemic-trend-covid-19-rt).
 
 **It deliberately excludes WastewaterSCAN / SCAN / Verily data**, which is licensed **CC BY-NC 4.0 (non-commercial)** and cannot be used on a monetized site. The exclusion is enforced defensively in code (`excludeNonCommercial` in `data-sources.js`) and covered by tests. See [`/data-sources/`](build/pages/content/data-sources.mjs).
 
@@ -158,6 +160,27 @@ even when production is current).
    so the deploy log confirms the override took. GitHub pauses scheduled workflows
 in a repository with no activity for 60 days; re-enable it from the Actions tab
 if that happens.
+
+### CDC epidemic trend (COVID-19 Rt)
+
+State pages and the home page also carry CDC's own estimate of whether COVID-19
+infections are growing (`build/lib/epidemic-trend.mjs`). It is a second, separate
+build-time input: it is **not** on the ingest mirror (it is a CDC website data
+file, not a Socrata dataset), so the build fetches it directly from cdc.gov.
+
+| `EPIDEMIC_TREND` | Behaviour |
+|---|---|
+| `auto` *(default)* | Fetch, validate and render. Any failure — network, HTTP error, bad JSON, wrong schema, a report older than 21 days, categories that contradict their own probabilities — **omits the blocks**. It never fails the build, even under `LIVE_PRERENDER=require`, and is never replaced by sample values. |
+| `off` | Skip the fetch and omit the blocks. |
+
+An offline build (`LIVE_PRERENDER=off`) skips it too, and a build whose snapshot
+is sample data carries no blocks: a page that says "Sample data" must not also
+carry a real health signal. Anything other than `auto` or `off` fails the build
+loudly (there is deliberately no `require` mode). The build log says which
+happened (`epidemic trend: …`). When blocks are rendered, the figures behind them
+are written to `dist/data/epidemic-trends.json`, and `build/check.mjs` verifies
+every block against that record. Review `DOCUMENTED_ED_GAPS` in the same module
+whenever CDC's data notes change; see `docs/EPIDEMIC-TREND-REVIEW.md`.
 
 ### Cloudflare Web Analytics and the CSP
 

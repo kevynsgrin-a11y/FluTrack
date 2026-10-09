@@ -69,6 +69,13 @@ export default function dataSources(ctx) {
       granularity: 'HHS region / state',
       cadence: 'Weekly',
     },
+    {
+      name: 'CDC epidemic trends (Rt) — COVID-19',
+      measures:
+        'The CDC’s modeled estimate of whether COVID-19 infections are growing, with its category from Growing to Declining, estimated from emergency-department visits. Direction only, not the burden of disease; shown beside a state’s readings and never part of the combined index.',
+      granularity: 'State (and national)',
+      cadence: 'Weekly model reports; fetched when the site is built',
+    },
   ];
 
   const rows = datasets
@@ -128,6 +135,7 @@ export default function dataSources(ctx) {
     <p>Two further sources are built but switched off for now: the CDC's influenza A wastewater sample data (<code>ymmh-divb</code>), whose WastewaterSCAN rows are always dropped, and state influenza-like-illness rates from CDC ILINet as re-served by Carnegie Mellon's Delphi Epidata API. The CDC's FluSight forecasts, NREVSS regional positivity and California's CDPH respiratory dashboard are candidates for later.</p>
 
     <p>Both the build and browser use the caching copy at <code>ingest.oakandmain.dev</code>. Cache retrieval and source publication follow different schedules. An October retrieval of a September observation remains a September observation. Each metric retains its geography, observation period, publication date when supplied, retrieval timestamp and usable coverage; an absent source publication date is unknown rather than inferred from the build. Source fields named <code>buildnumber</code> or <code>date_updated</code> remain source build/update dates, not verified publication dates.</p>
+    <p>The one exception is the CDC's epidemic-trend file. It is not a Socrata dataset and is not on the ingestion service, so the build fetches it directly from <code>cdc.gov</code> and checks its schema, dates and categories before using it. Your browser never fetches it. If it cannot be fetched or fails those checks, the epidemic-trend blocks are left out; they are never replaced by sample values, and pages built from sample data carry none. The figures behind every block are published as <code>/data/epidemic-trends.json</code>. <a href="/methodology/#epidemic-trend">How FluTrack shows it</a></p>
 
     <h2>Coverage and interpretation</h2>
     <p>Cases, laboratory positivity, wastewater viral activity, emergency-department visit percentages and hospital admission rates measure different things. Hospitalization data is displayed separately from the combined index. State observations do not independently measure a city, and participating sewersheds do not cover every resident. No data does not mean no illness. A fresh cache timestamp or a list of 51 jurisdiction keys does not establish usable observations for each pathogen or source.</p>
@@ -138,6 +146,12 @@ export default function dataSources(ctx) {
       <li><strong>Wastewater contract transition.</strong> The CDC's <a href="https://www.cdc.gov/wastewater/respiratory-viruses/state.html?cove-tab=1" rel="noopener">state wastewater page, updated October 2, 2026</a>, says a new testing contract was awarded to Verily on September 28, 2026. CDC warned of a brief reporting gap affecting about 200 sites while sampling, testing and reporting restart. This notice alone does not establish why a September 26 observation is missing; each reading's own dates and coverage still apply.</li>
       <li><strong>Iowa NSSP reporting.</strong> The CDC's <a href="https://www.cdc.gov/respiratory-viruses/data/activity-levels.html" rel="noopener">activity-level data notes, updated October 2, 2026</a>, say Iowa's NSSP feed ended on May 6, 2026 following a change in health information exchange vendors. Only data through the week ending May 2 is considered; weeks ending May 9, 2026 and later show <em>Data Unavailable</em>. This reporting gap is not evidence of low illness activity.</li>
       <li><strong>Missouri's ARI baseline.</strong> The same October 2 CDC notes explain that data quality issues prevented use of Missouri's own historical data before MMWR Week 10 of 2025 (March 2&ndash;8). CDC used the rest of HHS Region 7 for that earlier portion of the historical baseline, and Missouri's own data from Week 10 onward, to calculate its 2026&ndash;27 activity levels. This is a caveat about CDC's categorical baseline, separate from FluTrack's editorial index thresholds.</li>
+    </ul>
+
+    <h3>Documented CDC surveillance gaps &mdash; October 9, 2026</h3>
+    <ul>
+      <li><strong>South Dakota emergency-department data.</strong> The CDC's <a href="https://www.cdc.gov/respiratory-viruses/data/activity-levels.html" rel="noopener">activity-level data page, updated October 9, 2026</a>, says no emergency-department visit data are available for South Dakota. The CDC estimates its epidemic trend from emergency-department visits, so FluTrack withholds that category for South Dakota, and for Iowa for the reason above, rather than show a direction label without the data it rests on. This reporting gap is not evidence of low illness activity.</li>
+      <li><strong>No CDC trend estimate.</strong> The CDC does not estimate an epidemic trend where emergency-department data are too sparse, show recent anomalies, or fail its reliability checks. FluTrack says so in those cases; &ldquo;not estimated&rdquo; is not the same as &ldquo;not changing&rdquo;.</li>
     </ul>
 
     <h2>Licensing and what we deliberately exclude</h2>

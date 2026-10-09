@@ -18,6 +18,14 @@ import { site, privacyEmail } from '../../lib/site.mjs';
 const ENTRIES = [
   {
     date: '2026-10-09',
+    kind: 'Methodology',
+    title: 'The CDC’s COVID-19 epidemic trend, shown separately from the index',
+    body:
+      'State pages now show the CDC’s own estimate of whether COVID-19 infections are growing (Growing, Likely growing, Not changing, Likely declining or Declining), with its probability, the estimated reproduction number, the model report’s date and the date its emergency-department data end, and the home page carries one national line. It is direction only, never part of the combined respiratory index, and no existing reading changed. Beside it, a state page lists FluTrack’s own COVID-19 emergency-department and wastewater readings, each with its own direction, and says when they point in different directions. The CDC’s category is withheld for a state when its emergency-department data are unavailable (currently Iowa and South Dakota, per the CDC’s notes), and left out entirely if the file cannot be fetched or fails validation. The sources and methodology pages describe the rules.',
+    affectsReadings: false,
+  },
+  {
+    date: '2026-10-09',
     kind: 'Interface',
     title: 'Check your area, and report how you feel',
     body:

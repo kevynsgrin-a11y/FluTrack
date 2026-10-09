@@ -329,6 +329,26 @@ main { flex: 1 0 auto; }
 .signal-row__name { font-weight: var(--weight-semibold); }
 .signal-row__val { align-self: center; font-variant-numeric: tabular-nums; font-weight: var(--weight-semibold); text-align: right; }
 
+/* CDC epidemic trend: a direction signal, kept apart from the severity scale --- */
+.epi__card { display: grid; gap: var(--space-md); }
+.epi__card > p { margin: 0; max-width: 48rem; }
+.epi__headline { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-xs) var(--space-md); }
+.epi__eyebrow { font-size: var(--step--1); font-weight: var(--weight-semibold); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); }
+.epi__headline .trend { font-size: var(--step-2); }
+.epi__facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr)); gap: var(--space-md) var(--space-lg); margin: 0; }
+.epi__facts dt { font-size: var(--step--1); color: var(--text-muted); }
+.epi__facts dd { margin: 0.1rem 0 0; font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.epi__note { max-width: 48rem; margin: 0; }
+.epi__compare { margin-top: var(--space-xl); display: grid; gap: var(--space-md); }
+.epi__compare > h3, .epi__compare > p { margin: 0; max-width: 48rem; }
+.epi__row { display: grid; gap: var(--space-xs); padding: var(--space-md) 0; border-bottom: 1px solid var(--border-strong); }
+.epi__row-name { min-width: 0; font-weight: var(--weight-semibold); overflow-wrap: anywhere; }
+.epi__row-val { min-width: 0; }
+.epi__national { max-width: 48rem; margin: 0 0 var(--space-lg); }
+@media (min-width: 40rem) {
+  .epi__row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-lg); align-items: start; }
+}
+
 /* Map field plate --------------------------------------------------------- */
 .us-map { width: 100%; }
 .us-map__frame { background: var(--surface); border-top: 2px solid var(--text); border-bottom: 1px solid var(--border-strong); padding: var(--space-md); }
