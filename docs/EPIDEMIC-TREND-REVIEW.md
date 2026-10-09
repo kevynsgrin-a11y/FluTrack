@@ -52,22 +52,24 @@ Findings that shaped the design:
 | Mutation checks (remove the category-against-probability check, the ED gate, the disagreement flag, the staleness guard, the declining-probability inversion, the certainty clamp) | each caught by one to four tests; files restored byte-for-byte |
 | QA negative controls (category ≠ record, missing record, alarm word, severity token in a block, wrong report date, category on a withheld block) | all six caught by `build/check.mjs` |
 | Build matrix, real build code with a stubbed `fetch` serving the retained file | offline; live + CDC OK (49 shown, 2 withheld, 52 pages carry blocks); CDC 503 (3 attempts); not JSON (1); report 69 days old (1); `EPIDEMIC_TREND=off` (0 requests); default build with this sandbox's blocked network; invalid `EPIDEMIC_TREND` fails loudly. Every build exited 0 (except the invalid setting) and passed QA |
+| **Real fetch, GitHub Actions runner** (CI live-build step, run 37981048063, 2026-10-09 19:33 UTC) | `epidemic trend: CDC report 2026-10-07, data through 2026-10-06 — 49 states shown, 2 withheld, 0 not estimated`, on the live snapshot for the week ending 2026-10-03 (51 of 51 states); `build/check.mjs` passed against the real blocks; 508 of 508 tests passed. The first CI run, with Node's default User-Agent, got **HTTP 403** from CDC and failed soft as designed (exit 0, QA passed, blocks omitted); the build now identifies itself with a descriptive User-Agent, and the second run succeeded |
 | Chromium, 320 / 390 / 1440 px, light and dark | no horizontal overflow, no script errors; screenshots reviewed |
 
 ## What this did not verify
 
-- **A real fetch from cdc.gov.** The build sandbox could not reach CDC (proxy 403, DNS failure), so the fetch path was exercised with a stubbed `fetch` serving the retained file. The first real fetch happens in CI and on Cloudflare.
-- **Freshness of the evidence.** It is one retained vintage; CDC revises records.
+- **Cloudflare Pages' own build.** The preview deployed successfully, but its build log is behind the dashboard login. Opening the branch preview's `/data/epidemic-trends.json` shows whether Cloudflare's builder reached CDC. The GitHub runner did (see above), but CDC's CDN has already shown it treats some clients differently.
+- **Freshness of the evidence.** The design evidence is one retained vintage; CDC revises records. The real fetch in CI saw the same October 7 report.
 
 ## For the owner
 
 1. **Licence.** The preserved CDC Rt pages state no licence or reuse terms either way. The sources page labels this feed "Public Domain" like CDC's other U.S. Government products. Please confirm that is the position you want to publish.
-2. **New egress path.** The build now calls `www.cdc.gov` directly (not the ingest mirror). If CDC or its CDN blocks the Cloudflare Pages or GitHub runner addresses, the blocks silently never appear; the build log says `epidemic trend: unavailable (…)`. If that matters, add the endpoint to the mirror and change `EPIDEMIC_TREND_URL`.
+2. **New egress path.** The build now calls `www.cdc.gov` directly (not the ingest mirror). CDC's CDN answered Node's default User-Agent from the GitHub runner with HTTP 403, and accepted a descriptive one (`EPIDEMIC_TREND_USER_AGENT`, which identifies the build and does not imitate a browser). If it starts refusing again — CDC can change its bot rules, or a build host's address range can be blocked — the blocks silently never appear; the build log says `epidemic trend: unavailable (…)`. If that matters, add the endpoint to the mirror and change `EPIDEMIC_TREND_URL`.
 3. **After merge, check production:** `/data/epidemic-trends.json` exists with the latest `reportDate`; Wyoming and Connecticut show blocks and Iowa shows the withheld note; the home page has the national line. If absent, read the `epidemic trend:` line in the Cloudflare build log.
 4. **Review `DOCUMENTED_ED_GAPS`** (`build/lib/epidemic-trend.mjs`) whenever CDC's data notes change; a stale entry errs toward withholding.
 5. **Wastewater vintage.** CDC says (second-hand, from the category-verification note in the evidence package) that it recalculates COVID-19 wastewater baselines on April 1 and October 1 and revises history. The retained CDC state file is one vintage, but the site reads a different dataset through the mirror, and its only comparability guard is the Aug 14 method change. Confirm the mirror's wastewater history is a single vintage before relying on first-week-of-October wastewater trends, including the new comparison rows.
 6. **Deploy timing.** The weekly rebuild deploys only when the feed has a newer Socrata week, so an Rt report published between deploys appears with the next one. Each block shows its own report date.
-7. **Not covered by design:** metro pages, `/states/`, and browser re-rendering (the blocks are static).
+7. **Pre-existing QA noise, not from this change.** The live build's QA prints about 39 `contains the literal "undefined"` warnings. The bare-word check in `build/check.mjs` matches the intentional zero-baseline copy "percentage change is undefined" (`trendChangeText`), which real early-October data triggers for many states (RSV and flu ED shares that were exactly zero). `main` at `c1ac14b` produces the identical warnings on the same data; the check only warns, so nothing fails. Left alone to keep this change focused. A one-line fix would strip that phrase before the test.
+8. **Not covered by design:** metro pages, `/states/`, and browser re-rendering (the blocks are static).
 
 ## Files
 
