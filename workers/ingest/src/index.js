@@ -9,6 +9,10 @@
 // Both pull crons run every source; each source fails independently and a
 // failed or thin pull writes nothing (D1 keeps the last good week).
 //
+// After a pull, KV documents are rebuilt one state per invocation through the
+// Worker's own loopback binding (ctx.exports), keeping each invocation under
+// KV's 1,000-operations cap.
+//
 // Manual endpoints (all POST, Authorization: Bearer <INGEST_TOKEN>):
 //   /__ingest        run the official pull now (?only=nssp_ed,nwss_wval)
 //   /__maintenance   run the daily maintenance now
@@ -82,9 +86,20 @@ export async function writeKvForStates(env, abbrs, now = new Date()) {
   return written;
 }
 
-async function fanOutKv(env, now) {
+/**
+ * The Worker's own fetch handler as a binding: ctx.exports.default (the
+ * automatic loopback binding, compatibility flag enable_ctx_exports), or an
+ * explicit SELF service binding if one is configured. Each call through it is
+ * a fresh invocation with its own KV-operation budget.
+ */
+export function loopback(env, ctx) {
+  return ctx?.exports?.default || env.SELF || null;
+}
+
+async function fanOutKv(env, now, ctx) {
   const abbrs = states.map((s) => s.abbr);
-  if (!env.SELF) return { kv_docs: await writeKvForStates(env, abbrs, now) };
+  const self = loopback(env, ctx);
+  if (!self) return { kv_docs: await writeKvForStates(env, abbrs, now) };
   let docs = 0;
   const failed = [];
   const queue = [...abbrs];
@@ -92,7 +107,7 @@ async function fanOutKv(env, now) {
     while (queue.length) {
       const abbr = queue.shift();
       try {
-        const res = await env.SELF.fetch('https://flutrack-ingest/__kv', {
+        const res = await self.fetch('https://flutrack-ingest/__kv', {
           method: 'POST',
           headers: { Authorization: `Bearer ${env.INGEST_TOKEN}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ states: [abbr] }),
@@ -109,7 +124,7 @@ async function fanOutKv(env, now) {
   return { kv_docs: docs, kv_failed: failed };
 }
 
-export async function runIngest(env, { only = null, fetchImpl = fetch, now = new Date() } = {}) {
+export async function runIngest(env, { only = null, fetchImpl = fetch, now = new Date(), ctx = null } = {}) {
   const defs = sourceDefs(now, env).filter((d) => !only || only.includes(d.key));
   const results = await Promise.all(defs.map((d) => runSource(d, { env, fetchImpl, now })));
   const good = results.filter((r) => r.ok);
@@ -122,7 +137,7 @@ export async function runIngest(env, { only = null, fetchImpl = fetch, now = new
   if (rows.length && env.DB) {
     summary.statements = await upsertOfficial(env.DB, rows);
   }
-  if (env.DB && env.OFFICIAL_CACHE) Object.assign(summary, await fanOutKv(env, now));
+  if (env.DB && env.OFFICIAL_CACHE) Object.assign(summary, await fanOutKv(env, now, ctx));
   summary.finished_at = new Date().toISOString();
   if (env.OFFICIAL_CACHE) await env.OFFICIAL_CACHE.put(LAST_RUN_KEY, JSON.stringify(summary));
   return summary;
@@ -131,13 +146,13 @@ export async function runIngest(env, { only = null, fetchImpl = fetch, now = new
 export default {
   async scheduled(event, env, ctx) {
     if (PULL_CRONS.has(event.cron)) {
-      ctx.waitUntil(runIngest(env).then((s) => console.log('ingest', JSON.stringify(s.sources))));
+      ctx.waitUntil(runIngest(env, { ctx }).then((s) => console.log('ingest', JSON.stringify(s.sources))));
     } else if (event.cron === MAINTENANCE_CRON) {
       ctx.waitUntil(dailyMaintenance(env).then((s) => console.log('maintenance', JSON.stringify(s))));
     }
   },
 
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (request.method === 'GET' && url.pathname === '/health') {
       const last = env.OFFICIAL_CACHE ? await env.OFFICIAL_CACHE.get(LAST_RUN_KEY, 'json') : null;
@@ -149,7 +164,7 @@ export default {
     switch (url.pathname) {
       case '/__ingest': {
         const only = url.searchParams.get('only')?.split(',').filter(Boolean) || null;
-        return json(await runIngest(env, { only }));
+        return json(await runIngest(env, { only, ctx }));
       }
       case '/__kv': {
         const body = await request.json().catch(() => ({}));

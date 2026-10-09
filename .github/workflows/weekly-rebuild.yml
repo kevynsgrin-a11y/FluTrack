@@ -11,8 +11,9 @@ name: Weekly CDC rebuild
 # the feed carries a newer week than production (build/rebuild-gate.mjs), by
 # POSTing a Cloudflare Pages deploy hook. That hook starts a Cloudflare build,
 # and that build honours the Pages project's own LIVE_PRERENDER, which defaults
-# to auto: set it to require in the dashboard, or a feed hiccup during the deploy
-# can ship sample data. build/staleness-alarm.mjs reports it the next day either way.
+# to auto: set it to require in wrangler.toml (see README "Weekly data refresh";
+# the dashboard shows variables read-only now that wrangler.toml manages the
+# project), or a feed hiccup during the deploy can ship sample data. build/staleness-alarm.mjs reports it the next day either way.
 #
 # dry_run runs everything except the POST, so the whole chain can be proven on a
 # fresh runner without touching production.

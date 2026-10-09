@@ -7,9 +7,10 @@ Each line says what, why, and where.
 
 - [ ] **Turnstile widget** — create one (Cloudflare dashboard → Turnstile → Add
       widget, domains `flufollower.com`, `flufollower.pages.dev`, mode Managed).
-      Put the **site key** in `build/lib/site.mjs` → `turnstile.siteKey` (public),
-      and the **secret** with `npx wrangler pages secret put TURNSTILE_SECRET
-      --project-name flufollower`. Until then the report form shows "opens soon"
+      Put the **site key** in the root `wrangler.toml` `[vars]` as
+      `TURNSTILE_SITE_KEY` (public; the build reads it), and the **secret**
+      with `npx wrangler pages secret put TURNSTILE_SECRET --project-name
+      flufollower`. Until then the report form shows "opens soon"
       and `/api/report` answers 503; "Check your area" works. See
       docs/DEPLOY-FEATURE.md §2.
 - [ ] **Deploy `flutrack-ingest`** (`cd workers/ingest && npx wrangler deploy`),

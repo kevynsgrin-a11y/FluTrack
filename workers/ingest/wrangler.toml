@@ -4,6 +4,9 @@
 name = "flutrack-ingest"
 main = "src/index.js"
 compatibility_date = "2026-07-22"
+# ctx.exports: the automatic loopback binding the pull uses to rebuild KV one
+# state per invocation (no self service binding to configure).
+compatibility_flags = ["enable_ctx_exports"]
 workers_dev = true
 
 [triggers]
@@ -26,12 +29,6 @@ migrations_dir = "../../migrations"
 [[kv_namespaces]]
 binding = "OFFICIAL_CACHE"
 id = "91b560ebf86148e0b8c9cc29b1aa48cc"
-
-# Self binding: the pull fans out one invocation per state to rebuild KV
-# documents, keeping each invocation under KV's 1,000-operation cap.
-[[services]]
-binding = "SELF"
-service = "flutrack-ingest"
 
 [vars]
 NWSS_SITE = "false"        # ymmh-divb flu A site samples (WastewaterSCAN rows always dropped)
