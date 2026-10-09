@@ -6,10 +6,16 @@ name: Weekly CDC rebuild
 # week ending the previous Saturday; this runs Saturday morning (US), and again
 # Monday to catch a holiday-delayed publish.
 #
-# It never deploys sample data: the preflight build uses LIVE_PRERENDER=require
-# and fails red if the feed is down or stale, leaving last week's live deploy in
-# place. It deploys only when the feed carries a newer week than production
-# (build/rebuild-gate.mjs), by POSTing a Cloudflare Pages deploy hook.
+# The preflight build uses LIVE_PRERENDER=require and fails red if the feed is
+# down or stale, leaving last week's live deploy in place. It deploys only when
+# the feed carries a newer week than production (build/rebuild-gate.mjs), by
+# POSTing a Cloudflare Pages deploy hook. That hook starts a Cloudflare build,
+# and that build honours the Pages project's own LIVE_PRERENDER, which defaults
+# to auto: set it to require in the dashboard, or a feed hiccup during the deploy
+# can ship sample data. build/staleness-alarm.mjs reports it the next day either way.
+#
+# dry_run runs everything except the POST, so the whole chain can be proven on a
+# fresh runner without touching production.
 #
 # One-time setup — see README "Weekly data refresh": Cloudflare Pages →
 # flufollower → Settings → Builds → Deploy hooks → add a hook on branch `main`,
@@ -23,6 +29,10 @@ on:
     inputs:
       force:
         description: Rebuild production even if it already shows the newest CDC week
+        type: boolean
+        default: false
+      dry_run:
+        description: Run the live build, QA and comparison, but do not call the deploy hook
         type: boolean
         default: false
 
@@ -60,7 +70,7 @@ jobs:
         run: node build/rebuild-gate.mjs ${{ inputs.force && '--force' || '' }}
 
       - name: Trigger Cloudflare Pages production build
-        if: steps.gate.outputs.deploy == 'true'
+        if: steps.gate.outputs.deploy == 'true' && !inputs.dry_run
         env:
           DEPLOY_HOOK: ${{ secrets.CF_PAGES_DEPLOY_HOOK }}
           WEEK: ${{ steps.gate.outputs.week }}
@@ -71,6 +81,14 @@ jobs:
           fi
           curl --fail --silent --show-error --retry 3 --retry-delay 5 -X POST "$DEPLOY_HOOK" -o /dev/null
           echo "Triggered a production rebuild for CDC week ending $WEEK." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Dry run — deploy hook skipped
+        if: steps.gate.outputs.deploy == 'true' && inputs.dry_run
+        env:
+          WEEK: ${{ steps.gate.outputs.week }}
+          REASON: ${{ steps.gate.outputs.reason }}
+        run: |
+          echo "Dry run: the gate would deploy CDC week $WEEK ($REASON). The deploy hook was not called." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Summary
         if: steps.gate.outputs.deploy != 'true'

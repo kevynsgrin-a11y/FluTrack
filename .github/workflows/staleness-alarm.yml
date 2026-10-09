@@ -1,0 +1,57 @@
+name: Production data watchdog
+
+# Reads what production is serving and fails when it is not live CDC data, or
+# when its live week is older than the generator's own ceiling.
+#
+# This is the layer the weekly rebuild cannot provide for itself. When the
+# rebuild stops, nothing is building, so no build fails: production keeps its
+# last deployed week, and the badge keeps saying "Live CDC data". A failed
+# scheduled run is what tells the repository owner, and the job summary says why.
+#
+# The schedule runs from the default branch only. A workflow_dispatch run needs
+# this file on the default branch, so until it merges, the pull_request trigger
+# below is how it runs cold. That trigger is limited to changes that touch the
+# watchdog or the ceiling it enforces, so an unrelated PR never runs it. A red
+# result on such a PR reports production, not the PR.
+
+on:
+  schedule:
+    - cron: '43 15 * * *' # daily, after the Saturday and Monday rebuild windows
+  pull_request:
+    paths:
+      - build/staleness-alarm.mjs
+      - build/lib/live-snapshot.mjs
+      - .github/workflows/staleness-alarm.yml
+  workflow_dispatch:
+    inputs:
+      max_age_days:
+        description: Override the age ceiling in days (default is the live generator's MAX_LIVE_AGE_DAYS)
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      # No dependencies to install — FluTrack has zero runtime/build deps.
+
+      - name: Check what production is serving
+        env:
+          MAX_AGE_DAYS: ${{ github.event.inputs.max_age_days }}
+        run: |
+          if [ -n "$MAX_AGE_DAYS" ]; then
+            node build/staleness-alarm.mjs --max-age-days "$MAX_AGE_DAYS"
+          else
+            node build/staleness-alarm.mjs
+          fi
