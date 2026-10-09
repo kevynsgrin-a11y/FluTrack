@@ -46,6 +46,33 @@ export const LIVE_WEEKS = 12;
  */
 export const MIN_LIVE_STATES = 25;
 
+/** Conservative observation-age guard; a weekly release need not be today's data. */
+export const MAX_OBSERVATION_AGE_DAYS = 21;
+
+/** Valid calendar dates only: Date.parse otherwise accepts dates such as February 30. */
+export function observationAgeDays(weekEnding, now = new Date()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(weekEnding))) return Infinity;
+  const t = Date.parse(`${weekEnding}T00:00:00Z`);
+  if (!Number.isFinite(t) || new Date(t).toISOString().slice(0, 10) !== weekEnding) return Infinity;
+  return Math.floor((now.getTime() - t) / 86_400_000);
+}
+
+const DATE_FIELDS = Object.freeze({
+  publication: ['publication_date', 'published_at', 'date_published'],
+  updated: ['date_updated', 'buildnumber', 'last_updated'],
+  periodStart: ['week_start', 'week_start_date', 'period_start'],
+});
+
+// An upstream update/build timestamp is retained separately. It is not evidence
+// of an official publication date, and an ingest retrieval is neither one.
+function rowMetadata(row, week) {
+  return {
+    observationPeriod: { start: pickField(row, DATE_FIELDS.periodStart) || null, end: week, weekEnding: week },
+    publicationDate: pickField(row, DATE_FIELDS.publication) || null,
+    upstreamUpdatedAt: pickField(row, DATE_FIELDS.updated) || null,
+  };
+}
+
 /**
  * Dataset registry. `fields` lists candidate Socrata column names in priority
  * order — the adapter uses the first one present on a row, so the site tolerates
@@ -161,7 +188,7 @@ function socrataUrl(id, params) {
   return `${SOCRATA_BASE}/${id}.json?${qs}`;
 }
 
-async function fetchJson(url, { signal } = {}) {
+async function fetchJson(url, { signal, now = new Date() } = {}) {
   const res = await fetch(url, {
     signal,
     headers: { Accept: 'application/json' },
@@ -170,11 +197,15 @@ async function fetchJson(url, { signal } = {}) {
   const payload = await res.json();
   // The ingest worker wraps warm payloads: { api, data, fetchedAt, stale }. Unwrap
   // transparently so every adapter below keeps seeing raw Socrata rows.
-  const rows = payload && typeof payload === 'object' && payload.api && 'data' in payload
-    ? payload.data
-    : payload;
+  const wrapped = payload && typeof payload === 'object' && payload.api && 'data' in payload;
+  const rows = wrapped ? payload.data : payload;
   if (!Array.isArray(rows)) throw new Error(`Unexpected payload (not a row array) for ${url}`);
-  return rows;
+  return {
+    rows,
+    retrievedAt: wrapped ? payload.fetchedAt || null : now.toISOString(),
+    requestRetrievedAt: now.toISOString(),
+    stale: wrapped && payload.stale === true,
+  };
 }
 
 function normalizePathogen(raw) {
@@ -182,7 +213,7 @@ function normalizePathogen(raw) {
   if (/flu|influenza/.test(s)) return 'influenza';
   if (/cov|sars/.test(s)) return 'covid';
   if (/rsv|syncytial/.test(s)) return 'rsv';
-  return 'combined';
+  return /combined|all respiratory/.test(s) ? 'combined' : null;
 }
 
 /** Resolve a Socrata geography string to a state record. */
@@ -219,18 +250,22 @@ export function parseEdRows(rows) {
     const st = resolveState(pickField(row, f.geography));
     if (!st) continue;
     const week = weekOf(row, f.week);
-    if (!week) continue;
+    if (!Number.isFinite(observationAgeDays(week))) continue;
     if (!byState.has(st.abbr)) byState.set(st.abbr, new Map());
     const weeks = byState.get(st.abbr);
-    if (!weeks.has(week)) weeks.set(week, { week, influenza: NaN, covid: NaN, rsv: NaN, combined: NaN });
+    if (!weeks.has(week)) weeks.set(week, { week, influenza: NaN, covid: NaN, rsv: NaN, combined: NaN, metadata: {} });
     const rec = weeks.get(week);
     const pathogen = pickField(row, f.pathogen);
     if (pathogen != null) {
-      rec[normalizePathogen(pathogen)] = numeric(pickField(row, f.percent));
+      const key = normalizePathogen(pathogen);
+      if (!key) continue;
+      rec[key] = numeric(pickField(row, f.percent));
+      rec.metadata[key] = rowMetadata(row, week);
     } else {
       for (const key of ['combined', ...PATHOGENS]) {
         const v = numeric(pickField(row, f[key]));
         if (Number.isFinite(v)) rec[key] = v;
+        rec.metadata[key] = rowMetadata(row, week);
       }
     }
   }
@@ -240,6 +275,14 @@ export function parseEdRows(rows) {
     for (const rec of recs) {
       if (!Number.isFinite(rec.combined) && PATHOGENS.every((p) => Number.isFinite(rec[p]))) {
         rec.combined = round(rec.influenza + rec.covid + rec.rsv);
+        const publicationDates = [...new Set(PATHOGENS.map((p) => rec.metadata[p]?.publicationDate).filter(Boolean))];
+        rec.metadata.combined = {
+          observationPeriod: { start: null, end: rec.week, weekEnding: rec.week },
+          publicationDate: publicationDates.length === 1 ? publicationDates[0] : null,
+          publicationDates,
+          upstreamUpdatedAt: [...new Set(PATHOGENS.map((p) => rec.metadata[p]?.upstreamUpdatedAt).filter(Boolean))].sort().at(-1) || null,
+          derivedFrom: PATHOGENS,
+        };
       }
     }
     out.set(abbr, recs);
@@ -258,11 +301,11 @@ export function parseAriRows(rows) {
     const st = resolveState(pickField(row, f.geography));
     if (!st) continue;
     const week = weekOf(row, f.week);
-    if (!week) continue;
+    if (!Number.isFinite(observationAgeDays(week))) continue;
     if (!byState.has(st.abbr)) byState.set(st.abbr, []);
     const label = pickField(row, f.levelLabel);
     const level = ariLevelFromLabel(label);
-    byState.get(st.abbr).push({ week, level, label: level == null ? null : String(label).trim() });
+    byState.get(st.abbr).push({ week, level, label: level == null ? null : String(label).trim(), metadata: { level: rowMetadata(row, week) } });
   }
   for (const [abbr, recs] of byState) byState.set(abbr, sortByWeek(recs));
   return byState;
@@ -289,16 +332,37 @@ export function parseWastewaterRows(rows) {
   const f = DATASETS.wastewater.fields;
   // 1. Group each eligible reading by state, virus and site.
   const bySite = new Map();
-  let anonymous = 0;
+  const byState = new Map();
   for (const row of excludeNonCommercial(rows, f.provenance)) {
     const st = resolveState(pickField(row, f.geography));
     if (!st) continue;
     const week = weekOf(row, f.week);
     const pathogen = normalizePathogen(pickField(row, f.pathogen));
     const wval = numeric(pickField(row, f.wval));
-    if (!week || !PATHOGENS.includes(pathogen) || !Number.isFinite(wval)) continue;
-    // A row with no site id can't be checked for staleness; it still counts as one site.
-    const site = pickField(row, f.site) ?? `row-${(anonymous += 1)}`;
+    if (!Number.isFinite(observationAgeDays(week)) || !PATHOGENS.includes(pathogen)) continue;
+    // Keep the reporting period even when no usable value survives. Otherwise
+    // a missing newest week silently promotes an older reading to "latest".
+    if (!byState.has(st.abbr)) byState.set(st.abbr, new Map());
+    const weeks = byState.get(st.abbr);
+    if (!weeks.has(week)) weeks.set(week, {
+      influenza: [], covid: [], rsv: [], metadata: {},
+      eligibleSites: { influenza: new Set(), covid: new Set(), rsv: new Set() },
+    });
+    const weekRecord = weeks.get(week);
+    const previous = weekRecord.metadata[pathogen] || {};
+    const meta = rowMetadata(row, week);
+    const publicationDates = [...new Set([...(previous.publicationDates || []), meta.publicationDate].filter(Boolean))];
+    weekRecord.metadata[pathogen] = {
+      ...meta,
+      publicationDate: publicationDates.length === 1 ? publicationDates[0] : null,
+      publicationDates,
+      upstreamUpdatedAt: [previous.upstreamUpdatedAt, meta.upstreamUpdatedAt].filter(Boolean).sort().at(-1) || null,
+    };
+    // Identifiable sites are required to substantiate site coverage. Anonymous
+    // duplicate rows must not become three independently reporting sewersheds.
+    const site = pickField(row, f.site);
+    if (site == null || !Number.isFinite(wval)) continue;
+    weekRecord.eligibleSites[pathogen].add(String(site));
     const key = `${st.abbr}|${pathogen}|${site}`;
     if (!bySite.has(key)) bySite.set(key, { abbr: st.abbr, pathogen, reports: [] });
     const { reports } = bySite.get(key);
@@ -307,12 +371,9 @@ export function parseWastewaterRows(rows) {
   }
 
   // 2. Drop stale runs, then pool what is left by state, week and virus.
-  const byState = new Map();
   for (const { abbr, pathogen, reports } of bySite.values()) {
     for (const { week, wval } of withoutStaleRuns(sortByWeek(reports))) {
-      if (!byState.has(abbr)) byState.set(abbr, new Map());
       const weeks = byState.get(abbr);
-      if (!weeks.has(week)) weeks.set(week, { influenza: [], covid: [], rsv: [] });
       weeks.get(week)[pathogen].push(wval);
     }
   }
@@ -321,12 +382,30 @@ export function parseWastewaterRows(rows) {
   const stateValue = (vals) => (vals.length >= MIN_WASTEWATER_SITES ? round(median(vals)) : NaN);
   const out = new Map();
   for (const [abbr, weeks] of byState) {
-    const recs = [...weeks.entries()].map(([week, vals]) => ({
-      week,
-      influenza: stateValue(vals.influenza),
-      covid: stateValue(vals.covid),
-      rsv: stateValue(vals.rsv),
-    }));
+    const recs = [...weeks.entries()].map(([week, vals]) => {
+      const reportingMetadata = PATHOGENS.map((p) => vals.metadata[p]).filter(Boolean);
+      const publicationDates = [...new Set(reportingMetadata.flatMap((meta) => meta.publicationDates || [meta.publicationDate]).filter(Boolean))];
+      vals.metadata.combined = {
+        observationPeriod: { start: null, end: week, weekEnding: week },
+        publicationDate: publicationDates.length === 1 ? publicationDates[0] : null,
+        publicationDates,
+        upstreamUpdatedAt: reportingMetadata.map((meta) => meta.upstreamUpdatedAt).filter(Boolean).sort().at(-1) || null,
+      };
+      return {
+        week,
+        influenza: stateValue(vals.influenza),
+        covid: stateValue(vals.covid),
+        rsv: stateValue(vals.rsv),
+        metadata: vals.metadata,
+        coverage: Object.fromEntries(PATHOGENS.map((p) => [p, {
+          reportingSites: vals[p].length,
+          eligibleSites: vals.eligibleSites[p].size,
+          minimumSites: MIN_WASTEWATER_SITES,
+          excludedRepeatedSites: vals.eligibleSites[p].size - vals[p].length,
+          populationCoverage: null,
+        }])),
+      };
+    });
     out.set(abbr, sortByWeek(recs));
   }
   return out;
@@ -344,65 +423,126 @@ function withoutStaleRuns(reports) {
   return keep;
 }
 
-/** True when a signal bundle carries at least one real reading. */
+/** True when a signal bundle carries at least one finite, usable composite input. */
 export function hasSignalData(sig) {
-  return Boolean(
-    sig &&
-      ((sig.edCombinedSeries && sig.edCombinedSeries.length) ||
-        (sig.wastewaterSeries && sig.wastewaterSeries.length) ||
-        Number.isFinite(sig.ariLevel))
-  );
+  // Missing kind supports verified legacy live snapshots. An explicit unknown
+  // or sample binding cannot be promoted into usable live coverage.
+  if (sig?.provenance?.kind && sig.provenance.kind !== 'live') return false;
+  const usable = (key) => {
+    const metric = sig?.provenance?.metrics?.[key];
+    const metricWeek = metric?.observationPeriod?.weekEnding;
+    return !metric || ((!metric.kind || metric.kind === 'live') && metric.status === 'available' && metric.contributes !== false &&
+      (!metricWeek || !sig.weekEnding || metricWeek === sig.weekEnding));
+  };
+  const finiteSeries = (series) => Array.isArray(series) && series.some(Number.isFinite);
+  return Boolean(sig && (
+    (usable('edVisits') && finiteSeries(sig.edCombinedSeries)) ||
+    (usable('wastewater') && finiteSeries(sig.wastewaterSeries)) ||
+    (usable('ari') && Number.isFinite(sig.ariLevel))
+  ));
+}
+
+const latestUsableWeek = (rows, keys) => [...rows].reverse().find((r) => keys.some((key) => Number.isFinite(r[key])))?.week || '';
+const peakWastewater = (row) => {
+  const values = PATHOGENS.map((p) => row[p]).filter(Number.isFinite);
+  return values.length ? Math.max(...values) : null;
+};
+
+function metricProvenance(rows, key, { dataset, source = {}, referenceWeek, geography, now, coverage = null, readValue = (r) => r[key] }) {
+  const latest = rows.at(-1);
+  const weekEnding = latest?.week || null;
+  const value = latest ? readValue(latest) : null;
+  const observations = rows.map((r) => ({ weekEnding: r.week, value: Number.isFinite(readValue(r)) ? readValue(r) : null }));
+  const meta = latest?.metadata?.[key] || {};
+  const ageDays = observationAgeDays(weekEnding, now);
+  let status = Number.isFinite(value) ? 'available' : 'missing';
+  let reason = status === 'missing' ? 'no-usable-latest-observation' : null;
+  if (source.status === 'unavailable') { status = 'unavailable'; reason = source.reason || 'source-request-failed'; }
+  else if (status === 'available' && (ageDays > MAX_OBSERVATION_AGE_DAYS || ageDays < 0)) {
+    status = 'stale'; reason = ageDays < 0 ? 'future-observation-period' : 'observation-age';
+  }
+  const contributes = status === 'available' && weekEnding === referenceWeek;
+  if (status === 'available' && !contributes) reason = 'different-observation-period';
+  return {
+    status, contributes, reason,
+    source: dataset.label, datasetId: dataset.id,
+    measure: dataset === DATASETS.edVisits ? 'percentage of emergency-department visits' : dataset === DATASETS.wastewater ? 'wastewater viral activity level' : 'acute respiratory illness activity category',
+    geography,
+    observationPeriod: meta.observationPeriod || { start: null, end: weekEnding, weekEnding },
+    publicationDate: meta.publicationDate || null,
+    ...(meta.publicationDates ? { publicationDates: meta.publicationDates } : {}),
+    upstreamUpdatedAt: meta.upstreamUpdatedAt || null,
+    retrievedAt: source.retrievedAt || null,
+    requestRetrievedAt: source.requestRetrievedAt || null,
+    cacheStale: source.stale === true,
+    ageDays: Number.isFinite(ageDays) ? ageDays : null,
+    coverage: coverage || { reportedObservations: observations.filter((o) => o.value != null).length, populationCoverage: null },
+    observations,
+  };
+}
+
+function metricSeries(metric) {
+  return metric.contributes ? metric.observations.map((o) => o.value) : [];
 }
 
 /**
- * Assemble per-state signal bundles (the snapshot/model shape) from parsed
- * rows. Series keep the most recent LIVE_WEEKS weeks, oldest first.
- * @returns {{ signalsByAbbr: Map, weekEnding: string, statesWithData: number }}
+ * Assemble dated, state-scoped readings. A missing newest value never falls
+ * back to an older finite value, and metrics from different periods do not
+ * silently form a single latest-period index. Historical observations remain
+ * in provenance for inspection and date-aligned aggregate comparisons.
  */
-export function assembleLiveSignals({ ed = new Map(), ari = new Map(), ww = new Map() } = {}) {
+export function assembleLiveSignals({ ed = new Map(), ari = new Map(), ww = new Map(), sourceMetadata = {}, now = new Date() } = {}) {
   const signalsByAbbr = new Map();
   let latestWeek = '';
-  let statesWithData = 0;
-  const finite = (arr) => arr.filter(Number.isFinite);
-
   for (const st of states) {
-    const edRows = (ed.get(st.abbr) || []).slice(-LIVE_WEEKS);
-    const ariRows = ari.get(st.abbr) || [];
-    const wwRows = (ww.get(st.abbr) || []).slice(-LIVE_WEEKS);
-
-    const week = edRows.at(-1)?.week || ariRows.at(-1)?.week || wwRows.at(-1)?.week || '';
-    if (week > latestWeek) latestWeek = week;
-
+    const edRows = sortByWeek(ed.get(st.abbr) || []).slice(-LIVE_WEEKS);
+    const ariRows = sortByWeek(ari.get(st.abbr) || []).slice(-LIVE_WEEKS);
+    const wwRows = sortByWeek(ww.get(st.abbr) || []).slice(-LIVE_WEEKS);
+    const geography = { level: 'state', abbr: st.abbr, name: st.name };
+    const week = [latestUsableWeek(edRows, ['combined', ...PATHOGENS]), latestUsableWeek(ariRows, ['level']), latestUsableWeek(wwRows, PATHOGENS)].sort().at(-1) || '';
+    const latestReportingWeekEnding = [edRows.at(-1)?.week, ariRows.at(-1)?.week, wwRows.at(-1)?.week].filter(Boolean).sort().at(-1) || null;
+    const common = { referenceWeek: week, geography, now };
+    const edMetric = metricProvenance(edRows, 'combined', { ...common, dataset: DATASETS.edVisits, source: sourceMetadata.edVisits,
+      coverage: { reportingPathogens: PATHOGENS.filter((p) => Number.isFinite(edRows.at(-1)?.[p])), requiredPathogensForDerivedCombined: PATHOGENS, populationCoverage: null } });
+    const ariMetric = metricProvenance(ariRows, 'level', { ...common, dataset: DATASETS.ari, source: sourceMetadata.ari });
+    const wwMetric = metricProvenance(wwRows, 'combined', { ...common, dataset: DATASETS.wastewater, source: sourceMetadata.wastewater, readValue: peakWastewater,
+      coverage: { pathogens: wwRows.at(-1)?.coverage || null, minimumSitesPerPathogen: MIN_WASTEWATER_SITES, populationCoverage: null } });
+    const positivityMetric = { status: 'unavailable', contributes: false, reason: 'no-live-adapter', source: 'NREVSS laboratory test positivity', observationPeriod: { start: null, end: null, weekEnding: null }, publicationDate: null, retrievedAt: null, coverage: null, observations: [] };
+    const provenance = {
+      kind: 'live', geography,
+      observationPeriod: { start: null, end: week || null, weekEnding: week || null },
+      latestReportingWeekEnding,
+      metrics: { edVisits: edMetric, ari: ariMetric, wastewater: wwMetric, positivity: positivityMetric },
+    };
     const pathogens = {};
     for (const p of PATHOGENS) {
+      const edPathogen = metricProvenance(edRows, p, { ...common, dataset: DATASETS.edVisits, source: sourceMetadata.edVisits });
+      const wwPathogen = metricProvenance(wwRows, p, { ...common, dataset: DATASETS.wastewater, source: sourceMetadata.wastewater, coverage: wwRows.at(-1)?.coverage?.[p] });
       pathogens[p] = {
-        edPercentSeries: finite(edRows.map((r) => r[p])),
-        wastewaterSeries: finite(wwRows.map((r) => r[p])),
-        positivitySeries: [],
+        edPercentSeries: metricSeries(edPathogen), wastewaterSeries: metricSeries(wwPathogen), positivitySeries: [],
+        provenance: { kind: 'live', geography, observationPeriod: provenance.observationPeriod, metrics: { edVisits: edPathogen, wastewater: wwPathogen, positivity: positivityMetric } },
       };
     }
-
     const signals = {
-      ariLevel: ariRows.at(-1)?.level ?? null,
-      ariLabel: ariRows.at(-1)?.label ?? null,
-      edCombinedSeries: finite(edRows.map((r) => r.combined)),
-      // State wastewater signal = the weekly PEAK of the per-pathogen medians,
-      // so whichever virus is most active sets the composite reading.
-      wastewaterSeries: finite(
-        wwRows.map((r) => {
-          const vals = finite(PATHOGENS.map((p) => r[p]));
-          return vals.length ? Math.max(...vals) : NaN;
-        })
-      ),
+      ariLevel: ariMetric.contributes ? ariRows.at(-1).level : null,
+      ariLabel: ariMetric.contributes ? ariRows.at(-1).label : null,
+      edCombinedSeries: metricSeries(edMetric),
+      wastewaterSeries: metricSeries(wwMetric),
       positivityCombined: null,
       weekEnding: week,
+      provenance,
       pathogens,
     };
-    if (hasSignalData(signals)) statesWithData += 1;
+    if (hasSignalData(signals) && week > latestWeek) latestWeek = week;
     signalsByAbbr.set(st.abbr, signals);
   }
 
-  return { signalsByAbbr, weekEnding: latestWeek, statesWithData };
+  // Coverage belongs to the stated snapshot period, rather than the union of
+  // any historic reading ever seen or the number of jurisdiction object keys.
+  const usableAbbrs = [...signalsByAbbr].filter(([, sig]) => sig.weekEnding === latestWeek && hasSignalData(sig)).map(([abbr]) => abbr);
+  const statesWithData = usableAbbrs.length;
+  return { signalsByAbbr, weekEnding: latestWeek, statesWithData,
+    coverage: { geography: '50 states and District of Columbia', jurisdictions: states.length, usableJurisdictions: statesWithData, usableAbbrs, observationPeriod: { weekEnding: latestWeek || null } } };
 }
 
 // --- Fetch --------------------------------------------------------------- //
@@ -414,26 +554,32 @@ export function assembleLiveSignals({ ed = new Map(), ari = new Map(), ww = new 
  * valid ISO date — a response that is "successful" but empty must never be
  * labeled live. Returns { signalsByAbbr: Map, weekEnding, sources, statesWithData }.
  */
-export async function fetchLiveSignals({ timeoutMs = 12000 } = {}) {
+export async function fetchLiveSignals({ timeoutMs = 12000, now = new Date() } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   const signal = controller.signal;
   const query = (ds, limit) => socrataUrl(ds.id, { $limit: limit, $order: `${ds.fields.week[0]} DESC` });
 
-  const settled = await Promise.allSettled([
-    fetchJson(query(DATASETS.edVisits, 60000), { signal }).then(parseEdRows),
-    fetchJson(query(DATASETS.ari, 20000), { signal }).then(parseAriRows),
-    fetchJson(query(DATASETS.wastewater, 60000), { signal }).then(parseWastewaterRows),
-  ]);
+  const entries = [['edVisits', 60000, parseEdRows], ['ari', 20000, parseAriRows], ['wastewater', 60000, parseWastewaterRows]];
+  const settled = await Promise.allSettled(entries.map(async ([key, limit, parse]) => {
+    const result = await fetchJson(query(DATASETS[key], limit), { signal, now });
+    return { ...result, parsed: parse(result.rows) };
+  }));
   clearTimeout(timer);
 
-  const [ed, ari, ww] = settled.map((r) => (r.status === 'fulfilled' ? r.value : new Map()));
+  const [ed, ari, ww] = settled.map((r) => (r.status === 'fulfilled' ? r.value.parsed : new Map()));
   if (settled.every((r) => r.status === 'rejected')) {
     throw new Error(`All CDC live sources failed to load (${settled.map((r) => r.reason?.message || r.reason).join('; ')})`);
   }
 
-  const assembled = assembleLiveSignals({ ed, ari, ww });
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(assembled.weekEnding)) {
+  const sourceMetadata = Object.fromEntries(entries.map(([key], i) => {
+    const result = settled[i];
+    return [key, result.status === 'fulfilled'
+      ? { status: 'available', retrievedAt: result.value.retrievedAt, requestRetrievedAt: result.value.requestRetrievedAt, stale: result.value.stale }
+      : { status: 'unavailable', reason: result.reason?.message || String(result.reason), retrievedAt: null, requestRetrievedAt: now.toISOString() }];
+  }));
+  const assembled = assembleLiveSignals({ ed, ari, ww, sourceMetadata, now });
+  if (!Number.isFinite(observationAgeDays(assembled.weekEnding, now))) {
     throw new Error('Live CDC feed returned no valid week-ending date');
   }
   if (assembled.statesWithData < MIN_LIVE_STATES) {
@@ -442,13 +588,31 @@ export async function fetchLiveSignals({ timeoutMs = 12000 } = {}) {
     );
   }
 
-  // A source is only credited when it actually contributed rows.
-  const sources = [];
-  if (ed.size) sources.push(DATASETS.edVisits.label);
-  if (ari.size) sources.push(DATASETS.ari.label);
-  if (ww.size) sources.push(DATASETS.wastewater.label);
-
-  return { ...assembled, sources };
+  // HTTP success or a parsed row is not a contribution. The current-period
+  // reading must contain a finite, eligible value used by at least one state.
+  const sourceAvailability = entries.map(([key]) => {
+    const stateReadings = [...assembled.signalsByAbbr].map(([abbr, sig]) => ({ abbr, metric: sig.provenance.metrics[key] }));
+    const readings = stateReadings.map(({ metric }) => metric);
+    const contributing = stateReadings.filter(({ metric }) => metric.contributes);
+    return {
+      key, source: DATASETS[key].label, datasetId: DATASETS[key].id,
+      ...sourceMetadata[key],
+      cacheStale: sourceMetadata[key].stale === true,
+      status: sourceMetadata[key].status === 'unavailable' ? 'unavailable' : contributing.length ? 'available' : 'missing',
+      contributingJurisdictions: contributing.length,
+      contributingAbbrs: contributing.map(({ abbr }) => abbr),
+      contributingObservationPeriods: [...new Set(contributing.map(({ metric }) => metric.observationPeriod.weekEnding).filter(Boolean))].sort(),
+      // All reported periods include dated gaps and readings excluded from the
+      // selected index; the contributing periods above describe its inputs.
+      observationPeriods: [...new Set(readings.map((metric) => metric.observationPeriod.weekEnding).filter(Boolean))].sort(),
+      publicationDates: [...new Set(readings.flatMap((metric) => metric.publicationDates || [metric.publicationDate]).filter(Boolean))].sort(),
+      upstreamUpdatedAt: readings.map((metric) => metric.upstreamUpdatedAt).filter(Boolean).sort().at(-1) || null,
+    };
+  });
+  const sources = sourceAvailability.filter((source) => source.contributingJurisdictions > 0).map((source) => source.source);
+  return { ...assembled, sources, sourceAvailability,
+    retrievedAt: sourceAvailability.filter((source) => source.contributingJurisdictions > 0).map((source) => source.retrievedAt).filter(Boolean).sort().at(-1) || null,
+    requestRetrievedAt: now.toISOString() };
 }
 
 /**

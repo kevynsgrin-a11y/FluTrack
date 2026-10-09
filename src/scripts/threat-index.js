@@ -138,32 +138,36 @@ export function scoreToLevel(score) {
 
 /** Human-readable label for a 0–4 level. */
 export function levelLabel(level) {
+  if (!Number.isFinite(level)) return 'Unknown';
   return SEVERITY_LABELS[clamp(Math.round(level), 0, 4)] ?? 'Unknown';
 }
 
 /**
  * Compute a directional trend from a chronological numeric series (oldest →
  * newest). Compares the latest value against the mean of the prior up-to-3
- * points. Returns direction and a rounded percent change.
+ * points. The rounded/clamped changePct preserves the model's direction
+ * contract; actualChangePct records the uncapped comparison for presentation.
  */
 export function computeTrend(series) {
   const clean = (series || []).filter((n) => Number.isFinite(n));
-  if (clean.length < 2) return { direction: 'flat', changePct: 0, label: 'Not enough data' };
+  if (clean.length < 2 || !Number.isFinite(series?.at?.(-1))) return { direction: 'unknown', changePct: null, label: 'Not enough data', priorCount: 0 };
   const latest = clean[clean.length - 1];
   const prior = clean.slice(Math.max(0, clean.length - 4), clean.length - 1);
   const base = prior.reduce((a, b) => a + b, 0) / prior.length;
+  const evidence = { priorCount: prior.length, priorMean: base, latestValue: latest, zeroBaseline: base === 0 };
   if (base === 0) {
     const dir = latest > 0 ? 'up' : 'flat';
-    return { direction: dir, changePct: latest > 0 ? 100 : 0, label: trendLabel(dir) };
+    return { direction: dir, changePct: latest > 0 ? 100 : 0, label: trendLabel(dir), ...evidence, actualChangePct: null, changePctCapped: false };
   }
-  // Clamp the reported change: a tiny off-season base (e.g. 0.05% → 0.3%) would
-  // otherwise yield an absurd, alarming figure. Direction is still detected; the
-  // headline number stays within a believable band.
-  const changePct = clamp(Math.round(((latest - base) / base) * 100), -200, 200);
+  // Keep the existing internal cap and direction thresholds, while retaining
+  // the actual evidence so the public text never calls a capped value exact.
+  const actualChangePct = ((latest - base) / base) * 100;
+  const rounded = Math.round(actualChangePct);
+  const changePct = clamp(rounded, -200, 200);
   let direction = 'flat';
   if (changePct >= 8) direction = 'up';
   else if (changePct <= -8) direction = 'down';
-  return { direction, changePct, label: trendLabel(direction) };
+  return { direction, changePct, label: trendLabel(direction), ...evidence, actualChangePct, changePctCapped: rounded !== changePct };
 }
 
 function trendLabel(direction) {
@@ -178,10 +182,7 @@ function trendLabel(direction) {
  */
 export function scorePathogen(pathogen, p = {}) {
   const parts = [];
-  const latest = (arr) => {
-    const c = (arr || []).filter((n) => Number.isFinite(n));
-    return c.length ? c[c.length - 1] : null;
-  };
+  const latest = lastFinite;
 
   const ed = latest(p.edPercentSeries);
   if (ed != null && BREAKPOINTS.edVisits[pathogen]) {
@@ -224,9 +225,9 @@ export function scorePathogen(pathogen, p = {}) {
 
 function pick(...arrays) {
   for (const a of arrays) {
-    if (a && a.filter((n) => Number.isFinite(n)).length >= 2) return a;
+    if (Number.isFinite(a?.at?.(-1)) && a.filter((n) => Number.isFinite(n)).length >= 2) return a;
   }
-  return arrays.find((a) => a && a.length) || [];
+  return arrays.find((a) => Number.isFinite(a?.at?.(-1))) || [];
 }
 
 /**
@@ -293,6 +294,6 @@ export function buildThreatModel(signals = {}) {
 }
 
 function lastFinite(arr) {
-  const c = (arr || []).filter((n) => Number.isFinite(n));
-  return c.length ? c[c.length - 1] : null;
+  const value = arr?.at?.(-1);
+  return Number.isFinite(value) ? value : null;
 }

@@ -65,11 +65,12 @@ export function datasetLd() {
   return {
     '@context': 'https://schema.org',
     '@type': 'Dataset',
-    name: 'FluTrack Respiratory Threat Level',
+    name: 'FluTrack Combined Respiratory Index',
     description:
-      'A unified, state-level respiratory threat level for influenza, RSV and ' +
-      'COVID-19, derived from public-domain CDC surveillance systems (NSSP, ' +
-      'NWSS, NREVSS).',
+      'A combined state-level respiratory index for influenza, RSV and COVID-19. ' +
+      'Implemented live inputs are NSSP emergency-department visits and acute ' +
+      'respiratory illness activity, and NWSS wastewater. NREVSS positivity ' +
+      'is unavailable live and is modeled only in labeled illustrative samples.',
     creator: { '@type': 'Organization', name: site.name },
     url: `${site.origin}/methodology/`,
     isBasedOn: 'https://data.cdc.gov/',
@@ -94,8 +95,8 @@ export function webApplicationLd() {
     isAccessibleForFree: true,
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     description:
-      "See this week's CDC respiratory data for your U.S. county — hospital admissions, " +
-      'wastewater and the state level — and add an anonymous symptom report to a privacy-safe community count.',
+      'See dated CDC respiratory observations for your area: state hospital admissions, ' +
+      'county wastewater where covered, and the state respiratory index, alongside a separate anonymous community count.',
     publisher: { '@type': 'Organization', name: site.name, url: site.origin },
     isBasedOn: 'https://data.cdc.gov/',
   };
@@ -159,14 +160,18 @@ export function statePageLd(state, weekEnding, page = {}) {
   return {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: page.name || `Flu in ${state.name}: current activity level`,
+    name: page.name || `Combined respiratory index in ${state.name}: dated surveillance`,
     url: `${site.origin}${page.path || `/state/${state.slug}/`}`,
     description:
       page.description ||
-      `Current flu (influenza) activity level and weekly trend for ${state.name}, plus RSV and COVID-19, from public CDC surveillance data. Updated weekly.`,
+      `A combined respiratory index for flu, RSV and COVID-19 in ${state.name}, with dated public CDC surveillance observations, trends and coverage limits.`,
     isPartOf: { '@type': 'WebSite', name: site.name, url: site.origin },
     about: ['Influenza', 'Respiratory syncytial virus', 'COVID-19'],
-    ...(weekEnding ? { datePublished: weekEnding, dateModified: weekEnding } : {}),
+    // An observation period is not the date this page or its source was
+    // published. A retrieval timestamp likewise cannot establish publication.
+    ...(weekEnding && page.provenance?.live && page.available !== false ? { temporalCoverage: weekEnding } : {}),
+    ...(page.datePublished ? { datePublished: page.datePublished } : {}),
+    ...(page.dateModified ? { dateModified: page.dateModified } : {}),
   };
 }
 

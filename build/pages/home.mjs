@@ -1,6 +1,7 @@
 import { escapeHtml } from '../../src/scripts/util.js';
 import { threatCard, pathogenTiles, signalRows, provenanceStrip } from '../../src/scripts/render.js';
 import { usMap } from '../../src/scripts/map-render.js';
+import { presentationModel } from '../../src/scripts/reading-provenance.js';
 import { icon } from '../../src/scripts/icons.js';
 import { signupBand, trendDisclaimer, adSlot } from '../lib/partials.mjs';
 import { websiteLd, organizationLd, datasetLd, webApplicationLd } from '../lib/seo.mjs';
@@ -8,26 +9,27 @@ import { reportSection } from '../lib/report-section.mjs';
 
 export default function home(ctx) {
   const { site, states, national, weekEnding, provenance } = ctx;
-  const def = national;
+  const def = { ...national, model: presentationModel(national.model, { ...provenance, weekEnding }) };
   const stateOptions = states.map((s) => `<option value="${s.abbr}">${escapeHtml(s.name)}</option>`).join('');
   const mapEntries = states.map((s) => {
-    const m = ctx.models.get(s.abbr).model;
+    const m = presentationModel(ctx.models.get(s.abbr).model, { ...provenance, weekEnding });
     return { abbr: s.abbr, name: s.name, slug: s.slug, level: m.level, label: m.label };
   });
 
   const body = `
   <section class="hero">
-    <div class="hero__bg" aria-hidden="true" data-sev="${def.model.level ?? 0}"></div>
+    <div class="hero__bg" aria-hidden="true"${Number.isFinite(def.model.level) ? ` data-sev="${def.model.level}"` : ''}></div>
     <div class="container">
       <div class="hero__grid">
         <div class="home-readout" data-region="threat-card" data-week="${escapeHtml(weekEnding)}">
-          ${threatCard(def.state, def.model, { weekEnding, provenance })}
+          ${threatCard(def.state, def.model, { weekEnding, provenance, signals: def.signals })}
         </div>
         <div class="hero__lead">
           <p class="hero__label">Flu <span aria-hidden="true">/</span> RSV <span aria-hidden="true">/</span> COVID-19 <span aria-hidden="true">/</span> United States</p>
           <h1 class="hero__question">How bad is it near you, in plain English?</h1>
-          <p class="lede hero__lede">FluTrack turns the CDC's own surveillance data into one simple answer for your state — a combined flu, RSV and COVID-19 threat level, and which way it's heading.</p>
-          <div class="prov" style="margin-top: var(--space-lg)">${provenanceStrip(provenance)}</div>
+          <p class="lede hero__lede">FluTrack summarizes reported flu, RSV and COVID-19 activity in a combined respiratory index for your state. Each reading describes its observation period, with a trend when enough comparable data exists.</p>
+          <div class="prov" data-region="provenance-strip" style="margin-top: var(--space-lg)">${provenanceStrip(def.model.provenance || provenance, { model: def.model })}</div>
+          <p class="text-secondary" style="margin-top: var(--space-sm)">The U.S. display is an unweighted rollup of available state signals, not an independently published CDC national estimate. State and local trends can differ.</p>
         </div>
       </div>
       <form class="picker hero__cta" id="state-picker" role="search" aria-label="Choose your state">
@@ -61,10 +63,10 @@ export default function home(ctx) {
         <h2>By virus, for <span data-region="state-name">the U.S.</span></h2>
         <p class="text-secondary">The same picture, split into flu, RSV and COVID-19.</p>
       </div>
-      <div data-region="pathogen-tiles">${pathogenTiles(def.model)}</div>
+      <div data-region="pathogen-tiles">${pathogenTiles(def.model, { weekEnding, provenance })}</div>
       <div style="margin-top: var(--space-2xl)">
         <h2 style="font-size: var(--step-2)">Underlying signals</h2>
-        <div data-region="signal-rows" style="margin-top: var(--space-md)">${signalRows(def.signals)}</div>
+        <div data-region="signal-rows" style="margin-top: var(--space-md)">${signalRows(def.signals, { model: def.model, weekEnding, provenance })}</div>
       </div>
     </div>
   </section>
@@ -91,15 +93,15 @@ export default function home(ctx) {
       <div class="editorial-columns">
         <div>
           <h3>We read the CDC</h3>
-          <p>Every week we pull the CDC's public-domain surveillance feeds — emergency-department visits, lab positivity and wastewater viral activity.</p>
+          <p>The implemented CDC feeds are emergency-department visits, the Acute Respiratory Illness activity level and wastewater viral activity. Laboratory positivity is unavailable in live readings; illustrative samples can include it.</p>
         </div>
         <div>
           <h3>We combine the signals</h3>
-          <p>Those signals are blended into one transparent 0–4 threat level for your state, with a rising/falling trend. <a href="/methodology/">See the method</a></p>
+          <p>Available signals are blended into a transparent 0–4 combined respiratory index. The trend compares the latest observation with the mean of up to three prior observations. <a href="/methodology/">See the method</a></p>
         </div>
         <div>
           <h3>You get a plain answer</h3>
-          <p>No epidemiology degree required — just how active respiratory illness is where you live, and where it's headed.</p>
+          <p>State surveillance provides context, with its dates and coverage limits. Missing observations do not mean no illness, and sample data cannot describe current conditions.</p>
         </div>
       </div>
     </div>
@@ -108,13 +110,13 @@ export default function home(ctx) {
   <section class="section below-fold" style="background: var(--bg-elevated); border-block: 1px solid var(--border)">
     <div class="container">
       <div class="section-head section-rule">
-        <h2>Built on public-domain CDC data</h2>
-        <p class="text-secondary">Only U.S. Government public-domain sources — no restrictively licensed feeds.</p>
+        <h2>Implemented sources and unavailable feeds</h2>
+        <p class="text-secondary">A source contributes only where usable observations are available. The underlying signals above list the inputs for the selected reading.</p>
       </div>
       <div class="source-ledger">
         ${sourceCard('Emergency department visits', 'NSSP', 'The share of ER visits for respiratory illness (flu, RSV, COVID-19), by state.')}
         ${sourceCard('Wastewater viral activity', 'NWSS', "The CDC's wastewater index — an early indicator that can lead clinical cases by days.")}
-        ${sourceCard('Laboratory test positivity', 'NREVSS', 'The percentage of respiratory tests coming back positive.')}
+        ${sourceCard('Laboratory test positivity — unavailable live', 'NREVSS', 'No live adapter is implemented. Positivity appears only in clearly labeled illustrative sample inputs.')}
         ${sourceCard('Acute Respiratory Illness level', 'NSSP ARI', "The CDC's categorical activity level, from Very Low to Very High.")}
       </div>
       <div class="callout" style="margin-top: var(--space-xl)">
@@ -132,7 +134,7 @@ export default function home(ctx) {
       <div class="state-index">
         ${ctx.states.slice(0, 12).map((s) => ctx.render.stateChip(s, ctx.models.get(s.abbr).model)).join('')}
       </div>
-      <div style="margin-top: var(--space-xl)"><a class="btn btn--secondary" href="/states/">See the US flu map</a></div>
+      <div style="margin-top: var(--space-xl)"><a class="btn btn--secondary" href="/states/">See the respiratory activity map</a></div>
     </div>
   </section>
 

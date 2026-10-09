@@ -49,7 +49,7 @@ export function signupBand({ compact = false } = {}) {
 }
 
 export function trendDisclaimer() {
-  return `<div class="callout callout--warn" role="note"><p class="callout__title">${icon('clock')} Trends, not real-time counts</p><p>${escapeHtml(disclaimers.trendNotLive)} ${escapeHtml(disclaimers.short)}</p></div>`;
+  return `<div class="callout callout--warn" role="note"><p class="callout__title">${icon('clock')} Dated observations, not real-time counts</p><p>${escapeHtml(disclaimers.trendNotLive)} The trend compares the latest observation with the mean of up to three prior observations of the same measurement. A build or retrieval date does not establish health conditions on that day. Missing data does not mean no illness. ${escapeHtml(disclaimers.short)}</p></div>`;
 }
 
 export function breadcrumbs(crumbs) {
@@ -117,9 +117,9 @@ export const contentRevised = Object.freeze({
   '/changelog/': '2026-10-09',
   '/consent/': '2026-09-26',
   '/consumer-health-data-privacy/': '2026-10-09',
-  '/editorial-policy/': '2026-10-08',
-  '/faq/': '2026-09-21',
-  '/medical-disclaimer/': '2026-09-21',
+  '/editorial-policy/': '2026-10-09',
+  '/faq/': '2026-10-09',
+  '/medical-disclaimer/': '2026-10-09',
   '/methodology/': '2026-10-09',
   '/privacy/': '2026-10-09',
   '/terms/': '2026-09-21',
@@ -128,7 +128,7 @@ export const contentRevised = Object.freeze({
   '/alerts/': '2026-09-21',
   '/contact/': '2026-09-21',
   '/data-sources/': '2026-10-09',
-  '/season/2026-27/': '2026-09-29',
+  '/season/2026-27/': '2026-10-09',
 });
 
 /** ISO revision date for a content page, for sitemap <lastmod>. */

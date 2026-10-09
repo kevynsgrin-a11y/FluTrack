@@ -11,6 +11,10 @@ import { createHash } from 'node:crypto';
 import { gzipSync } from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve, join } from 'node:path';
+import { computeModel } from '../src/scripts/model.js';
+import { readingStatus } from '../src/scripts/reading-provenance.js';
+import { hasSignalData, MIN_LIVE_STATES } from '../src/scripts/data-sources.js';
+import { states } from '../src/scripts/states-data.js';
 
 const dist = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'dist');
 const errors = [];
@@ -81,7 +85,9 @@ if (existsSync(join(dist, 'data/snapshot.json'))) {
   const live = snap.kind === 'live';
   if (!['live', 'sample'].includes(snap.kind)) errors.push(`data/snapshot.json: unknown kind "${snap.kind}"`);
   if (live && !/^\d{4}-\d{2}-\d{2}$/.test(snap.weekEnding || '')) errors.push('data/snapshot.json: live snapshot without a valid weekEnding');
-  if (live && !(snap.statesWithData >= 25)) errors.push(`data/snapshot.json: live snapshot covers only ${snap.statesWithData} states`);
+  const usableCoverage = states.filter((state) => snap.states?.[state.abbr]?.weekEnding === snap.weekEnding && hasSignalData(snap.states[state.abbr])).length;
+  if (live && usableCoverage < MIN_LIVE_STATES) errors.push(`data/snapshot.json: live snapshot has usable observations for only ${usableCoverage} jurisdictions`);
+  if (live && snap.statesWithData !== usableCoverage) errors.push(`data/snapshot.json: declared coverage ${snap.statesWithData} disagrees with ${usableCoverage} usable jurisdiction readings`);
   const LIVE_BADGE = 'class="badge badge--live"';
   const SAMPLE_BADGE = 'class="badge badge--cached"';
   let pages = 0;
@@ -95,8 +101,12 @@ if (existsSync(join(dist, 'data/snapshot.json'))) {
     // Plain-English takeaways are claims about a real state: live data only.
     if (rel !== '/index.html') {
       const hasTakeaways = html.includes('<section class="takeaways"');
-      if (live && !hasTakeaways) errors.push(`${rel}: live state report is missing its plain-English takeaways`);
-      if (!live && hasTakeaways) errors.push(`${rel}: plain-English takeaways rendered from sample data`);
+      const state = states.find((s) => rel === `/state/${s.slug}/index.html`);
+      const provenance = { kind: snap.kind, live, weekEnding: snap.weekEnding };
+      const model = computeModel(snap.states?.[state?.abbr] || {}, provenance);
+      const hasUsableLiveReading = readingStatus(model, provenance) === 'live';
+      if (hasUsableLiveReading && !hasTakeaways) errors.push(`${rel}: usable live reading is missing its plain-English takeaways`);
+      if (!hasUsableLiveReading && hasTakeaways) errors.push(`${rel}: takeaways rendered from sample, stale or missing observations`);
     }
   }
   const ogDir = join(dist, 'assets', 'og');

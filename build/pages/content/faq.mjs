@@ -97,14 +97,14 @@ function faqGroups(disclaimers) {
       intro: 'What the rating means, how fresh it is, and how to follow a state.',
       items: [
         {
-          q: 'What is the respiratory threat level?',
-          a: `<p>It is a single, plain-English rating — from <strong>Minimal</strong> to <strong>Very High</strong> — that summarizes how much combined flu, RSV and COVID-19 activity the CDC's surveillance data shows in a given state, paired with a trend of whether that activity is rising, falling or holding steady. It is a descriptive summary of recently reported data — not a forecast, not a case count, and not a measure of any one person's risk. Our <a href="/methodology/">methodology</a> documents exactly how it is built.</p>`,
+          q: 'What is the combined respiratory index?',
+          a: `<p>It is a rating — from <strong>Minimal</strong> to <strong>Very High</strong> — of available flu, RSV and COVID-19 surveillance inputs for a state. It summarizes the dated observations, with a trend only when enough comparable history exists. It is not an influenza-only level, an infection count, a forecast or a personal risk score. Sample data is illustrative, and missing or stale observations cannot establish current conditions. Our <a href="/methodology/">methodology</a> documents the calculation.</p>`,
         },
         {
           q: 'How current is the data?',
-          a: `<p>FluTrack refreshes weekly. CDC surveillance systems publish on a weekly cadence, typically on Fridays, and each refresh reflects the most recent reporting week available. ${escapeHtml(
+          a: `<p>The index sources generally publish weekly, with source-specific schedules and reporting delays. ${escapeHtml(
             disclaimers.trendNotLive
-          )} Because reporting is collected and revised over time, the newest figures describe recent weeks rather than the current day.</p>`,
+          )} The observation period is separate from publication and retrieval dates: fetching September observations in October does not establish October conditions. The newest figures can be revised, and an older observation may still be the latest scheduled release.</p>`,
         },
         {
           q: 'Why does the data lag one to two weeks?',
@@ -114,7 +114,7 @@ function faqGroups(disclaimers) {
         },
         {
           q: 'How is the threat level calculated?',
-          a: `<p>Four public-domain CDC signals — wastewater viral activity, emergency-department visits, an acute-respiratory-illness activity label, and laboratory test positivity — are each scored from 0 to 100, blended by fixed weights into one composite score, and mapped to one of five levels. A separate rule compares the latest week against the prior few to set the trend. Every weight, threshold and cut point is published on our <a href="/methodology/">methodology</a> page, so the calculation can be checked rather than taken on faith.</p>`,
+          a: `<p>The model scores available wastewater viral activity, emergency-department visits and the Acute Respiratory Illness activity label from 0 to 100, blends them with fixed weights and maps the result to five levels. Laboratory positivity has a model weight but no live adapter; it appears only in illustrative samples. The trend compares the latest observation with the mean of up to three prior observations, not an ordinary week-over-week change. With insufficient history the trend is unknown. See our <a href="/methodology/">methodology</a> for each weight and threshold.</p>`,
         },
         {
           q: 'How do surge alerts work?',
@@ -129,7 +129,7 @@ function faqGroups(disclaimers) {
       items: [
         {
           q: 'Where does the data come from?',
-          a: `<p>Entirely from the CDC's own public-domain surveillance systems: NSSP for emergency-department visits and the acute-respiratory-illness activity level, NWSS for wastewater viral activity, and NREVSS for laboratory test positivity. All of it is downloadable by anyone from <a href="https://data.cdc.gov/" rel="noopener">data.cdc.gov</a>. Our <a href="/data-sources/">data sources</a> page documents each feed, and our <a href="/methodology/">methodology</a> explains how they are combined.</p>`,
+          a: `<p>The implemented live index feeds are NSSP emergency-department visits and the Acute Respiratory Illness activity level, and NWSS wastewater viral activity, from <a href="https://data.cdc.gov/" rel="noopener">data.cdc.gov</a> through the existing ingestion service. Only usable observations contribute to a reading. NREVSS laboratory positivity is unavailable live; sample inputs are labeled as illustrative. Hospital admissions in the area card come from NHSN and are a separate measure, outside the index. Our <a href="/data-sources/">data sources</a> page documents each feed.</p>`,
         },
         {
           q: "Why don't you show exact case counts?",
@@ -139,11 +139,15 @@ function faqGroups(disclaimers) {
         },
         {
           q: 'What is wastewater surveillance, and why does it matter?',
-          a: `<p>Communities shed traces of respiratory viruses into their sewage, and the CDC's National Wastewater Surveillance System (NWSS) measures those concentrations to produce a normalized viral-activity level. It carries weight because it does not depend on who chooses to get tested, and it can move ahead of clinical signals by several days — making it one of the earliest reads on where activity is heading. For that reason FluTrack weights it most heavily of the four signals; the exact weight is on our <a href="/methodology/">methodology</a> page.</p>`,
+          a: `<p>The CDC's National Wastewater Surveillance System (NWSS) measures viral material in wastewater to produce a normalized activity index. It describes participating sewersheds, not infection counts, test positivity, ED visits or hospital admissions. Coverage differs across places and viruses; a local wastewater increase cannot establish a statewide or national trend. FluTrack's wastewater weight is an editorial choice documented in our <a href="/methodology/">methodology</a>.</p>`,
+        },
+        {
+          q: 'Does missing data mean there is no illness?',
+          a: `<p>No. Surveillance gaps describe missing coverage, not the absence of illness. Missing values are not zeros, an unavailable pathogen is not rated low, and insufficient history is not holding steady. A state or metro reading cannot substitute for independently measured city conditions, and a national trend cannot substitute for the selected state.</p>`,
         },
         {
           q: 'Why did you exclude some wastewater data?',
-          a: `<p>Some widely cited wastewater networks — WastewaterSCAN, also referenced as SCAN or Verily — publish under a <strong>CC BY-NC 4.0</strong> license, which permits non-commercial use only. FluTrack is supported by advertising and affiliate links, which makes it a commercial use, so incorporating that data would breach the license terms. FluTrack therefore ingests only the CDC's own public-domain NWSS product and filters the non-commercial networks out in code. Our <a href="/data-sources/">data sources</a> page explains the exclusion in full.</p>`,
+          a: `<p>WastewaterSCAN / SCAN data is licensed <strong>CC BY-NC 4.0</strong>, which permits non-commercial use only; FluTrack excludes it because the project is designed for commercial use. The existing conservative provenance filter also excludes Verily-marked rows. A provider name does not establish a dataset's license: the CDC's September 28, 2026 Verily testing-contract award is distinct from the WastewaterSCAN license and does not automatically identify its data as WastewaterSCAN data. Our <a href="/data-sources/">data sources</a> page explains the filter and its coverage limits.</p>`,
         },
         {
           q: 'Can I use FluTrack data?',

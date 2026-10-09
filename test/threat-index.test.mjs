@@ -41,6 +41,8 @@ test('scoreToLevel respects the composite cut points', () => {
 test('levelLabel returns the right words', () => {
   assert.equal(levelLabel(0), 'Minimal');
   assert.equal(levelLabel(4), 'Very High');
+  assert.equal(levelLabel(null), 'Unknown');
+  assert.equal(levelLabel(undefined), 'Unknown');
 });
 
 test('labelToLevel is tolerant of casing and synonyms', () => {
@@ -66,7 +68,29 @@ test('computeTrend detects rising, falling, and flat', () => {
   assert.equal(computeTrend([1, 1, 1, 2]).direction, 'up');
   assert.equal(computeTrend([4, 4, 4, 2]).direction, 'down');
   assert.equal(computeTrend([2, 2, 2, 2]).direction, 'flat');
-  assert.equal(computeTrend([1]).direction, 'flat'); // insufficient data
+  assert.equal(computeTrend([1]).direction, 'unknown');
+  assert.equal(computeTrend([1]).changePct, null);
+});
+
+test('computeTrend compares against up to three prior observations, preserving the ±8% thresholds', () => {
+  const trend = computeTrend([99, 1, 1, 10, 10]);
+  assert.equal(trend.direction, 'up');
+  assert.equal(trend.changePct, 150, 'latest equals previous point but exceeds the prior-three mean');
+  assert.equal(trend.priorCount, 3);
+  assert.equal(computeTrend([100, 107]).direction, 'flat');
+  assert.equal(computeTrend([100, 108]).direction, 'up');
+  assert.equal(computeTrend([100, 93]).direction, 'flat');
+  assert.equal(computeTrend([100, 92]).direction, 'down');
+});
+
+test('a missing latest observation does not fall back to an older trend or level', () => {
+  const trend = computeTrend([1, 2, null]);
+  assert.equal(trend.direction, 'unknown');
+  assert.equal(trend.changePct, null);
+  const model = buildThreatModel({ edCombinedSeries: [2, 3, null], pathogens: { influenza: { edPercentSeries: [1, 2, null] } } });
+  assert.equal(model.level, null);
+  assert.equal(model.pathogens.influenza.level, null);
+  assert.equal(model.pathogens.influenza.trend.direction, 'unknown');
 });
 
 test('computeTrend clamps absurd percentages from a tiny base', () => {
@@ -79,7 +103,27 @@ test('computeTrend clamps absurd percentages from a tiny base', () => {
 test('computeTrend handles an exactly-zero prior base', () => {
   const t = computeTrend([0, 0, 0, 1]);
   assert.equal(t.direction, 'up');
-  assert.ok(Number.isFinite(t.changePct));
+  assert.equal(t.changePct, 100, 'preserve the internal direction contract');
+  assert.equal(t.actualChangePct, null, 'relative growth from zero is undefined');
+  assert.equal(t.zeroBaseline, true);
+  assert.equal(t.priorMean, 0);
+  assert.equal(t.latestValue, 1);
+  assert.equal(t.changePctCapped, false);
+  assert.equal(computeTrend([0, 0]).actualChangePct, null);
+  assert.equal(computeTrend([0, 0]).direction, 'flat');
+});
+
+test('capped model percentages retain the actual comparison and original scoring boundaries', () => {
+  const t = computeTrend([0, 0, 0.1, 0.2]);
+  assert.equal(t.changePct, 200);
+  assert.equal(t.direction, 'up');
+  assert.equal(t.changePctCapped, true);
+  assert.ok(Math.abs(t.actualChangePct - 500) < 1e-9);
+  assert.equal(t.priorMean, 0.1 / 3);
+  assert.equal(t.latestValue, 0.2);
+  assert.equal(computeTrend([1, 3]).changePctCapped, false, 'an exact 200% comparison is not capped');
+  assert.equal(computeTrend([100, 107]).direction, 'flat');
+  assert.equal(computeTrend([100, 108]).direction, 'up');
 });
 
 test('scorePathogen blends signals and yields a level', () => {

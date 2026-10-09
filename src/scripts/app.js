@@ -16,18 +16,20 @@
 // mismatch the static markup.
 // ===========================================================================
 
-import { loadSnapshot, fetchLiveSignals, hasSignalData, shouldRefreshLive } from './data-sources.js';
+import { loadSnapshot, fetchLiveSignals, shouldRefreshLive } from './data-sources.js';
 import { computeModel } from './model.js';
 import { nationalSignals } from './aggregate.js';
-import { threatCard, pathogenTiles, signalRows, levelToken, trendChip } from './render.js';
+import { threatCard, pathogenTiles, signalRows, levelToken, trendChip, provenanceStrip, stateChip } from './render.js';
 import { takeawaysBlock } from './takeaways.js';
+import { weekInBriefContent, stateIntro, stateFaqs, stateDescription, sourceEvidence, stateReadingSummary } from './state-narrative.js';
+import { MEASUREMENT_NAMES, TREND_COMPARISON, observationWeek, presentationModel, readingStatus, resolveProvenance, trendChangeText } from './reading-provenance.js';
 import { states, stateByAbbr } from './states-data.js';
-import { formatDate, formatChange } from './util.js';
+import { escapeHtml, formatDate } from './util.js';
 
 const SELECT_KEY = 'flutrack-state';
 const US = { abbr: 'US', name: 'United States', slug: '', isNational: true };
 
-const cardRegion = document.querySelector('[data-region="threat-card"]');
+const cardRegion = typeof document === 'undefined' ? null : document.querySelector('[data-region="threat-card"]');
 if (cardRegion) {
   boot().catch((err) => console.warn('[FluTrack] init failed', err));
 }
@@ -61,7 +63,6 @@ async function boot() {
     // Never step backwards: a lagging cache must not replace a newer pre-render.
     if (store.provenance.live && live.weekEnding < store.weekEnding) return;
     ingestLive(store, live);
-    store.provenance = { live: true, sources: live.sources };
     render(store, selection);
     announceLive(live);
   } catch (e) {
@@ -69,25 +70,38 @@ async function boot() {
   }
 }
 
-function ingestSnapshot(store, snap) {
+export function ingestSnapshot(store, snap) {
   store.weekEnding = snap.weekEnding;
-  store.provenance = snap.kind === 'live' ? { live: true, sources: snap.sources || [] } : { live: false };
-  for (const [abbr, sig] of Object.entries(snap.states || {})) {
-    store.signals.set(abbr, sig);
+  store.provenance = snapshotProvenance(snap);
+  for (const st of states) {
+    store.signals.set(st.abbr, snap.states?.[st.abbr] || {});
   }
-  store.signals.set('US', nationalSignals([...store.signals.values()]));
+  store.signals.set('US', nationalSignals(states.map((st) => store.signals.get(st.abbr)), store.provenance));
 }
 
-function ingestLive(store, live) {
-  // Over SAMPLE data every state is replaced — one with no live readings shows
-  // "No data" rather than keeping a sample figure under a "Live" badge. Over a
-  // live pre-render, a state the refresh lacks keeps its build-time CDC data.
-  const replaceAll = !store.provenance.live;
+export function ingestLive(store, live) {
+  // Each state's own period and availability travel with its readings. An
+  // absent state cannot retain a sample or older level under the new bundle's
+  // provenance, and a state never borrows the national reading.
   store.weekEnding = live.weekEnding || store.weekEnding;
-  for (const [abbr, sig] of live.signalsByAbbr) {
-    if (replaceAll || hasSignalData(sig)) store.signals.set(abbr, sig);
+  store.provenance = snapshotProvenance({ ...live, kind: 'live' });
+  for (const st of states) {
+    store.signals.set(st.abbr, live.signalsByAbbr.get(st.abbr) || {});
   }
-  store.signals.set('US', nationalSignals(states.map((s) => store.signals.get(s.abbr)).filter(Boolean)));
+  store.signals.set('US', nationalSignals(states.map((s) => store.signals.get(s.abbr)).filter(Boolean), store.provenance));
+}
+
+function snapshotProvenance(snapshot) {
+  return {
+    ...(snapshot.provenance || {}),
+    kind: snapshot.kind || 'unknown',
+    live: snapshot.kind === 'live',
+    sources: snapshot.sources || [],
+    weekEnding: snapshot.weekEnding,
+    generatedAt: snapshot.generatedAt,
+    retrievedAt: snapshot.retrievedAt,
+    coverage: snapshot.coverage,
+  };
 }
 
 function resolveState(abbr) {
@@ -95,22 +109,39 @@ function resolveState(abbr) {
   return stateByAbbr(abbr) || US;
 }
 
-function render(store, abbr) {
+export function render(store, abbr) {
   const st = resolveState(abbr);
-  const signals = store.signals.get(st.abbr) || store.signals.get('US');
-  if (!signals) return;
-  const model = computeModel(signals);
-  const opts = { weekEnding: store.weekEnding, provenance: store.provenance };
+  const signals = store.signals.get(st.abbr) || {};
+  const model = presentationModel(computeModel(signals, store.provenance), store.provenance);
+  const provenance = resolveProvenance(model.provenance, store.provenance);
+  const weekEnding = observationWeek(model, store.provenance);
+  const opts = { weekEnding, provenance, model };
 
   setRegion('threat-card', threatCard(st, model, opts));
-  setRegion('pathogen-tiles', pathogenTiles(model));
-  setRegion('signal-rows', signalRows(signals));
+  setRegion('pathogen-tiles', pathogenTiles(model, opts));
+  setRegion('signal-rows', signalRows(signals, opts));
+  setRegion('provenance-strip', provenanceStrip(provenance, { model }));
   // State pages: plain-English takeaways, only ever written from live data.
   if (!st.isNational && document.querySelector('[data-region="takeaways"]')) {
     const peers = states
       .filter((s) => s.hhsRegion === st.hhsRegion && s.abbr !== st.abbr)
-      .map((s) => ({ name: s.name, level: computeModel(store.signals.get(s.abbr) || {}).level }));
-    setRegion('takeaways', takeawaysBlock(st, model, signals, { live: store.provenance.live, peers, weekEnding: store.weekEnding }));
+      .map((s) => {
+        const m = computeModel(store.signals.get(s.abbr) || {}, store.provenance);
+        return { name: s.name, level: m.level, provenance: m.provenance, weekEnding: observationWeek(m, store.provenance) };
+      });
+    setRegion('takeaways', takeawaysBlock(st, model, signals, { live: provenance.live, provenance, peers, weekEnding }));
+  }
+  // Dynamic copy, snippets and FAQ data use the same evidence-qualified text
+  // as the static state page, so a live refresh cannot leave sample claims.
+  if (!st.isNational && document.querySelector('[data-region="state-intro"]')) {
+    const neighbors = states.filter((s) => s.hhsRegion === st.hhsRegion && s.abbr !== st.abbr).slice(0, 6);
+    setText('state-intro', stateIntro(st, neighbors, model, signals, provenance));
+    setRegion('neighbor-states', neighbors.map((s) => stateChip(s, computeModel(store.signals.get(s.abbr) || {}, store.provenance))).join(''));
+    setRegion('week-in-brief', weekInBriefContent(st, model, weekEnding, provenance));
+    setRegion('source-evidence', sourceEvidence(signals, model, provenance));
+    const faqs = stateFaqs(st, model, signals, weekEnding, provenance);
+    setRegion('state-faqs', faqs.map((f) => `<details class="faq-item"><summary>${escapeHtml(f.q)}</summary><div class="faq-item__body">${f.a}</div></details>`).join(''));
+    refreshStateMetadata(stateDescription(st, model, signals, weekEnding, provenance), faqs, weekEnding, { ...provenance, available: Number.isFinite(model.level) });
   }
 
   // Home-only regions.
@@ -120,21 +151,43 @@ function render(store, abbr) {
 
   // State-page "at a glance" regions.
   setRegion('glance-level', `<strong>${escapeText(model.label)}</strong>`);
-  setRegion(
-    'glance-trend',
-    model.trend.direction !== 'flat'
-      ? `${escapeText(model.trend.label)} ${escapeText(formatChange(model.trend.changePct))}`
-      : escapeText(model.trend.label)
-  );
-  setText('glance-week', formatDate(store.weekEnding));
+  setRegion('glance-trend', trendChip(model.trend, opts));
+  setText('glance-week', formatDate(weekEnding));
   setRegion('sticky-level', levelToken(model.level, model.label));
-  setRegion('sticky-trend', trendChip(model.trend));
+  setRegion('sticky-trend', trendChip(model.trend, opts));
   const stickyLevel = document.querySelector('[data-region="sticky-level"]');
-  if (stickyLevel && Number.isFinite(model.level)) stickyLevel.setAttribute('data-sev', String(model.level));
+  if (stickyLevel) {
+    if (Number.isFinite(model.level)) stickyLevel.setAttribute('data-sev', String(model.level));
+    else stickyLevel.removeAttribute('data-sev');
+  }
   const heroBg = document.querySelector('.hero__bg');
-  if (heroBg && Number.isFinite(model.level)) heroBg.setAttribute('data-sev', String(model.level));
+  if (heroBg) {
+    if (Number.isFinite(model.level)) heroBg.setAttribute('data-sev', String(model.level));
+    else heroBg.removeAttribute('data-sev');
+  }
   repaintMap(store, st.abbr);
   return { st, model };
+}
+
+function refreshStateMetadata(description, faqs, weekEnding, provenance) {
+  for (const selector of ['meta[name="description"]', 'meta[property="og:description"]', 'meta[name="twitter:description"]']) {
+    document.querySelector(selector)?.setAttribute('content', description);
+  }
+  document.querySelectorAll('script[type="application/ld+json"]').forEach((script) => {
+    let data;
+    try { data = JSON.parse(script.textContent); } catch { return; }
+    if (data['@type'] === 'FAQPage') {
+      data.mainEntity = faqs.map((f) => ({
+        '@type': 'Question', name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim() },
+      }));
+    } else if (data['@type'] === 'WebPage') {
+      data.description = description;
+      if (provenance.live && provenance.available && weekEnding) data.temporalCoverage = weekEnding;
+      else delete data.temporalCoverage;
+    } else return;
+    script.textContent = JSON.stringify(data);
+  });
 }
 
 // Recolor the US tile-grid map from the store (live data upgrade) and highlight
@@ -146,7 +199,7 @@ function repaintMap(store, selectedAbbr) {
     const abbr = tile.getAttribute('data-abbr');
     const signals = store.signals.get(abbr);
     if (signals) {
-      const m = computeModel(signals);
+      const m = presentationModel(computeModel(signals, store.provenance), store.provenance);
       if (Number.isFinite(m.level)) tile.setAttribute('data-sev', String(m.level));
       else tile.removeAttribute('data-sev');
       const title = tile.querySelector('title');
@@ -166,7 +219,19 @@ function repaintMap(store, selectedAbbr) {
 // Announce a picker-driven change to assistive tech via the polite live region.
 function announceSelection(st, model) {
   const region = document.getElementById('live-status');
-  if (region) region.textContent = `${st.isNational ? 'United States' : st.name}: ${model.label}, ${model.trend.label}.`;
+  if (region) region.textContent = selectionAnnouncement(st, model);
+}
+
+/** The selected reading must carry the same evidence limits when spoken. */
+export function selectionAnnouncement(state, model) {
+  const summary = stateReadingSummary(state, model, observationWeek(model), model.provenance);
+  if (readingStatus(model) !== 'live') return summary;
+  const national = state.isNational ? ' This is an unweighted aggregate of states with usable observations, not a population-weighted national CDC estimate.' : '';
+  const trend = model.trend;
+  const trendText = ['up', 'down', 'flat'].includes(trend?.direction) && Number.isFinite(trend.changePct)
+    ? ` The trend in ${MEASUREMENT_NAMES[trend.source] || 'the selected surveillance measurement'} was ${trend.label.toLowerCase()}${trend.zeroBaseline || trend.changePctCapped ? ` (${trendChangeText(trend)})` : ''}: ${TREND_COMPARISON}.`
+    : ' There are not enough comparable observations to determine a trend.';
+  return `${summary}${national}${trendText}`;
 }
 
 function setRegion(name, html) {
@@ -272,5 +337,5 @@ async function locate(select, apply, btn) {
 
 function announceLive(live) {
   const region = document.getElementById('live-status');
-  if (region) region.textContent = `Live CDC data loaded (week ending ${formatDate(live.weekEnding)}).`;
+  if (region) region.textContent = `CDC observations loaded (week ending ${formatDate(live.weekEnding)}); the retrieval date does not describe today's health conditions.`;
 }

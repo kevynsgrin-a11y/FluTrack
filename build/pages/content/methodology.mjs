@@ -25,9 +25,9 @@ export default function methodology(ctx) {
   const content = `
     ${breadcrumbs(crumbs)}
 
-    <p>The <strong>respiratory threat level</strong> is a single, plain-English answer to one
-    question: how much flu, RSV and COVID-19 activity is the CDC's own surveillance data showing in
-    a given state right now, and which way is it moving? Underneath that one word sits a small,
+    <p>The <strong>combined respiratory index</strong> summarizes reported flu, RSV and COVID-19
+    activity in a state for the available observation periods. It describes those observations,
+    rather than current-day conditions. Underneath that reading sits a small,
     deliberately boring pipeline. This page documents every constant in it, so you can check our
     work rather than take it on faith.</p>
 
@@ -38,12 +38,16 @@ export default function methodology(ctx) {
     ranges in the underlying CDC products. They are <em>not</em> CDC-defined cut points, and no U.S.
     government agency sets, reviews, or endorses them.</p>
 
+    <p>Source coverage also limits interpretation. CDC's <a href="https://www.cdc.gov/respiratory-viruses/data/activity-levels.html" rel="noopener">October 2, 2026 activity-level notes</a> document Iowa's NSSP feed termination on May 6 and a historical-baseline substitution for Missouri's 2026&ndash;27 categories. CDC's <a href="https://www.cdc.gov/wastewater/respiratory-viruses/state.html?cove-tab=1" rel="noopener">October 2 wastewater notice</a> describes a September 28 contract award and warns of a brief gap affecting about 200 sites. These are source-specific limitations, not a reason to infer no illness or change the index's thresholds. See <a href="/data-sources/">data sources</a> for the affected dates and scope.</p>
+
     <div class="callout" role="note">
       <p class="callout__title">${icon('pulse')} The short version</p>
-      <p>Four CDC signals are each scored 0&ndash;100, blended by a fixed weighting into one composite
+      <p>The model supports four input signals; up to three have implemented live CDC adapters.
+      Available inputs are scored 0&ndash;100, blended by a fixed weighting into one composite
       score, and that score is mapped to one of five levels &mdash; <strong>Minimal, Low, Moderate,
-      High, Very High</strong>. A separate rule compares the most recent week against the prior few to
-      label the trend <strong>Rising</strong>, <strong>Falling</strong>, or <strong>Holding steady</strong>.</p>
+      High, Very High</strong>. A separate rule compares the latest observation with the mean of up to
+      three prior observations to label a supported trend <strong>Rising</strong>,
+      <strong>Falling</strong>, or <strong>Holding steady</strong>. Insufficient history is unknown.</p>
     </div>
 
     <h2>The five levels</h2>
@@ -56,17 +60,22 @@ export default function methodology(ctx) {
           <tr><th scope="col">Level</th><th scope="col">Label</th><th scope="col">Composite score (0&ndash;100)</th><th scope="col">In plain English</th></tr>
         </thead>
         <tbody>
-          <tr><td>0</td><td><strong>Minimal</strong></td><td>0 &ndash; &lt;&nbsp;20</td><td>Little measurable respiratory activity in the data.</td></tr>
-          <tr><td>1</td><td><strong>Low</strong></td><td>20 &ndash; &lt;&nbsp;40</td><td>Present but limited; typical of the shoulders of a season.</td></tr>
-          <tr><td>2</td><td><strong>Moderate</strong></td><td>40 &ndash; &lt;&nbsp;60</td><td>Clearly elevated activity across the signals.</td></tr>
-          <tr><td>3</td><td><strong>High</strong></td><td>60 &ndash; &lt;&nbsp;80</td><td>Widespread activity, in the range of a busy respiratory week.</td></tr>
-          <tr><td>4</td><td><strong>Very High</strong></td><td>80 &ndash; 100</td><td>Among the most intense activity the signals register.</td></tr>
+          <tr><td>0</td><td><strong>Minimal</strong></td><td>0 &ndash; &lt;&nbsp;20</td><td>Lowest index band among the available inputs.</td></tr>
+          <tr><td>1</td><td><strong>Low</strong></td><td>20 &ndash; &lt;&nbsp;40</td><td>Second index band among the available inputs.</td></tr>
+          <tr><td>2</td><td><strong>Moderate</strong></td><td>40 &ndash; &lt;&nbsp;60</td><td>Middle index band among the available inputs.</td></tr>
+          <tr><td>3</td><td><strong>High</strong></td><td>60 &ndash; &lt;&nbsp;80</td><td>Fourth index band among the available inputs.</td></tr>
+          <tr><td>4</td><td><strong>Very High</strong></td><td>80 &ndash; 100</td><td>Highest index band among the available inputs.</td></tr>
         </tbody>
       </table>
     </div>
 
-    <h2>The four signals and their weights</h2>
-    <p>FluTrack draws on four independent, public-domain CDC surveillance signals. Each is converted
+    <p>A low index is not evidence that illness is absent, and no data is never assigned a low level.
+    Coverage and reporting gaps limit every band.</p>
+
+    <h2>The supported signals and their weights</h2>
+    <p>The model supports four signals, with live adapters for NSSP ED visits, NSSP ARI and NWSS wastewater.
+    NREVSS laboratory positivity is unavailable live and is modeled only in illustrative samples.
+    Each usable input is converted
     to its own 0&ndash;100 sub-score (see below), and the composite is a weighted average of whichever
     signals are present. The weights are fixed:</p>
     <div class="table-wrap">
@@ -75,10 +84,10 @@ export default function methodology(ctx) {
           <tr><th scope="col">Signal</th><th scope="col">CDC source</th><th scope="col">Weight</th><th scope="col">Why this weight</th></tr>
         </thead>
         <tbody>
-          <tr><td>Wastewater viral activity (WVAL)</td><td>NWSS</td><td><strong>0.30</strong></td><td>Weighted highest: viral shedding measured in wastewater typically leads clinical reporting by roughly 5&ndash;7 days, so it is the earliest read on where activity is heading.</td></tr>
-          <tr><td>Acute Respiratory Illness level</td><td>NSSP ARI</td><td><strong>0.25</strong></td><td>A broad categorical read on how busy respiratory care is, translated from the CDC's own activity label.</td></tr>
-          <tr><td>Emergency-department visits</td><td>NSSP</td><td><strong>0.25</strong></td><td>A direct, hard measure of illness severe enough to send people to the ER.</td></tr>
-          <tr><td>Laboratory test positivity</td><td>NREVSS</td><td><strong>0.20</strong></td><td>Weighted lowest: positivity reflects testing behavior &mdash; who chooses to get tested &mdash; as much as underlying prevalence, so it is the noisiest of the four.</td></tr>
+          <tr><td>Wastewater viral activity (WVAL)</td><td>NWSS &mdash; live adapter implemented</td><td><strong>0.30</strong></td><td>Community wastewater measurement from participating sampling sites; the weight is an editorial choice, not a guarantee that this signal leads others.</td></tr>
+          <tr><td>Acute Respiratory Illness level</td><td>NSSP ARI &mdash; live adapter implemented</td><td><strong>0.25</strong></td><td>A broad categorical respiratory-illness activity label. It is not specific to influenza, RSV or COVID-19 alone.</td></tr>
+          <tr><td>Emergency-department visits</td><td>NSSP &mdash; live adapter implemented</td><td><strong>0.25</strong></td><td>Share of reported ED visits associated with each virus; a care-setting measure rather than an infection count.</td></tr>
+          <tr><td>Laboratory test positivity</td><td>NREVSS &mdash; unavailable live; sample only</td><td><strong>0.20</strong></td><td>Percentage positive among tested specimens, with testing and surveillance coverage limits. This weight is unused in live readings.</td></tr>
         </tbody>
       </table>
     </div>
@@ -102,18 +111,19 @@ export default function methodology(ctx) {
     <ul>
       <li><strong>Emergency-department visits.</strong> NSSP publishes one share per virus &mdash; influenza,
       COVID-19 and RSV. The <em>combined</em> figure is the sum of the three shares for the week, computed
-      only when all three were reported.</li>
+      only when all three were reported. It is a sum of visit percentages, not a count of distinct infections.</li>
       <li><strong>Wastewater.</strong> NWSS publishes a viral activity level for each sampling site. After
       sites from non-commercially licensed networks are excluded, a state's weekly reading for each virus
       is the <strong>median</strong> across its reporting sites, so a single small sewershed cannot set the
       whole state's value. Two safeguards back that up: a reading needs <strong>at least three</strong>
       eligible sites that week, and a site that repeats the identical value above the 1.0 floor for three
-      or more reports in a row is treated as carrying a stale value forward and left out. The composite
+      or more reports in a row is treated as a possible carried-forward value and left out. The composite
       wastewater signal is the highest of the three virus medians. A state without enough eligible sites
       that week has no wastewater signal, and its level rests on the others.</li>
       <li><strong>Laboratory test positivity.</strong> There is no live adapter for NREVSS yet, so a live
       reading rests on up to three signals; only the illustrative sample models positivity.</li>
-      <li><strong>Trends.</strong> The twelve most recent reported weeks drive each trend and sparkline.</li>
+      <li><strong>Trends and sparklines.</strong> The bundle keeps up to twelve reported weeks for the
+      sparkline. Each trend uses only the latest comparable observation and up to three prior observations.</li>
     </ul>
 
     <h2>From a raw reading to a 0&ndash;100 sub-score</h2>
@@ -188,8 +198,10 @@ export default function methodology(ctx) {
       </table>
     </div>
     <p class="muted">At the state-composite level, combined ED visits, the wastewater index and the ARI
-    label feed the headline number; a state's mean test positivity is scored against the influenza
-    positivity band as a general proxy. The per-pathogen bands above drive the by-virus breakdown.</p>
+    label feed a live headline reading where available. Only in illustrative samples, a state's mean
+    test positivity is scored against the influenza positivity band as a proxy. The per-pathogen bands
+    above drive the by-virus breakdown. Hospital admissions are a separate measure in the area card;
+    they do not enter this index.</p>
 
     <h2>A worked example</h2>
     <p>Suppose a state reports three signals for the latest week: a wastewater index of 6.0, combined
@@ -224,25 +236,35 @@ export default function methodology(ctx) {
     <h2>How the trend is derived</h2>
     <p>The trend answers "which way is this moving?" without pretending to more precision than weekly,
     lagged data can support. FluTrack takes the relevant chronological series (oldest to newest),
-    compares the <strong>most recent week</strong> against the <strong>mean of the prior up-to-three
-    weeks</strong>, and expresses the difference as a percent change:</p>
+    compares the <strong>latest observation</strong> against the <strong>mean of up to three prior
+    observations</strong>, and expresses the difference as a percent change. This is not an ordinary
+    week-over-week comparison. The headline trend uses combined ED visits when there is enough history,
+    otherwise wastewater; each by-virus trend uses that virus's ED visits, otherwise wastewater, otherwise
+    sample positivity. It is a trend in the selected input series, not a trend calculated from composite scores:</p>
     <ul>
       <li>A change of <strong>+8% or more</strong> is labeled <strong>Rising</strong>.</li>
       <li>A change of <strong>&minus;8% or more</strong> (a fall of at least 8%) is labeled <strong>Falling</strong>.</li>
-      <li>Anything in between is <strong>Holding steady</strong>.</li>
+      <li>A supported change in between is <strong>Holding steady</strong>.</li>
     </ul>
-    <p>The &plusmn;8% band is deliberately wide enough to ignore ordinary week-to-week wobble while still
-    catching a genuine turn. When fewer than two data points are available, the trend is reported as
-    "Not enough data" rather than guessed. As a worked case, an ED-visit series of 3.6, 3.8, 3.9, 4.2
-    compares the latest 4.2 against the prior three-week mean of about 3.77, a change of roughly +12% &mdash;
+    <p>The &plusmn;8% classification band leaves smaller relative changes in the Holding steady category.
+    When fewer than two usable observations are available, the trend is reported as
+    "Not enough data" rather than guessed. Missing observations are not zeros. The model retains its
+    &plusmn;200% cap, and a comparison beyond the cap is labeled “+200% or more (display capped)”
+    for an increase, rather than presented as exactly +200%. Relative-growth rankings use the actual,
+    uncapped comparison. A zero prior mean has no defined percentage change: a positive latest value
+    is described as an increase from zero, and two zero readings as unchanged from zero. Zero-baseline
+    series are excluded from relative-growth rankings. These presentation rules preserve the model's
+    existing direction thresholds and internal zero-baseline rule. As a worked case, an ED-visit series of 3.6, 3.8, 3.9, 4.2
+    compares the latest 4.2 against the prior three-observation mean of about 3.77, a change of roughly +12% &mdash;
     labeled <strong>Rising</strong>.</p>
 
     <h2>Timing: a trend, never a live count</h2>
-    <p>${escapeHtml(disclaimers.trendNotLive)} CDC surveillance systems publish on a weekly cadence
-    (typically Fridays), and a given week's figures generally reflect illness from one to two weeks
-    earlier as reports are collected and revised. FluTrack therefore leads with the direction of travel
-    rather than any single day's number, and figures for the most recent week or two can still move as
-    late data arrives. See <a href="/data-sources/">data sources</a> for the specific CDC systems behind
+    <p>${escapeHtml(disclaimers.trendNotLive)} Publication schedules and reporting delays vary by source.
+    Each observation period, source publication date when supplied, retrieval timestamp and coverage
+    describe different things. Fetching a September observation in October does not establish October
+    conditions; a feed can be retrieved successfully before its next scheduled release. Sample inputs,
+    missing observations, insufficient history and stale readings cannot support a current-week conclusion.
+    See <a href="/data-sources/">data sources</a> for the specific CDC systems behind
     each signal.</p>
 
     <h2 id="check-your-area">Check your area: county data and community reports</h2>
@@ -279,8 +301,8 @@ export default function methodology(ctx) {
     eyebrow: 'Methodology',
     title: 'How the respiratory threat level is computed',
     lede:
-      'A full, transparent account of how FluTrack turns four public-domain CDC surveillance ' +
-      'signals into one respiratory threat level for your state — every weight, threshold and ' +
+      'A full, transparent account of how FluTrack turns available public-domain CDC surveillance ' +
+      'inputs into one combined respiratory index for your state — every weight, threshold and ' +
       'trend rule, exactly as the code applies them.',
   })}
 
@@ -306,7 +328,7 @@ export default function methodology(ctx) {
   return {
     title: 'Methodology: how the threat level is computed',
     description:
-      'How FluTrack turns four CDC surveillance signals into one respiratory threat level — a 0–4 scale from a 0–100 composite score — with transparent weights and thresholds.',
+      'How available CDC surveillance inputs form a combined respiratory index, with source coverage, sample-only positivity, thresholds and the prior-observation trend rule.',
     path: '/methodology/',
     lastmod: revisedOn('/methodology/'),
     body,
@@ -328,13 +350,13 @@ function techArticleLd(site) {
     '@type': 'TechArticle',
     headline: 'How the FluTrack respiratory threat level is computed',
     description:
-      'The complete methodology behind FluTrack\'s unified respiratory threat level: the four ' +
-      'CDC surveillance signals, their weights, the per-signal breakpoints, the 0–100 composite ' +
+      'The methodology behind FluTrack\'s combined respiratory index: three implemented live ' +
+      'CDC inputs and sample-only positivity, their weights, per-signal breakpoints, the 0–100 composite ' +
       'score, and the trend rule.',
     url: `${site.origin}/methodology/`,
     inLanguage: 'en-US',
     datePublished: '2026-07-01',
-    dateModified: '2026-10-08',
+    dateModified: revisedOn('/methodology/'),
     author: { '@type': 'Organization', name: site.name },
     publisher: { '@type': 'Organization', name: site.name, url: site.origin },
     isBasedOn: 'https://data.cdc.gov/',
@@ -367,17 +389,17 @@ function methodologyFaqs(disclaimers) {
     },
     {
       q: 'Why is wastewater weighted more heavily than lab positivity?',
-      a: `<p>Wastewater viral activity typically leads clinical reporting by roughly 5–7 days, making it the earliest reliable read on where activity is heading, so it carries the highest weight (0.30). Test positivity is weighted lowest (0.20) because it reflects testing behavior — who decides to get tested — as much as underlying prevalence.</p>`,
+      a: `<p>These fixed weights are editorial modeling choices: wastewater carries 0.30 and positivity 0.20. They do not establish that wastewater always leads clinical signals. No live positivity adapter is implemented; positivity is modeled only in labeled samples and its weight is excluded from live readings.</p>`,
     },
     {
       q: 'What happens when a signal is missing for my state?',
-      a: `<p>The composite is a weighted average over whichever signals are actually reported. If a signal is unavailable, its weight is dropped and the remaining weights are renormalized, so the score always reflects a proper average of the data on hand. FluTrack also records which signals contributed.</p>`,
+      a: `<p>The composite is a weighted average over whichever signals are usable. If a signal is unavailable, its weight is dropped and the remaining weights are renormalized. If none is usable there is no level; no data does not mean no illness. FluTrack lists the actual contributors, and insufficient trend history is unknown rather than holding steady.</p>`,
     },
     {
       q: 'How current is the data behind the threat level?',
       a: `<p>${escapeHtml(
         disclaimers.trendNotLive
-      )} Surveillance updates weekly, and each week's figures generally reflect illness from one to two weeks earlier. That is why FluTrack leads with the trend rather than a single day's count. See our <a href="/data-sources/">data sources</a> for the specific CDC systems.</p>`,
+      )} Source publication schedules vary. Observation periods, source publication dates and retrieval timestamps are separate; a fresh retrieval does not make an older observation current. The trend compares the latest observation with the mean of up to three prior observations. See our <a href="/data-sources/">data sources</a> for the specific CDC systems.</p>`,
     },
     {
       q: 'Is the respiratory threat level a prediction or medical advice?',

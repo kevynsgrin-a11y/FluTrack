@@ -11,20 +11,22 @@ import { adSlot } from '../build/lib/partials.mjs';
 import { layout } from '../build/lib/layout.mjs';
 import statesPage from '../build/pages/content/states.mjs';
 import { disclaimers } from '../build/lib/site.mjs';
+import { stateOgSvg } from '../build/lib/assets.mjs';
 
 const snap = generateSnapshot();
 
 /** The context the build hands each page template. */
 function makeCtx(overrides = {}) {
+  const provenance = { kind: snap.kind, live: snap.kind === 'live', weekEnding: snap.weekEnding };
   const models = new Map();
   for (const st of states) {
     const data = snap.states[st.abbr];
-    models.set(st.abbr, { model: computeModel(data), signals: nationalSignals([data]) });
+    models.set(st.abbr, { model: computeModel(data, provenance), signals: data });
   }
   return {
     site,
     weekEnding: snap.weeks.at(-1),
-    provenance: snap.provenance,
+    provenance,
     states,
     models,
     render: { stateChip },
@@ -34,6 +36,29 @@ function makeCtx(overrides = {}) {
 
 const ctx = makeCtx();
 const find = (abbr) => states.find((s) => s.abbr === abbr);
+
+test('unverified state evidence stays unknown across static sticky labels, metadata, FAQ and share image', () => {
+  const state = find('CA');
+  const provenance = { kind: 'live', live: true, weekEnding: '2026-09-26', now: '2026-10-09T12:00:00Z' };
+  const local = makeCtx({ provenance, weekEnding: provenance.weekEnding });
+  const signals = { weekEnding: provenance.weekEnding, edCombinedSeries: [1, 2], pathogens: {}, provenance: { kind: 'unknown' } };
+  const model = computeModel(signals, provenance);
+  local.models.set(state.abbr, { model, signals });
+  const page = statePage(local, state);
+  const sticky = page.body.match(/<span class="status-strip__level"[\s\S]*?<\/span>\s*<span data-region="sticky-trend"/)?.[0];
+  assert.ok(sticky);
+  assert.doesNotMatch(sticky, /data-sev=|Minimal|Low|Rising/);
+  assert.match(page.description, /not verified/);
+  const web = page.jsonld.find((item) => item['@type'] === 'WebPage');
+  const faq = page.jsonld.find((item) => item['@type'] === 'FAQPage');
+  assert.equal(web.description, page.description);
+  assert.equal(faq.mainEntity[0].acceptedAnswer.text, page.description);
+  assert.equal(web.temporalCoverage, undefined);
+  const svg = stateOgSvg(site, state, model, provenance);
+  assert.match(svg, /Unverified provenance/);
+  assert.match(svg, /Unknown/);
+  assert.doesNotMatch(svg, />Low<|>Minimal<|Rising vs/);
+});
 
 // --- the route contract ---------------------------------------------------- //
 
@@ -46,7 +71,7 @@ test('a state report is emitted at the documented URL contract', () => {
   // og-default.png. This used to assert '/assets/og/california.svg', which no
   // social or chat consumer renders in a link preview, so every share was blank.
   assert.equal(page.ogImage, undefined);
-  assert.match(page.title, /^Flu in California: current activity level & weekly trend$/);
+  assert.match(page.title, /^Respiratory observations in California: flu, RSV & COVID-19$/);
   assert.ok(page.description.includes('California'));
   assert.ok(page.scripts.includes('/assets/js/app.js'));
 });
@@ -71,7 +96,7 @@ test('the all-states map labels its own figures as sample data', () => {
   const page = statesPage(makeCtx({ disclaimers }));
   assert.match(page.body, /class="badge badge--cached"/, 'a provenance badge is rendered');
   assert.match(page.body, /Sample data/);
-  assert.match(page.body, /as of [A-Z][a-z]+ \d+, \d{4}/, 'the data date is stated');
+  assert.match(page.body, /observation period ending [A-Z][a-z]+ \d+, \d{4}/, 'the data date is stated');
 });
 
 test('every jurisdiction renders a state report at its own slug', () => {
@@ -113,7 +138,7 @@ test('the state name is escaped wherever it is interpolated', () => {
 test('the masthead names the state and the illness it covers', () => {
   const state = find('TX');
   const { body } = statePage(ctx, state);
-  assert.ok(body.includes('<h1>Flu in Texas: current activity level &amp; weekly trend</h1>'));
+  assert.ok(body.includes('<h1>Respiratory observations in Texas: flu, RSV &amp; COVID-19</h1>'));
   assert.ok(body.includes('data-state="TX"'), 'the threat card is tagged for hydration');
   assert.ok(body.includes(`data-week="${snap.weeks.at(-1)}"`), 'the report week is exposed to the client');
 });
@@ -186,7 +211,7 @@ test('a state with no same-region neighbors still renders', () => {
   const local = makeCtx();
   local.models.set('ZZ', { model: computeModel(snap.states.CA), signals: nationalSignals([snap.states.CA]) });
   const { body } = statePage(local, isolated);
-  assert.ok(body.includes('<h1>Flu in Testland: current activity level &amp; weekly trend</h1>'));
+  assert.ok(body.includes('<h1>Respiratory observations in Testland: flu, RSV &amp; COVID-19</h1>'));
   assert.ok(!body.includes('undefined'));
   assert.ok(!body.includes('You can also compare nearby states'), 'no dangling comparison sentence');
 });
@@ -202,7 +227,8 @@ test('a state with no model data renders a no-data page rather than throwing', (
   });
   const { body } = statePage(local, state);
   assert.equal((body.match(/<h1[\s>]/g) || []).length, 1);
-  assert.ok(body.includes('data-sev="0"'), 'the severity attribute falls back to 0');
+  const sticky = body.slice(body.indexOf('data-sticky-status'), body.indexOf('state-masthead'));
+  assert.ok(!sticky.includes('data-sev='), 'missing evidence must not receive the Minimal severity color');
   assert.ok(body.includes('No data'));
   assert.ok(!body.includes('undefined'));
 });

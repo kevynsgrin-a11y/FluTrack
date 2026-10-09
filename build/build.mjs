@@ -66,15 +66,25 @@ function loadSampleSnapshot() {
 
 // --- Context -------------------------------------------------------------- //
 function buildContext(snapshot) {
+  const provenance = {
+    kind: snapshot.kind || 'unknown',
+    live: snapshot.kind === 'live',
+    weekEnding: snapshot.weekEnding,
+    observationPeriod: { weekEnding: snapshot.weekEnding },
+    generatedAt: snapshot.generatedAt,
+    retrievedAt: snapshot.retrievedAt || null,
+    sources: snapshot.sources || [],
+    coverage: snapshot.coverage || null,
+  };
   const models = new Map();
   for (const st of states) {
     const signals = snapshot.states[st.abbr];
-    models.set(st.abbr, { model: computeModel(signals), signals });
+    models.set(st.abbr, { model: computeModel(signals, provenance), signals });
   }
-  const natSignals = nationalSignals(states.map((s) => snapshot.states[s.abbr]));
+  const natSignals = nationalSignals(states.map((s) => snapshot.states[s.abbr]), provenance);
   const national = {
     state: { name: 'United States', abbr: 'US', slug: '' },
-    model: computeModel(natSignals),
+    model: computeModel(natSignals, provenance),
     signals: natSignals,
   };
   return {
@@ -83,7 +93,7 @@ function buildContext(snapshot) {
     states,
     snapshot,
     weekEnding: snapshot.weekEnding,
-    provenance: snapshot.kind === 'live' ? { live: true, sources: snapshot.sources } : { live: false },
+    provenance,
     models,
     national,
     render: { threatCard, pathogenTiles, stateChip, signalRows },

@@ -77,10 +77,11 @@
 .breadcrumbs a { color: var(--text-secondary); }
 .breadcrumbs [aria-current='page'] { color: var(--text); }
 .state-layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(17rem, 0.72fr); gap: var(--space-2xl); align-items: start; }
+.state-layout > * { min-width: 0; }
 .state-rail { border-left: 1px solid var(--border-strong); padding-left: var(--space-xl); }
 .state-rail .card + .card { margin-top: var(--space-xl); }
 .comparison-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr)); border-top: 2px solid var(--text); }
-.comparison-strip .state-chip { min-height: 4rem; }
+.comparison-strip .state-chip { min-height: 4rem; flex-wrap: wrap; }
 
 .status-strip {
   position: fixed;
@@ -91,7 +92,7 @@
   left: 0;
   right: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 2fr);
   gap: var(--space-md);
   align-items: center;
   padding: 0.55rem max(var(--space-md), calc((100vw - var(--container)) / 2));
@@ -113,6 +114,7 @@
 }
 .status-strip__state { font-weight: var(--weight-semibold); }
 .status-strip__level { display: inline-flex; align-items: center; gap: 0.35rem; color: var(--sev-ink); font-weight: var(--weight-semibold); }
+.status-strip > * { min-width: 0; }
 
 .season-kit { border-top: 2px solid var(--text); border-bottom: 1px solid var(--border-strong); }
 .season-kit__head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-md); padding: var(--space-md) 0; }
@@ -147,7 +149,7 @@
 
 @media (max-width: 56rem) {
   .hero__grid,
-  .state-layout { grid-template-columns: 1fr; }
+  .state-layout { grid-template-columns: minmax(0, 1fr); }
   .hero__map { padding-top: 0; }
   .state-rail { border-left: 0; border-top: 1px solid var(--border-strong); padding: var(--space-xl) 0 0; }
   .editorial-columns { grid-template-columns: 1fr; }
@@ -168,8 +170,8 @@
   .signup__form .btn { justify-self: start; }
 }
 @media (max-width: 36rem) {
-  .status-strip { grid-template-columns: 1fr auto; gap: var(--space-xs); }
-  .status-strip .trend { grid-column: 1 / -1; }
+  .status-strip { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-xs); }
+  .status-strip > :last-child { grid-column: 1 / -1; }
   .season-kit__grid { grid-template-columns: 1fr; }
   .season-kit__slot { min-height: 6rem; border-right: 0; }
 }

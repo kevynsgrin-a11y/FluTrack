@@ -82,7 +82,7 @@ function head(page) {
   <meta property="og:image" content="${escapeHtml(ogImage)}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="${escapeHtml(site.name)} — a local respiratory threat level for flu, RSV and COVID-19">
+  <meta property="og:image:alt" content="${escapeHtml(site.name)} — combined respiratory index for flu, RSV and COVID-19, with an illustrative U.S. map">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:site" content="${escapeHtml(site.social.twitter)}">
   <meta name="twitter:title" content="${escapeHtml(page.title || site.name)}">

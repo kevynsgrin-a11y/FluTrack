@@ -6,8 +6,8 @@ import { breadcrumbLd, cdcDatasetLd } from '../../lib/seo.mjs';
 /**
  * /data-sources/ — the provenance page. Documents every public-domain CDC
  * surveillance feed that contributes to the threat level, and states plainly
- * why non-commercially licensed wastewater data (WastewaterSCAN / SCAN /
- * Verily, CC BY-NC 4.0) is deliberately excluded from this monetized site.
+ * why WastewaterSCAN / SCAN data (CC BY-NC 4.0) is excluded, and distinguishes
+ * that license from the broader provider labels excluded by the source filter.
  * Sterile data-visualizer voice: it describes the data, never prescribes.
  */
 export default function dataSources(ctx) {
@@ -25,28 +25,28 @@ export default function dataSources(ctx) {
       measures:
         'The share of emergency-department visits coded to influenza, RSV or COVID-19 — the workhorse clinical signal behind the index.',
       granularity: 'State',
-      cadence: 'Weekly, published Fridays',
+      cadence: 'Weekly; source publication and observation dates can differ',
     },
     {
       name: 'NSSP Acute Respiratory Illness (ARI) activity level',
       measures:
-        'A categorical activity level for acute respiratory illness, reported on a scale from Very Low to Very High.',
+        'A categorical activity level for broad acute respiratory illness; it is not specific to just influenza, RSV and COVID-19.',
       granularity: 'State',
       cadence: 'Weekly',
     },
     {
       name: 'NWSS Wastewater Viral Activity Level (WVAL)',
       measures:
-        'A normalized viral-activity index built from pathogen concentrations in community wastewater — a leading indicator that can move ahead of clinical signals by days.',
+        'A normalized viral-activity index from participating community wastewater sampling sites. FluTrack uses eligible-site state medians, not counts of infected people.',
       granularity: 'State / sewershed',
-      cadence: 'Weekly',
+      cadence: 'Fridays, with previous-week observations; subject to revisions',
     },
     {
       name: 'NWSS Wastewater Viral Activity Level — by county (atcp-73re)',
       measures:
         'The same WVAL product read site by site for the “Check your area” card: a county’s influenza A reading is the median public-domain site serving it. WastewaterSCAN sites are excluded.',
       granularity: 'County (where a site exists)',
-      cadence: 'Weekly, published Fridays',
+      cadence: 'Fridays, with previous-week observations; subject to revisions',
     },
     {
       name: 'NHSN hospital admission levels and rates (vdzy-6i9v)',
@@ -86,15 +86,15 @@ export default function dataSources(ctx) {
   const body = `
   ${pageHeader({
     eyebrow: 'Data sources',
-    title: 'Every number here traces back to the CDC',
+    title: 'Implemented CDC feeds, coverage and sample inputs',
     lede:
-      "FluTrack is assembled entirely from the CDC's own respiratory surveillance — the same open, public-domain feeds anyone can download. This page documents each dataset behind the threat level, the license it carries, and why we leave some sources out on purpose.",
+      "Live observations come from implemented CDC feeds; illustrative samples are labeled separately. This page distinguishes index inputs, separate area-card measures and unavailable feeds, with their geography and publication schedules.",
   })}
 
   ${prose(`
-    <p>The Centers for Disease Control and Prevention publish a great deal about respiratory illness every week, all of it in the public domain and all of it downloadable from <a href="https://data.cdc.gov/">data.cdc.gov</a>. FluTrack draws on four of those feeds and blends them into a single 0–4 threat level for your state. Nothing below is proprietary, and nothing sits behind a login — you can pull the very same inputs we do and check our work. How the signals are combined is documented separately in our <a href="/methodology/">methodology</a>.</p>
+    <p>FluTrack's implemented index inputs are NSSP emergency-department visits, NSSP Acute Respiratory Illness activity and NWSS wastewater from <a href="https://data.cdc.gov/">data.cdc.gov</a>, read through the existing ingestion service. Up to three usable signals contribute to a live combined respiratory index; NREVSS laboratory positivity has no live adapter. The model can include positivity only in labeled illustrative samples. Our <a href="/methodology/">methodology</a> describes the unchanged weights and thresholds.</p>
 
-    <h2>The datasets behind the index</h2>
+    <h2>Index feeds, separate measures and unavailable inputs</h2>
     <div class="table-wrap">
       <table>
         <thead>
@@ -113,27 +113,39 @@ export default function dataSources(ctx) {
     </div>
     <p class="text-secondary">Each source above is a weekly time series, not a live count. ${escapeHtml(
       disclaimers.trendNotLive
-    )} That is why FluTrack emphasizes the direction of a trend rather than any single week's figure.</p>
+    )} A supported trend compares the latest observation with the mean of up to three prior observations,
+    rather than an ordinary week-over-week change.</p>
 
     <h2>How the data reaches your screen</h2>
-    <p>FluTrack works in three tiers, so a page shows real data the moment it loads and stays usable if a government feed is briefly unreachable:</p>
+    <p>FluTrack works in three tiers, with provenance labels indicating whether a reading is observed or illustrative:</p>
     <ul>
-      <li><strong>Built from the CDC feeds.</strong> Each time the site is built — automatically every week, after the CDC's Friday publication — it reads the CDC's public-domain Socrata (SODA) datasets from <a href="https://data.cdc.gov/">data.cdc.gov</a> and renders every page from them. Those pages carry the <span class="badge badge--live"><span class="badge__dot"></span>Live CDC data</span> badge from the first paint.</li>
-      <li><strong>A sample fallback.</strong> If the feeds cannot be read when the site is built, it ships a bundled illustrative snapshot instead. Those pages say <span class="badge badge--cached">Sample data</span> and carry no plain-English summary, because a summary of sample figures would be a claim about a real state that no data supports.</li>
+      <li><strong>Built from the CDC feeds.</strong> A build attempts the implemented index feeds through the approved caching service and uses observations that pass coverage checks. A live-origin badge identifies reported inputs; their observation periods and age determine what they can support, not the build time.</li>
+      <li><strong>A sample fallback.</strong> If usable observations cannot be obtained, a bundled illustrative snapshot can keep the interface usable. Those readings say <span class="badge badge--cached">Sample data</span>; any accompanying explanation describes an example, not actual state conditions.</li>
       <li><strong>A refresh in your browser.</strong> When the page you loaded holds sample data, or a newer CDC week may have been published since it was built, your browser fetches the same feeds and updates the page.</li>
     </ul>
     <h2>The “Check your area” card and /api/official</h2>
     <p>The county card reads a separate copy of the CDC data kept by FluTrack's own ingest service, which queries <a href="https://data.cdc.gov/">data.cdc.gov</a> directly every Wednesday and Friday afternoon (UTC). Each dataset is pulled, checked and stored on its own: one that fails, or returns too little to be a real weekly release, changes nothing, and the last good week stays in place with its own date. Missing data is shown as missing, never as zero, and anything more than 14 days past its week ending is flagged. The same official-only data is available as JSON at <code>/api/official?state=CA&amp;county=06073</code> (open to any site, with attribution to the CDC).</p>
     <p>Two further sources are built but switched off for now: the CDC's influenza A wastewater sample data (<code>ymmh-divb</code>), whose WastewaterSCAN rows are always dropped, and state influenza-like-illness rates from CDC ILINet as re-served by Carnegie Mellon's Delphi Epidata API. The CDC's FluSight forecasts, NREVSS regional positivity and California's CDPH respiratory dashboard are candidates for later.</p>
 
-    <p>Both the build and the browser read the feeds through a caching copy run by FluTrack's publisher (<code>ingest.oakandmain.dev</code>), which re-fetches the CDC's datasets every few hours and serves their rows as published, so the CDC's servers are not queried on every visit. CDC surveillance systems refresh weekly, typically on Fridays, and reported figures generally reflect illness from one to two weeks earlier.</p>
+    <p>Both the build and browser use the caching copy at <code>ingest.oakandmain.dev</code>. Cache retrieval and source publication follow different schedules. An October retrieval of a September observation remains a September observation. Each metric retains its geography, observation period, publication date when supplied, retrieval timestamp and usable coverage; an absent source publication date is unknown rather than inferred from the build. Source fields named <code>buildnumber</code> or <code>date_updated</code> remain source build/update dates, not verified publication dates.</p>
+
+    <h2>Coverage and interpretation</h2>
+    <p>Cases, laboratory positivity, wastewater viral activity, emergency-department visit percentages and hospital admission rates measure different things. Hospitalization data is displayed separately from the combined index. State observations do not independently measure a city, and participating sewersheds do not cover every resident. No data does not mean no illness. A fresh cache timestamp or a list of 51 jurisdiction keys does not establish usable observations for each pathogen or source.</p>
+    <p>Weekly releases can be delayed or revised, and preliminary and final hospital products have different publication schedules. A missing week, insufficient trend history or stale observation is qualified rather than converted to zero or a stable trend. For current official context, see the CDC's <a href="https://www.cdc.gov/respiratory-viruses/data/" rel="noopener">respiratory data</a>, <a href="https://www.cdc.gov/respiratory-viruses/data/activity-levels.html" rel="noopener">activity levels</a> and <a href="https://www.cdc.gov/wastewater/respiratory-viruses/state.html?cove-tab=1" rel="noopener">state wastewater</a> pages. National trends and local changes cannot substitute for a selected state's observations.</p>
+
+    <h3>Documented CDC surveillance gaps &mdash; October 2, 2026</h3>
+    <ul>
+      <li><strong>Wastewater contract transition.</strong> The CDC's <a href="https://www.cdc.gov/wastewater/respiratory-viruses/state.html?cove-tab=1" rel="noopener">state wastewater page, updated October 2, 2026</a>, says a new testing contract was awarded to Verily on September 28, 2026. CDC warned of a brief reporting gap affecting about 200 sites while sampling, testing and reporting restart. This notice alone does not establish why a September 26 observation is missing; each reading's own dates and coverage still apply.</li>
+      <li><strong>Iowa NSSP reporting.</strong> The CDC's <a href="https://www.cdc.gov/respiratory-viruses/data/activity-levels.html" rel="noopener">activity-level data notes, updated October 2, 2026</a>, say Iowa's NSSP feed ended on May 6, 2026 following a change in health information exchange vendors. Only data through the week ending May 2 is considered; weeks ending May 9, 2026 and later show <em>Data Unavailable</em>. This reporting gap is not evidence of low illness activity.</li>
+      <li><strong>Missouri's ARI baseline.</strong> The same October 2 CDC notes explain that data quality issues prevented use of Missouri's own historical data before MMWR Week 10 of 2025 (March 2&ndash;8). CDC used the rest of HHS Region 7 for that earlier portion of the historical baseline, and Missouri's own data from Week 10 onward, to calculate its 2026&ndash;27 activity levels. This is a caveat about CDC's categorical baseline, separate from FluTrack's editorial index thresholds.</li>
+    </ul>
 
     <h2>Licensing and what we deliberately exclude</h2>
     <p>FluTrack uses <strong>only public-domain U.S. Government data</strong> — the CDC's own surveillance products, which carry no usage restrictions and can be reused by anyone, including on a commercial site. That constraint is a deliberate design choice, not an accident of what was easy to find.</p>
-    <p>In particular, FluTrack <strong>deliberately excludes WastewaterSCAN (also referenced as SCAN or Verily) data</strong>. Those wastewater readings are licensed <strong>CC BY-NC 4.0</strong> — a non-commercial license. FluTrack is supported by advertising and affiliate links, which makes it a commercial use, so incorporating that data would violate its license terms. We therefore ingest only the CDC's own public-domain NWSS Wastewater Viral Activity Level product and leave the non-commercial networks out entirely.</p>
+    <p>FluTrack <strong>deliberately excludes WastewaterSCAN / SCAN data</strong> licensed <strong>CC BY-NC 4.0</strong>, which permits non-commercial use only. FluTrack is designed for commercial use, so those inputs are excluded. A provider name is not a license: the CDC's September 28, 2026 Verily testing-contract award is a distinct source context and does not automatically identify the resulting data as WastewaterSCAN data.</p>
     <div class="callout">
       <p class="callout__title">${icon('check')} The exclusion is enforced in code</p>
-      <p class="text-secondary">This is not left to good intentions. The ingestion pipeline runs a defensive source filter — <code>excludeNonCommercial()</code> in <code>src/scripts/data-sources.js</code> — that drops any wastewater row whose provenance references SCAN, WastewaterSCAN, Verily or the other non-commercial networks, so CC BY-NC 4.0 data can never surface on a monetized page even if it appeared in an upstream response.</p>
+      <p class="text-secondary">The existing conservative provenance filter &mdash; <code>excludeNonCommercial()</code> in <code>src/scripts/data-sources.js</code> &mdash; excludes rows marked SCAN, WastewaterSCAN, Verily and certain partner labels. That filter also excludes Verily-marked rows beyond confirmed WastewaterSCAN provenance. The provider name or contract notice alone does not establish a dataset's license, and the contract notice alone does not explain a missing September 26 observation. Reported coverage describes only the rows retained by this filter.</p>
     </div>
 
     <h2>Independent, not official</h2>

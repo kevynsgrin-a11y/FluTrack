@@ -34,7 +34,7 @@ export default function medicalDisclaimer(ctx) {
       <p>${escapeHtml(disclaimers.notMedical)}</p>
     </div>
 
-    <p>FluTrack combines the CDC's weekly respiratory surveillance signals — emergency-department visits, laboratory test positivity and wastewater viral activity — into a single 0–4 threat level and a rising-or-falling trend for each state. That number describes how much flu, RSV and COVID-19 activity the CDC's data indicates across a whole population. It is background context for everyday decisions, and nothing on this page, or anywhere on this site, is intended to diagnose, treat, cure, or prevent any illness.</p>
+    <p>FluTrack combines available CDC emergency-department visits, the Acute Respiratory Illness activity level and wastewater viral activity into a combined respiratory index for flu, RSV and COVID-19. Laboratory positivity has no live adapter and is modeled only in labeled samples. A supported trend compares the latest observation with the mean of up to three prior observations; insufficient history is unknown. The index describes its reported observation periods and coverage, and nothing on this page, or anywhere on this site, is intended to diagnose, treat, cure, or prevent any illness.</p>
 
     <div class="callout callout--warn" role="note">
       <p class="callout__title">${icon('plus')} In a medical emergency, call 911</p>
