@@ -82,6 +82,44 @@ export function datasetLd() {
   };
 }
 
+/** The "Check your area / Report how you feel" tool on the home page. */
+export function webApplicationLd() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'FluTrack — Check your area',
+    url: `${site.origin}/#check-area`,
+    applicationCategory: 'HealthApplication',
+    operatingSystem: 'Any (web browser)',
+    isAccessibleForFree: true,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    description:
+      "See this week's CDC respiratory data for your U.S. county — hospital admissions, " +
+      'wastewater and the state level — and add an anonymous symptom report to a privacy-safe community count.',
+    publisher: { '@type': 'Organization', name: site.name, url: site.origin },
+    isBasedOn: 'https://data.cdc.gov/',
+  };
+}
+
+/**
+ * One schema.org Dataset node per CDC dataset FluTrack reads (/data-sources/).
+ * All are U.S. Government works in the public domain.
+ */
+export function cdcDatasetLd({ id, name, description }) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Dataset',
+    name,
+    description,
+    identifier: id,
+    url: `https://data.cdc.gov/d/${id}`,
+    creator: { '@type': 'GovernmentOrganization', name: 'U.S. Centers for Disease Control and Prevention', url: 'https://www.cdc.gov/' },
+    license: 'https://www.usa.gov/government-works',
+    isAccessibleForFree: true,
+    distribution: [{ '@type': 'DataDownload', encodingFormat: 'application/json', contentUrl: `https://data.cdc.gov/resource/${id}.json` }],
+  };
+}
+
 export function breadcrumbLd(crumbs) {
   return {
     '@context': 'https://schema.org',

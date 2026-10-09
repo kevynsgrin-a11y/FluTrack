@@ -17,6 +17,22 @@ import { site, privacyEmail } from '../../lib/site.mjs';
  */
 const ENTRIES = [
   {
+    date: '2026-10-09',
+    kind: 'Interface',
+    title: 'Check your area, and report how you feel',
+    body:
+      'The home page now has a “Check your area” card for any U.S. ZIP code or your approximate location. It shows the FluTrack level for your state, the CDC’s NHSN flu hospital-admission level and rate with the last four weeks, and the CDC’s wastewater reading for influenza A in your county where a public-domain sampling site exists, each labeled with its CDC system, the week it covers and when it was fetched, and flagged when more than 14 days old. Beside it, an optional anonymous form adds how you feel to a weekly county count, shown only as counts, never below five reports, and never able to change the CDC-based level. The rules are on the methodology page. The same official data is available as JSON at /api/official. Existing readings are unchanged.',
+    affectsReadings: false,
+  },
+  {
+    date: '2026-10-09',
+    kind: 'Privacy',
+    title: 'A consumer health data privacy notice for symptom reports',
+    body:
+      'Symptom reports are consumer health data, so they have their own notice at /consumer-health-data-privacy/, linked from every page footer and from the form. It sets out what a report holds and never holds (no name, email, IP address, exact location or full ZIP code), that reports are never sold or shared with advertising or analytics services, that raw reports are deleted after 90 days, and that nothing is shown for fewer than five. The Privacy Policy and the vendor register now list Cloudflare Turnstile, the bot check on the form, and the Cloudflare D1 and Workers KV storage behind it, plus the one browser entry the form sets.',
+    affectsReadings: false,
+  },
+  {
     date: '2026-10-08',
     kind: 'Correction',
     title: 'Wastewater readings from too few, or stuck, sampling sites',

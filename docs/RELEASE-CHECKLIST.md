@@ -97,6 +97,19 @@ its own container; the page body may not.
 
 ---
 
+### 2.7 Check your area / Report how you feel
+
+- [ ] **JS off**: the home page shows both forms; "Check my area" with a ZIP returns a styled result page with the US map; a report post without Turnstile explains that JavaScript is needed.
+- [ ] **JS on**: first tap in the section shows "Looks like you're near <County>, <ST> — Correct?"; Yes renders the card; Change ZIP focuses the ZIP field.
+- [ ] The result card leads with CDC data; every source chip shows its week ending and fetch date; data over 14 days old is amber.
+- [ ] Community block reads "Fewer than 5 reports…" for a quiet county and never shows a count below 5.
+- [ ] Turnstile's script loads only after the report form is touched (network panel); nothing from `challenges.cloudflare.com` on first load.
+- [ ] A second report from the same device within 7 days is refused client-side with a thank-you.
+- [ ] Share (on a phone) shares the official level only.
+- [ ] Globe: animates once (≤ 2.5 s) after the card; one still frame with reduced motion; no layout shift.
+- [ ] From a non-US connection, the area check says "US-only for now".
+- [ ] No ad slot inside or beside the section.
+
 ## 3. Release blockers
 
 **Ship nothing that exhibits any of these**, regardless of how minor it looks or

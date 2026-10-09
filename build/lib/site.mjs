@@ -88,6 +88,19 @@ export const site = {
   ads: {
     publisherId: '',
   },
+  // Cloudflare Turnstile — the bot check on the symptom-report form. The site
+  // key is public and belongs here (or in TURNSTILE_SITE_KEY at build time);
+  // the secret is a Pages secret, TURNSTILE_SECRET. While the key is empty the
+  // report half of the home widget renders as "opens soon" and /api/report
+  // stays closed, while "Check your area" works as normal.
+  turnstile: {
+    siteKey: process.env.TURNSTILE_SITE_KEY || '',
+  },
+  // Rollback switch, mirrored by FEATURE_REPORT in wrangler.toml [vars]:
+  // "false" at build time drops the report form from the home page.
+  features: {
+    report: String(process.env.FEATURE_REPORT ?? 'true').toLowerCase() !== 'false',
+  },
   // The CDC data cadence, surfaced in the UI to set expectations honestly.
   dataCadence: 'Weekly (CDC surveillance systems publish on Fridays)',
   // Content/legal-page revision date (for sitemap <lastmod>). Bump when copy changes.
@@ -208,6 +221,33 @@ export const processors = [
     dataCategories: 'Email address, chosen state, submission timestamp, country, user-agent',
     retention: 'Until you unsubscribe or ask us to delete it',
     deletionPath: 'privacy@flufollower.com',
+    consentClass: 'essential',
+    status: 'Live',
+    docs: 'https://www.cloudflare.com/privacypolicy/',
+  },
+  {
+    key: 'cloudflare-turnstile',
+    vendor: 'Cloudflare, Inc.',
+    service: 'Cloudflare Turnstile (bot check on the symptom-report form)',
+    purpose: 'Confirming a symptom report is sent by a person, not a bot',
+    basis: 'Legitimate interest (abuse prevention); loads only once you use the report form',
+    dataCategories: 'Browser and device signals and IP address, processed by Cloudflare for the check; FluTrack receives only pass/fail',
+    retention: 'Per Cloudflare; nothing from the check is stored with your report',
+    deletionPath: 'privacy@flufollower.com',
+    consentClass: 'essential',
+    status: site.turnstile.siteKey ? 'Live — only when you use the report form' : 'Engaged — the report form opens once it is configured',
+    docs: 'https://www.cloudflare.com/turnstile-privacy-policy/',
+  },
+  {
+    key: 'cloudflare-d1',
+    vendor: 'Cloudflare, Inc.',
+    service: 'D1 database and Workers KV (anonymous symptom reports; CDC data cache)',
+    purpose: 'Storing anonymous symptom reports and the county counts built from them',
+    basis: 'Consent (the consent box on every report; never pre-ticked)',
+    dataCategories:
+      'Symptoms, optional age band / vaccination / test / household answers, county, state, ZIP3 only where over 20,000 people, report day and week, a daily-salted hash of the IP address',
+    retention: 'Raw reports 90 days; daily county counts kept; hashing salts deleted daily',
+    deletionPath: 'Reports carry no identifier, so none can be traced to a person; all raw reports are deleted at 90 days — see /consumer-health-data-privacy/',
     consentClass: 'essential',
     status: 'Live',
     docs: 'https://www.cloudflare.com/privacypolicy/',

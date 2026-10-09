@@ -3,7 +3,8 @@ import { threatCard, pathogenTiles, signalRows, provenanceStrip } from '../../sr
 import { usMap } from '../../src/scripts/map-render.js';
 import { icon } from '../../src/scripts/icons.js';
 import { signupBand, trendDisclaimer, adSlot } from '../lib/partials.mjs';
-import { websiteLd, organizationLd, datasetLd } from '../lib/seo.mjs';
+import { websiteLd, organizationLd, datasetLd, webApplicationLd } from '../lib/seo.mjs';
+import { reportSection } from '../lib/report-section.mjs';
 
 export default function home(ctx) {
   const { site, states, national, weekEnding, provenance } = ctx;
@@ -43,6 +44,8 @@ export default function home(ctx) {
       </form>
     </div>
   </section>
+
+  ${reportSection({ siteKey: site.turnstile?.siteKey, enabled: site.features?.report !== false })}
 
   <section class="section section--tight" id="breakdown" style="scroll-margin-top: 5rem">
     <div class="container">
@@ -142,8 +145,8 @@ export default function home(ctx) {
     description: site.description,
     path: '/',
     body,
-    scripts: ['/assets/js/app.js', '/assets/js/map-keyboard.js'],
-    jsonld: [websiteLd(), organizationLd(), datasetLd()],
+    scripts: ['/assets/js/app.js', '/assets/js/map-keyboard.js', '/assets/js/report-boot.js'],
+    jsonld: [websiteLd(), organizationLd(), datasetLd(), webApplicationLd()],
   };
 }
 

@@ -39,6 +39,7 @@ import { generateSnapshot } from './lib/snapshot.mjs';
 import { resolveSnapshot } from './lib/live-snapshot.mjs';
 import { assetFiles, manifest, icoFromPng, stateOgSvg } from './lib/assets.mjs';
 import { extractCritical } from './lib/critical.mjs';
+import { shardCrosswalk } from '../src/server/zip-lookup.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
@@ -175,13 +176,30 @@ function writeAssets(snapshot) {
     // Font assets stay same-origin to satisfy the production CSP.
     const fonts = join(srcAssets, 'fonts');
     if (existsSync(fonts)) cpSync(fonts, join(outDir, 'fonts'), { recursive: true });
+    // Globe geometry (vendored by scripts/vendor-geo.mjs), fetched lazily.
+    const geo = join(srcAssets, 'geo');
+    if (existsSync(geo)) cpSync(geo, join(outDir, 'geo'), { recursive: true });
   }
+  // The hashed stylesheet name, for the server-rendered (no-JS) result pages
+  // the Pages Functions emit (src/server/page.js).
+  writeFileSync(join(outDir, 'build.json'), JSON.stringify({ css: site.assets.css }));
   // Ship exactly the snapshot the pages were rendered from, minified, so the
   // browser's first re-render reproduces the static markup — live data stays
   // live instead of flashing back to the sample.
   const dataOut = join(dist, 'data');
   mkdirSync(dataOut, { recursive: true });
   writeFileSync(join(dataOut, 'snapshot.json'), JSON.stringify(snapshot));
+
+  // ZIP → county lookup shards (/data/zip3/<zip3>.json), the fallback the
+  // Functions use until D1's zip_crosswalk is seeded (src/server/zip-lookup.js).
+  const crosswalk = resolve(root, 'src/data/zip-county.csv');
+  if (existsSync(crosswalk)) {
+    const shardDir = join(dataOut, 'zip3');
+    mkdirSync(shardDir, { recursive: true });
+    for (const [zip3, map] of Object.entries(shardCrosswalk(readFileSync(crosswalk, 'utf8')))) {
+      writeFileSync(join(shardDir, `${zip3}.json`), JSON.stringify(map));
+    }
+  }
 }
 
 function writeRootFiles(sitemapEntries) {
@@ -252,7 +270,11 @@ function headers() {
     // hits go to *.google-analytics.com / *.analytics.google.com.
     // static.cloudflareinsights.com serves the Cloudflare Web Analytics beacon,
     // which reports to cloudflareinsights.com.
-    `script-src 'self' 'sha256-${bootHash}' https://googletagmanager.com https://www.googletagmanager.com https://static.cloudflareinsights.com`,
+    // challenges.cloudflare.com serves Cloudflare Turnstile (the bot check on
+    // the symptom-report form): its script loads only once that form is used,
+    // and it renders in an iframe from the same host (frame-src below).
+    `script-src 'self' 'sha256-${bootHash}' https://googletagmanager.com https://www.googletagmanager.com https://static.cloudflareinsights.com https://challenges.cloudflare.com`,
+    "frame-src https://challenges.cloudflare.com",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://www.google-analytics.com https://*.google-analytics.com https://*.googletagmanager.com",
     "font-src 'self'",
@@ -316,6 +338,12 @@ ${htmlRules}
 
 /assets/*.svg
   Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+/assets/geo/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=2592000
+
+/assets/build.json
+  Cache-Control: no-cache
 
 /data/*
   Cache-Control: public, max-age=3600

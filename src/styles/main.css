@@ -182,3 +182,78 @@
   .hero__bg,
   .threat::after { display: none; }
 }
+
+/* ===========================================================================
+   Check your area / Report how you feel (build/lib/report-section.mjs) and
+   its result card (src/scripts/report-render.js). Mobile-first: one column,
+   two from 52rem. The result card never sits beside an ad slot.
+   =========================================================================== */
+.report { border-bottom: 1px solid var(--border); }
+.report__grid { display: grid; gap: var(--space-xl); }
+@media (min-width: 52rem) { .report__grid { grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr); align-items: start; } }
+.report__h { font-size: var(--step-1); margin-bottom: var(--space-xs); }
+.report__check, .report__form { border: 1px solid var(--border-strong); background: var(--surface); padding: var(--space-lg); border-radius: var(--radius-md); }
+.report__form { display: grid; gap: var(--space-md); }
+.report__form--soon { display: block; }
+.report__zip-row { display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-top: var(--space-2xs); }
+.report__zip { max-width: 9rem; font-variant-numeric: tabular-nums; }
+.report__confirm { margin-top: var(--space-md); padding: var(--space-md); background: var(--surface-2); border-left: 3px solid var(--accent); }
+.report__confirm .cluster { margin-top: var(--space-sm); }
+.report__hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.report__q { font-weight: var(--weight-semibold); font-size: var(--step-1); }
+.report__feeling { display: grid; gap: var(--space-sm); }
+.report__feeling > .btn, .report__sick > summary { width: 100%; justify-content: center; }
+.report__sick > summary { list-style: none; cursor: pointer; }
+.report__sick > summary::-webkit-details-marker { display: none; }
+.report__sick[open] > summary { background: var(--surface-2); }
+.report__sick-body { display: grid; gap: var(--space-md); margin-top: var(--space-md); }
+.report__symptoms { display: grid; gap: var(--space-2xs); grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); margin-top: var(--space-xs); }
+.report__more > summary { cursor: pointer; color: var(--link); font-weight: var(--weight-semibold); }
+.report__more-body { display: grid; gap: var(--space-md); margin-top: var(--space-md); }
+.report__radios, .report__sick-body > fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.report__radios .cluster { margin-top: var(--space-2xs); }
+.report__fine { font-size: var(--step--1); color: var(--text-muted); }
+.choice { display: flex; gap: var(--space-xs); align-items: flex-start; min-height: 2.75rem; padding-block: var(--space-2xs); cursor: pointer; }
+.choice input { width: 1.25rem; height: 1.25rem; margin-top: 0.1rem; flex: none; accent-color: var(--brand-700); }
+.choice--box { padding: var(--space-xs) var(--space-sm); border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--bg); }
+.choice--box:has(input:checked) { border-color: var(--brand-600); background: var(--brand-50); }
+.choice--consent { font-size: var(--step--1); }
+.report__turnstile:empty { display: none; }
+.report__result:empty { display: none; }
+.report__result { margin-top: var(--space-xl); scroll-margin-top: 5rem; }
+
+.result { border: 1px solid var(--border-strong); border-top: 3px solid var(--text); background: var(--surface); padding: var(--space-lg); border-radius: var(--radius-md); }
+.result:focus { outline: none; }
+.result__thanks { margin-bottom: var(--space-md); padding: var(--space-sm) var(--space-md); background: var(--sev-0-soft); color: var(--sev-0-ink); font-weight: var(--weight-semibold); }
+.result__title { font-size: var(--step-2); }
+.result__where { margin-top: var(--space-2xs); font-size: var(--step--1); }
+.result__official { display: grid; gap: 0; margin-top: var(--space-md); border-top: 1px solid var(--border); }
+.result__row { padding-block: var(--space-md); border-bottom: 1px solid var(--border); }
+.result__k { font-size: var(--step--1); font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); }
+.result__v { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center; margin-top: var(--space-xs); }
+.result__num { font-variant-numeric: tabular-nums; font-weight: var(--weight-semibold); }
+.result__note { margin-top: var(--space-2xs); font-size: var(--step--1); color: var(--text-secondary); }
+.result__spark { display: flex; gap: var(--space-sm); align-items: center; margin-top: var(--space-xs); font-size: var(--step--1); }
+.result__row--community { background: var(--surface-2); padding-inline: var(--space-md); border: 1px dashed var(--border-strong); margin-top: var(--space-md); }
+.result__row--community .badge[data-elevated='true'] { color: var(--sev-3-ink); background: var(--sev-3-soft); border-color: var(--sev-3); }
+.result__meaning { margin-top: var(--space-md); }
+.result__actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); margin-top: var(--space-md); }
+.result__emergency { margin-top: var(--space-md); padding: var(--space-sm) var(--space-md); border-left: 3px solid var(--sev-4); background: var(--sev-4-soft); color: var(--sev-4-ink); font-size: var(--step--1); }
+.result__fine { margin-top: var(--space-sm); font-size: var(--step--1); }
+.source-chips { list-style: none; padding: 0; margin: var(--space-md) 0 0; display: grid; gap: var(--space-2xs); }
+.source-chip { display: flex; flex-wrap: wrap; gap: 0 var(--space-xs); font-size: var(--step--1); color: var(--text-secondary); }
+.source-chip > span + span::before { content: '·'; margin-right: var(--space-xs); color: var(--text-muted); }
+.source-chip > .age-badge::before { content: none; }
+.age-badge { display: inline-block; padding: 0 var(--space-xs); border: 1px solid var(--border); border-radius: var(--radius-pill); font-size: var(--step--1); color: var(--text-secondary); }
+.age-badge[data-stale='true'] { color: var(--sev-2-ink); background: var(--sev-2-soft); border-color: var(--sev-2); }
+
+/* Globe: a fixed box from the first paint, so loading it never shifts layout. */
+.globe { position: relative; width: min(100%, 18rem); aspect-ratio: 1; margin: var(--space-lg) auto 0; display: grid; place-items: center; }
+.globe canvas { width: 100%; height: 100%; display: block; }
+.globe__placeholder { font-size: 4rem; line-height: 1; opacity: 0.5; animation: globe-spin 12s linear infinite; }
+@keyframes globe-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .globe__placeholder { animation: none; } }
+.result__map { margin-top: var(--space-lg); }
+.usmap { width: 100%; max-width: 32rem; height: auto; display: block; margin-inline: auto; }
+.usmap__state { fill: var(--surface-2); stroke: var(--border-strong); stroke-width: 0.75; }
+.usmap__state--on { fill: var(--sev, var(--brand-500)); stroke: var(--text); stroke-width: 1.5; }

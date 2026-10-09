@@ -101,6 +101,9 @@ export default function vendors(ctx) {
       <li><strong>Analytics</strong> and <strong>Advertising</strong> — non-essential. Anything in these classes that writes to your device is denied until you record a decision on our <a href="/consent/">privacy choices</a> page. Cloudflare Web Analytics is classed as analytics but is cookieless and stores nothing on your device, so it never engages that gate; we list it here rather than pretending a prompt governs it.</li>
     </ul>
 
+    <h2>What the symptom-report form stores on your device</h2>
+    <p>Sending a symptom report sets one <code>localStorage</code> entry, <code>ff_last_report</code>, holding only the time of your report. It limits each device to one report a week, is never transmitted, and is cleared with your browser's site data. It is strictly necessary for that limit, so it is not behind the consent prompt. Symptom reports themselves are covered by the <a href="/consumer-health-data-privacy/">consumer health data privacy notice</a> and are never shared with any analytics or advertising processor in this register.</p>
+
     <h2>Jurisdictional basis</h2>
     <p>FluTrack is operated from and hosted in the United States, and covers U.S. respiratory surveillance. Where the EU/UK GDPR applies, our lawful bases are the ones named in the table: <strong>consent</strong> for the surge-alert subscription and for the optional location lookup, which you can withdraw at any time, and <strong>legitimate interest</strong> for serving and securing the site and understanding aggregate usage. Under the California Consumer Privacy Act, we do not sell personal information and we do not share it for cross-context behavioral advertising. We honor Global Privacy Control as an opt-out signal where it applies.</p>
 

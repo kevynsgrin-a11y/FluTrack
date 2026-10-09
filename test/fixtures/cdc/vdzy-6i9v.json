@@ -1,0 +1,40 @@
+[
+ {
+  "jurisdiction": "CA",
+  "weekendingdate": "2026-09-26",
+  "totalconfc19newadm": "1017.0",
+  "totalconfflunewadm": "386.0",
+  "totalconfrsvnewadm": "20.0",
+  "totalconfc19newadmper100k": "2.62",
+  "totalconfflunewadmper100k": "0.99",
+  "totalconfrsvnewadmper100k": "0.05",
+  "totalconfc19newadmper100klevel": "Very Low",
+  "totalconfflunewadmper100klevel": "Very Low",
+  "totalconfrsvnewadmper100klevel": "Very Low",
+  "totalconfc19newadmhosprep": "322",
+  "totalconfflunewadmhosprep": "322",
+  "totalconfrsvnewadmhosprep": "322",
+  "totalconfc19newadmperchosprep": "80.7",
+  "totalconfflunewadmperchosprep": "80.7",
+  "totalconfrsvnewadmperchosprep": "80.7"
+ },
+ {
+  "jurisdiction": "USA",
+  "weekendingdate": "2026-09-26",
+  "totalconfc19newadm": "4445.0",
+  "totalconfflunewadm": "2572.0",
+  "totalconfrsvnewadm": "453.0",
+  "totalconfc19newadmper100k": "1.32",
+  "totalconfflunewadmper100k": "0.76",
+  "totalconfrsvnewadmper100k": "0.13",
+  "totalconfc19newadmper100klevel": "Very Low",
+  "totalconfflunewadmper100klevel": "Very Low",
+  "totalconfrsvnewadmper100klevel": "Very Low",
+  "totalconfc19newadmhosprep": "4580",
+  "totalconfflunewadmhosprep": "4580",
+  "totalconfrsvnewadmhosprep": "4580",
+  "totalconfc19newadmperchosprep": "79.57",
+  "totalconfflunewadmperchosprep": "79.57",
+  "totalconfrsvnewadmperchosprep": "79.57"
+ }
+]

@@ -1,0 +1,61 @@
+name: Deploy ingest Worker
+
+# Deploys workers/ingest (flutrack-ingest, the Worker that owns the cron
+# triggers) when it or the shared server code changes on main, or on demand.
+# The Pages site itself is NOT deployed here: Cloudflare builds it from git.
+#
+# One-time setup: repository secret CLOUDFLARE_API_TOKEN with Workers Scripts:
+# Edit, D1: Edit and Workers KV Storage: Edit on the account. Until it exists a
+# push only leaves a warning in the run summary (so main does not go red for a
+# missing optional credential); a manual run fails with the instruction.
+# Worker secrets (INGEST_TOKEN, SODA_APP_TOKEN) are set once with
+# `npx wrangler secret put` — see docs/DEPLOY-FEATURE.md.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - workers/ingest/**
+      - src/server/**
+      - src/scripts/states-data.js
+      - src/scripts/data-sources.js
+      - src/scripts/threat-index.js
+      - .github/workflows/deploy-ingest.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-ingest
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Tests for the Worker
+        run: node --test test/ingest.test.mjs
+
+      - name: Deploy flutrack-ingest
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 820e7cee61fccc60d14c8e20bc686942
+          MANUAL: ${{ github.event_name == 'workflow_dispatch' }}
+        working-directory: workers/ingest
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            msg="CLOUDFLARE_API_TOKEN is not set: flutrack-ingest was not deployed. Add the repository secret (see docs/DEPLOY-FEATURE.md §3)."
+            echo "$msg" >> "$GITHUB_STEP_SUMMARY"
+            if [ "$MANUAL" = "true" ]; then echo "::error::$msg"; exit 1; fi
+            echo "::warning::$msg"
+            exit 0
+          fi
+          npx --yes wrangler@4.135.0 deploy

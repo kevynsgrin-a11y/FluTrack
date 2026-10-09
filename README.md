@@ -35,6 +35,10 @@ Browser ──▶ /data/snapshot.json (the build's own data; instant first paint
 | Consent gate | `src/scripts/consent.js` | Default-deny gate for non-essential storage; honors GPC. |
 | Backend | `functions/api/subscribe.js` | Cloudflare Pages Function for surge-alert signup. |
 | CSP reports | `functions/api/csp-report.js` | First-party collector for CSP violation reports. |
+| Check your area | `functions/api/area.js`, `functions/api/official.js` | Official-first county/state payload; `/api/official` is CORS-open. Shared logic in `src/server/`. |
+| Symptom reports | `functions/api/report.js`, `src/scripts/report-*.js` | Anonymous, Turnstile-gated, rate-limited reports into D1; community counts suppressed below 5. |
+| Ingest Worker | `workers/ingest/` | `flutrack-ingest`: Wed/Fri CDC pulls into D1 + KV, daily salt rotation / 90-day purge / aggregates. |
+| Globe | `src/scripts/globe.js` | Lazy canvas globe after the result card, ≤ 45 KB gzipped (checked by `build/check.mjs`). |
 
 Because the render functions are imported by **both** the Node build (static output) and the browser (live re-render), the server-rendered and hydrated markup are byte-identical — no flicker, no hydration mismatch.
 
@@ -71,6 +75,12 @@ node build/lib/rasterize.mjs
 ```
 
 ## Deploy (Cloudflare Pages)
+
+> **"Report your symptoms + Check your area"** adds D1 (`flutrack-db`), KV
+> (`OFFICIAL_CACHE`), a Turnstile secret and the `flutrack-ingest` Worker. The
+> bindings live in `wrangler.toml`; setup, verification and rollback are in
+> [`docs/DEPLOY-FEATURE.md`](docs/DEPLOY-FEATURE.md). Tests need Node ≥ 22.13
+> (the D1 test double uses `node:sqlite`); the build still runs on Node 20.
 
 - **Build command:** `npm run build`
 - **Output directory:** `dist`

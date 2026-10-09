@@ -192,7 +192,7 @@ test('every content page declares its own revision date, not a site-wide constan
 
 test('the rendered month and the sitemap date are the same value', () => {
   // The defect was that these were two independent literals. They are now one.
-  assert.equal(revisedLabel('/privacy/'), 'September 2026');
+  assert.equal(revisedLabel('/privacy/'), 'October 2026');
   assert.equal(revisedOn('/privacy/'), contentRevised['/privacy/']);
   assert.equal(revisedLabel('/terms/'), 'September 2026');
   for (const [p, iso] of Object.entries(contentRevised)) {
