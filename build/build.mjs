@@ -40,6 +40,7 @@ import { resolveSnapshot } from './lib/live-snapshot.mjs';
 import { assetFiles, manifest, icoFromPng, stateOgSvg } from './lib/assets.mjs';
 import { extractCritical } from './lib/critical.mjs';
 import { shardCrosswalk } from '../src/server/zip-lookup.js';
+import { contentHash, writeVersionedScripts } from './lib/versioned-assets.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..');
@@ -155,18 +156,13 @@ function bundleCss() {
 }
 
 function copyScripts() {
-  const outDir = join(dist, 'assets', 'js');
-  mkdirSync(outDir, { recursive: true });
-  for (const f of readdirSync(srcScripts)) {
-    if (f === 'sw.js') continue; // service worker is emitted at the root scope
-    if (f.endsWith('.js')) cpSync(join(srcScripts, f), join(outDir, f));
-  }
+  const scripts = writeVersionedScripts(srcScripts, join(dist, 'assets'));
+  site.assets = { ...site.assets, js: scripts.path, jsVersion: scripts.version };
 }
 
-// Emit the service worker at the site root (root scope), versioned by the CSS
-// content hash so a new deploy activates a fresh cache.
+// JavaScript-only changes must also activate a fresh service-worker cache.
 function writeServiceWorker() {
-  const version = (site.assets?.css || 'styles').replace(/[^a-z0-9]/gi, '') || 'v1';
+  const version = `${site.assets?.css || 'styles'}-${site.assets?.jsVersion || 'v1'}`.replace(/[^a-z0-9]/gi, '');
   const sw = readFileSync(join(srcScripts, 'sw.js'), 'utf8').replace('__BUILD__', version);
   writeFileSync(join(dist, 'sw.js'), sw);
 }
@@ -189,10 +185,14 @@ function writeAssets(snapshot) {
     // Globe geometry (vendored by scripts/vendor-geo.mjs), fetched lazily.
     const geo = join(srcAssets, 'geo');
     if (existsSync(geo)) cpSync(geo, join(outDir, 'geo'), { recursive: true });
+    const og = readFileSync(join(srcAssets, 'og-default.png'));
+    const ogName = `og-default.${contentHash(og)}.png`;
+    writeFileSync(join(outDir, ogName), og);
+    site.assets.ogImage = `/assets/${ogName}`;
   }
   // The hashed stylesheet name, for the server-rendered (no-JS) result pages
   // the Pages Functions emit (src/server/page.js).
-  writeFileSync(join(outDir, 'build.json'), JSON.stringify({ css: site.assets.css }));
+  writeFileSync(join(outDir, 'build.json'), JSON.stringify({ css: site.assets.css, js: site.assets.js, ogImage: site.assets.ogImage }));
   // Ship exactly the snapshot the pages were rendered from, minified, so the
   // browser's first re-render reproduces the static markup — live data stays
   // live instead of flashing back to the sample.

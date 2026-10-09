@@ -5,6 +5,7 @@ import { buildAreaPayload, meaningLine } from '../src/server/area.js';
 import { communitySummary } from '../src/server/community.js';
 import { reportSection } from '../build/lib/report-section.mjs';
 import { SYMPTOM_KEYS } from '../src/scripts/report-schema.js';
+import { resultPage } from '../src/server/page.js';
 
 const NOW = new Date('2026-10-09T12:00:00Z');
 const entry = (source, week, readings, series = {}) => ({ source, system: source.split('_')[0].toUpperCase(), label: source, dataset: 'x', week_ending: week, fetched_at: '2026-10-09T03:00:00Z', method_version: null, readings, series });
@@ -70,6 +71,43 @@ test('the share text carries the official level only — never symptoms', () => 
   const text = shareText(payload());
   assert.equal(text, 'Reported CDC-based respiratory index for California: Low, week ending Oct 3, 2026 — via FluTrack');
   assert.doesNotMatch(text, /fever|cough|sick|symptom|community/i);
+});
+
+test('the actual area result page title is neutral while metadata preserves state dates and evidence limits', () => {
+  for (const [level, evidence] of [
+    [{ level: 1, label: 'Low', kind: 'live', week_ending: '2026-09-26' }, /Reported CDC-based respiratory index for California: Low, week ending Sep 26, 2026/],
+    [{ level: 1, label: 'Low', kind: 'sample', week_ending: '2026-09-26' }, /Illustrative sample respiratory index for California, period ending Sep 26, 2026; demonstration only/],
+    [{ level: 1, label: 'Low', kind: 'live', stale: true, week_ending: '2026-09-05' }, /Historical CDC-based respiratory index for California: Low, week ending Sep 5, 2026; current activity is unknown/],
+    [{ level: 0, label: 'Minimal', kind: 'unknown', week_ending: '2026-09-26' }, /No usable dated respiratory index for California; current activity is unknown/],
+    [{ level: 0, label: 'Minimal', week_ending: '2026-09-26' }, /No usable dated respiratory index for California; current activity is unknown/],
+    [{ level: 0, label: 'Minimal', kind: 'live' }, /No usable dated respiratory index for California; current activity is unknown/],
+    [null, /No usable dated respiratory index for California; current activity is unknown/],
+  ]) {
+    const p = payload();
+    p.level = level;
+    const html = resultPage({ payload: p });
+    assert.match(html, /<title>Respiratory readings for Alameda County, CA · FluTrack<\/title>/);
+    const description = html.match(/<meta name="description" content="([^"]*)">/)?.[1];
+    assert.ok(description, 'the complete result page includes description metadata');
+    assert.match(description, evidence);
+    assert.match(description, /County wastewater and statewide hospital admissions have separate observation periods/);
+    assert.doesNotMatch(html.match(/<head>([\s\S]*?)<\/head>/)[1], /This week|this week|Oct 9, 2026|CDC-based respiratory index for Alameda County/);
+    const map = html.match(/<svg class="usmap"[\s\S]*?<\/svg>/)?.[0];
+    assert.ok(map, 'the no-JS page preserves the state-location map');
+    assert.match(map, /usmap__state--on/);
+    if (Number.isFinite(level?.level) && level.week_ending && ['sample', 'live'].includes(level.kind)) {
+      assert.match(map, /data-sev="1"/, 'live, sample and historical indices retain their qualified severity');
+    } else {
+      assert.doesNotMatch(description, /Minimal|Low/);
+      assert.doesNotMatch(map, /data-sev=/, 'unknown or undated raw numbers cannot acquire a severity color');
+    }
+  }
+  const stateOnly = payload();
+  stateOnly.location = { ...stateOnly.location, county_name: null, county_fips: null };
+  assert.match(resultPage({ payload: stateOnly }), /<title>Respiratory readings for California · FluTrack<\/title>/);
+  const escaped = payload();
+  escaped.location = { ...escaped.location, county_name: 'County <test>' };
+  assert.match(resultPage({ payload: escaped }), /<title>Respiratory readings for County &lt;test&gt;, CA · FluTrack<\/title>/);
 });
 
 test('"What this means" describes the data, never advises, never says outbreak', () => {
