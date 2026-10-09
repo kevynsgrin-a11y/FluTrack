@@ -210,7 +210,7 @@
 .report__symptoms { display: grid; gap: var(--space-2xs); grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); margin-top: var(--space-xs); }
 .report__more > summary { cursor: pointer; color: var(--link); font-weight: var(--weight-semibold); }
 .report__more-body { display: grid; gap: var(--space-md); margin-top: var(--space-md); }
-.report__radios { border: 0; padding: 0; margin: 0; }
+.report__radios, .report__sick-body > fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
 .report__radios .cluster { margin-top: var(--space-2xs); }
 .report__fine { font-size: var(--step--1); color: var(--text-muted); }
 .choice { display: flex; gap: var(--space-xs); align-items: flex-start; min-height: 2.75rem; padding-block: var(--space-2xs); cursor: pointer; }
