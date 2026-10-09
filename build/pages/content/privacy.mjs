@@ -36,7 +36,7 @@ export default function privacy(ctx) {
 
     <div class="callout">
       <p class="callout__title">${icon('check')} The short version</p>
-      <p class="text-secondary">You can read the CDC threat level for every state without giving us anything at all. We ask for an email address only if you choose to sign up for surge alerts. We do not sell your information, and we set no cross-site tracking cookies of our own.</p>
+      <p class="text-secondary">You can read the CDC threat level for every state without giving us anything at all. We ask for an email address only if you choose to sign up for surge alerts, and an anonymous symptom report only if you choose to send one. We do not sell your information, and we set no cross-site tracking cookies of our own.</p>
     </div>
 
     <h2>Who we are</h2>
@@ -53,6 +53,9 @@ export default function privacy(ctx) {
 
     <h3>Information collected automatically</h3>
     <p>Like almost every website, our hosting provider records standard <strong>server logs</strong> when a page is requested — typically your IP address, the time of the request, the page fetched, and your browser's user-agent string. These logs exist for security, abuse prevention, and understanding aggregate traffic. We measure traffic in aggregate with two analytics services, and we do not attempt to identify individual visitors from either. <strong>Cloudflare Web Analytics</strong> is cookieless and stores nothing on your device. <strong>Google Analytics 4</strong> measures aggregate traffic — pages viewed, approximate location and device type — and Google sets cookies (<code>_ga</code>, <code>_ga_*</code>) to do so. Google Analytics loads only if you allow analytics storage on our <a href="/consent/">privacy choices</a> page or banner; a Global Privacy Control signal from your browser is treated as declining it. Google's handling of this data is described in its <a href="https://policies.google.com/privacy">privacy policy</a>, and you can opt out of Google Analytics on every site with Google's <a href="https://tools.google.com/dlpage/gaoptout">browser add-on</a>.</p>
+
+    <h3>Anonymous symptom reports — only if you send one</h3>
+    <p>The home page's “Report how you feel” form lets you add an anonymous report to a weekly county count. It is optional, needs a consent tick every time, and stores only the symptoms you tick, an age band and other optional answers, your county and state, the day and week, and a daily-salted one-way hash of your IP address used to limit repeat reports — never your name, email, IP address, exact location, full ZIP code or any free text. Reports are shown back only as county counts, never below five, are never shared or sold, and are deleted after 90 days. Because these are consumer health data, they are covered in full by our separate <a href="/consumer-health-data-privacy/">consumer health data privacy notice</a>. Checking your area without reporting stores nothing: a ZIP code you type is used once to find your county and discarded.</p>
 
     <h3>Approximate location — only when you ask for it</h3>
     <p>The home page offers a “Use my location” button. It does nothing unless you tap it and your browser then grants permission. If you do, your device provides approximate coordinates, which are sent once to the U.S. Federal Communications Commission's public <a href="https://geo.fcc.gov/">Area API geocoder</a> (<code>geo.fcc.gov</code>) purely to resolve which U.S. state you are in. That state is used to pre-select the picker for you and nothing more. <strong>We do not store your coordinates or your resolved location</strong> — the value is discarded as soon as the picker is set. If you never tap the button, no location is ever requested.</p>
@@ -88,6 +91,11 @@ export default function privacy(ctx) {
             <td>Kept in aggregate; not tied to your identity</td>
           </tr>
           <tr>
+            <th scope="row">Anonymous symptom report (optional)</th>
+            <td>Weekly county counts shown next to CDC data</td>
+            <td>Raw reports 90 days; county counts kept — see the <a href="/consumer-health-data-privacy/">consumer health data notice</a></td>
+          </tr>
+          <tr>
             <th scope="row">Approximate location</th>
             <td>To resolve “Use my location” to a state</td>
             <td>Not stored — discarded after resolving</td>
@@ -97,11 +105,12 @@ export default function privacy(ctx) {
     </div>
 
     <h2>Cookies and browser storage</h2>
-    <p>FluTrack itself sets <strong>no cross-site tracking cookies</strong>. The site keeps three small entries in your browser's <code>localStorage</code>, which stay on your machine and are never transmitted to us:</p>
+    <p>FluTrack itself sets <strong>no cross-site tracking cookies</strong>. The site keeps up to four small entries in your browser's <code>localStorage</code>, which stay on your machine and are never transmitted to us:</p>
     <ul>
       <li><code>flutrack-theme</code> — remembers whether you prefer the light or dark appearance.</li>
       <li><code>flutrack-state</code> — remembers the last state you looked at, so the picker can restore it on your next visit.</li>
       <li><code>flutrack-consent</code> — remembers your analytics choice, so we can honor it.</li>
+      <li><code>ff_last_report</code> — set only after you send a symptom report; holds just the time you reported, so a device sends at most one report a week.</li>
     </ul>
     <p>These are conveniences, not trackers. If you allow analytics storage, Google Analytics also sets the <code>_ga</code> and <code>_ga_*</code> cookies described above. You can clear all of this at any time through your browser's “clear site data” controls, and the site will simply fall back to its defaults.</p>
 
@@ -118,6 +127,7 @@ export default function privacy(ctx) {
       <li><strong>FCC Area API</strong> — used only for the optional “Use my location” lookup described above, and only when you tap it.</li>
       <li><strong>Google Analytics 4</strong> (Google LLC) — aggregate traffic measurement, loaded only if you allow analytics storage, as described above.</li>
       <li><strong>Cloudflare Web Analytics</strong> (Cloudflare, Inc.) — cookieless, aggregate traffic measurement.</li>
+      <li><strong>Cloudflare Turnstile and Cloudflare D1 / Workers KV</strong> (Cloudflare, Inc.) — the bot check on the symptom-report form, which loads only when you use that form, and the storage for anonymous reports. Symptom reports are never sent to any analytics or advertising service.</li>
       <li><strong>Our email provider</strong> — surge alerts are delivered through a reputable third-party email service that processes your email address on our behalf, under its own security and privacy commitments, solely to send the messages you requested.</li>
     </ul>
     <p>Where we describe a provider by role rather than by brand, it is because vendors can change; in every case they are used only for the narrow purpose above and are not permitted to use your information for their own marketing.</p>

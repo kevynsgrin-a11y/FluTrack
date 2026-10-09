@@ -1,7 +1,7 @@
 import { escapeHtml } from '../../../src/scripts/util.js';
 import { icon } from '../../../src/scripts/icons.js';
 import { pageHeader, prose, signupBand, revisedOn } from '../../lib/partials.mjs';
-import { breadcrumbLd } from '../../lib/seo.mjs';
+import { breadcrumbLd, cdcDatasetLd } from '../../lib/seo.mjs';
 
 /**
  * /data-sources/ — the provenance page. Documents every public-domain CDC
@@ -40,6 +40,27 @@ export default function dataSources(ctx) {
         'A normalized viral-activity index built from pathogen concentrations in community wastewater — a leading indicator that can move ahead of clinical signals by days.',
       granularity: 'State / sewershed',
       cadence: 'Weekly',
+    },
+    {
+      name: 'NWSS Wastewater Viral Activity Level — by county (atcp-73re)',
+      measures:
+        'The same WVAL product read site by site for the “Check your area” card: a county’s influenza A reading is the median public-domain site serving it. WastewaterSCAN sites are excluded.',
+      granularity: 'County (where a site exists)',
+      cadence: 'Weekly, published Fridays',
+    },
+    {
+      name: 'NHSN hospital admission levels and rates (vdzy-6i9v)',
+      measures:
+        'Lab-confirmed influenza, COVID-19 and RSV hospital admissions per 100,000 people, with the CDC’s own level (Very Low to Very High). The “how severe” line on the area card.',
+      granularity: 'State',
+      cadence: 'Weekly, published Fridays',
+    },
+    {
+      name: 'NHSN Hospital Respiratory Data — final (ua7e-t2fy) and preliminary (mpgq-jmmr)',
+      measures:
+        'Weekly admission counts and rates by state. The preliminary release is newer and revises recent weeks; both are stored and served by /api/official.',
+      granularity: 'State',
+      cadence: 'Final: Fridays. Preliminary: Wednesdays',
     },
     {
       name: 'NREVSS laboratory test positivity',
@@ -101,6 +122,10 @@ export default function dataSources(ctx) {
       <li><strong>A sample fallback.</strong> If the feeds cannot be read when the site is built, it ships a bundled illustrative snapshot instead. Those pages say <span class="badge badge--cached">Sample data</span> and carry no plain-English summary, because a summary of sample figures would be a claim about a real state that no data supports.</li>
       <li><strong>A refresh in your browser.</strong> When the page you loaded holds sample data, or a newer CDC week may have been published since it was built, your browser fetches the same feeds and updates the page.</li>
     </ul>
+    <h2>The “Check your area” card and /api/official</h2>
+    <p>The county card reads a separate copy of the CDC data kept by FluTrack's own ingest service, which queries <a href="https://data.cdc.gov/">data.cdc.gov</a> directly every Wednesday and Friday afternoon (UTC). Each dataset is pulled, checked and stored on its own: one that fails, or returns too little to be a real weekly release, changes nothing, and the last good week stays in place with its own date. Missing data is shown as missing, never as zero, and anything more than 14 days past its week ending is flagged. The same official-only data is available as JSON at <code>/api/official?state=CA&amp;county=06073</code> (open to any site, with attribution to the CDC).</p>
+    <p>Two further sources are built but switched off for now: the CDC's influenza A wastewater sample data (<code>ymmh-divb</code>), whose WastewaterSCAN rows are always dropped, and state influenza-like-illness rates from CDC ILINet as re-served by Carnegie Mellon's Delphi Epidata API. The CDC's FluSight forecasts, NREVSS regional positivity and California's CDPH respiratory dashboard are candidates for later.</p>
+
     <p>Both the build and the browser read the feeds through a caching copy run by FluTrack's publisher (<code>ingest.oakandmain.dev</code>), which re-fetches the CDC's datasets every few hours and serves their rows as published, so the CDC's servers are not queried on every visit. CDC surveillance systems refresh weekly, typically on Fridays, and reported figures generally reflect illness from one to two weeks earlier.</p>
 
     <h2>Licensing and what we deliberately exclude</h2>
@@ -135,6 +160,16 @@ export default function dataSources(ctx) {
     body,
     changefreq: 'monthly',
     priority: 0.5,
-    jsonld: [breadcrumbLd(crumbs)],
+    jsonld: [
+      breadcrumbLd(crumbs),
+      ...[
+        ['vutn-jzwm', 'NSSP Emergency Department Visits — COVID-19, Flu, RSV', 'Weekly share of emergency-department visits for COVID-19, influenza and RSV, by state.'],
+        ['f3zz-zga5', 'Level of Acute Respiratory Illness (ARI) Activity by State', 'Weekly categorical acute respiratory illness activity level, by state.'],
+        ['atcp-73re', 'CDC Wastewater Viral Activity Level for SARS-CoV-2, Influenza A and RSV', 'Weekly wastewater viral activity level by sampling site and county.'],
+        ['vdzy-6i9v', 'Weekly Hospital Respiratory Admission Levels and Rates by Jurisdiction (NHSN)', 'Weekly influenza, COVID-19 and RSV hospital admission rates and levels, by state.'],
+        ['ua7e-t2fy', 'Weekly Hospital Respiratory Data (HRD) Metrics by Jurisdiction (NHSN)', 'Weekly hospital respiratory data, final release, by state.'],
+        ['mpgq-jmmr', 'Weekly Hospital Respiratory Data (HRD) Metrics by Jurisdiction (NHSN), Preliminary', 'Weekly hospital respiratory data, preliminary release, by state.'],
+      ].map(([id, name, description]) => cdcDatasetLd({ id, name, description })),
+    ],
   };
 }

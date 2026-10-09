@@ -245,6 +245,17 @@ export default function methodology(ctx) {
     late data arrives. See <a href="/data-sources/">data sources</a> for the specific CDC systems behind
     each signal.</p>
 
+    <h2 id="check-your-area">Check your area: county data and community reports</h2>
+    <p>The home page's “Check your area” card puts the official data first. It shows, for your state, the FluTrack level described on this page and the CDC's NHSN flu hospital-admission level and rate per 100,000 people with its last four weeks; and, for your county, the CDC NWSS wastewater viral activity level (WVAL) for influenza A. A county's wastewater reading is the median sampling site among the public-domain sites serving it, with that site's CDC category. A county with no such site says so rather than showing zero, and a reading more than 14 days past its week ending is shown as “no recent data”. The CDC changed how WVAL is calculated on 14 August 2026, so a wastewater trend line never joins values from before and after that date. Every figure carries its CDC system, the week it covers and when we fetched it, and the card flags data more than 14 days old.</p>
+    <p><strong>Community reports</strong> are a separate, secondary signal: anonymous, self-reported and unverified. A report counts as <strong>influenza-like illness (ILI)</strong> when it has a fever of 100°F or higher <em>and</em> a cough or sore throat — the CDC's surveillance definition. It counts as <strong>COVID-like</strong> when it reports new loss of taste or smell, or a fever with a cough or shortness of breath. A self-reported positive test is counted as reported, never as verified. For each county, over the past seven days:</p>
+    <ul>
+      <li><strong>Fewer than 5 reports:</strong> nothing is shown except that there are fewer than five.</li>
+      <li><strong>5 to 19:</strong> the number of reports, marked “too few to compare”.</li>
+      <li><strong>20 or more:</strong> the share of reports meeting the ILI definition.</li>
+      <li><strong>“Elevated community reports”</strong> appears only with at least 30 reports <em>and</em> an ILI share at least twice the county's own share over the previous four weeks (or the state's, when the county has fewer than 20 reports in that period). With no usable baseline there is no elevated label.</li>
+    </ul>
+    <p>Community counts are recalculated once a day from reports that passed our abuse checks: a county-day with more than three times its usual daily number of reports, or more reports from one connection than the daily limit allows, is quarantined and left out. Community reports can never change the FluTrack level or any CDC figure, and FluTrack never describes them as an outbreak — it cannot verify one, and a label like that is not a claim self-reports can support. People also tend to start reporting when they feel sick, so “I feel fine” reports are invited to provide the denominator. How reports are collected and kept is set out in the <a href="/consumer-health-data-privacy/">consumer health data privacy notice</a>.</p>
+
     <h2>Limitations</h2>
     <p>An honest index states plainly what it cannot do. The respiratory threat level:</p>
     <ul>

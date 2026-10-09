@@ -74,7 +74,7 @@ export default function consumerHealthDataPrivacy(ctx) {
       <li>20 or more: the share of reports meeting the CDC's influenza-like-illness definition (fever plus cough or sore throat).</li>
       <li>“Elevated community reports” appears only with at least 30 reports and a share at least twice the area's usual level.</li>
     </ul>
-    <p>Counts are recalculated once a day, not live, so no single report changes what anyone sees in real time. Reports flagged by our automated abuse checks are excluded.</p>
+    <p>Counts are recalculated once a day, so no single report changes what anyone sees the moment it is sent. Reports flagged by our automated abuse checks are excluded.</p>
 
     <h2>Who we share it with</h2>
     <p><strong>No one, and we never sell it.</strong> Symptom reports are not shared with, sold to, or made available to advertisers, analytics companies, data brokers or any other third party, and they are never used for advertising or to target ads. They are not sent to Google Analytics or any other analytics tool.</p>
