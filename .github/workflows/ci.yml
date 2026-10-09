@@ -48,5 +48,13 @@ jobs:
       - name: QA — links, assets, SEO tags, provenance
         run: node build/check.mjs
 
+      # Tests run on Node 22: the Functions/Worker integration tests use an
+      # in-memory D1 built on node:sqlite (Node >= 22.13). The build above
+      # stays on Node 20, the version Cloudflare Pages builds with (.nvmrc).
+      - name: Set up Node 22 for tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Unit + integration tests
         run: node --test test/*.test.mjs

@@ -379,6 +379,22 @@ if (existsSync(join(dist, 'data/snapshot.json'))) {
   }
 }
 
+// --- No ad slot in or beside the symptom form / result card --------------- //
+{
+  const home = existsSync(join(dist, 'index.html')) ? readFileSync(join(dist, 'index.html'), 'utf8') : '';
+  const start = home.indexOf('<section class="section report"');
+  if (start !== -1) {
+    const end = home.indexOf('</section>', start) + '</section>'.length;
+    const inside = home.slice(start, end);
+    const before = home.slice(0, start).trimEnd().slice(-300);
+    const after = home.slice(end).trimStart().slice(0, 300);
+    if (/ad-slot/.test(inside)) errors.push('/index.html: an ad slot sits inside the report section');
+    if (/<aside class="ad-slot"[^>]*><\/aside>$/.test(before) || /^<aside class="ad-slot"/.test(after)) {
+      errors.push('/index.html: an ad slot sits directly beside the report section');
+    }
+  }
+}
+
 // --- Community output never says "outbreak" ------------------------------ //
 // Community reports are unverified; no page or template may call them one.
 for (const file of htmlFiles) {
