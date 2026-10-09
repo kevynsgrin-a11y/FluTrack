@@ -5,6 +5,7 @@
 import { site, disclaimers } from './site.mjs';
 import { escapeHtml } from '../../src/scripts/util.js';
 import { icon } from '../../src/scripts/icons.js';
+import { scriptHref } from './versioned-assets.mjs';
 
 // One inline script, allowlisted by its own SHA-256 in the CSP (build/build.mjs
 // derives the hash from this exact string, and build/check.mjs asserts that the
@@ -51,7 +52,7 @@ function head(page) {
   const desc = page.description || site.description;
   const canonical = `${site.origin}${page.path}`;
   const ogType = page.ogType || 'website';
-  const ogImage = `${site.origin}${page.ogImage || '/assets/og-default.png'}`;
+  const ogImage = `${site.origin}${page.ogImage || site.assets?.ogImage || '/assets/og-default.png'}`;
   const jsonld = (page.jsonld || []).map((obj) => `<script type="application/ld+json">${JSON.stringify(obj)}</script>`).join('\n  ');
   // GA4 goes through the consent gate: analytics.js registers it with
   // consent.js and gtag.js loads only once analytics storage is granted. The
@@ -60,7 +61,7 @@ function head(page) {
   // injects an ungated second copy of GA4 if it finds none there.
   const ga4 = site.analytics?.ga4MeasurementId;
   const analyticsTag = ga4
-    ? `\n  <script type="module" src="/assets/js/analytics.js" data-ga4-id="${escapeHtml(ga4)}"></script>`
+    ? `\n  <script type="module" src="${scriptHref('/assets/js/analytics.js', site.assets)}" data-ga4-id="${escapeHtml(ga4)}"></script>`
     : '';
   return `<meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">${analyticsTag}
@@ -136,8 +137,8 @@ function footer() {
 }
 
 export function layout(page) {
-  const scripts = (page.scripts || []).map((src) => `<script type="module" src="${src}"></script>`).join('\n  ');
+  const scripts = (page.scripts || []).map((src) => `<script type="module" src="${escapeHtml(scriptHref(src, site.assets))}"></script>`).join('\n  ');
   return `<!doctype html><html lang="en"><head>${head(page)}</head><body${page.bodyClass ? ` class="${page.bodyClass}"` : ''}>
   <a class="skip-link" href="#main">Skip to content</a>${header(page)}<main id="main" tabindex="-1">${page.body}</main>${footer()}<p class="visually-hidden" id="live-status" role="status" aria-live="polite"></p>
-  <script type="module" src="/assets/js/ui.js"></script><script type="module" src="/assets/js/alerts.js"></script>${scripts}</body></html>`;
+  <script type="module" src="${scriptHref('/assets/js/ui.js', site.assets)}"></script><script type="module" src="${scriptHref('/assets/js/alerts.js', site.assets)}"></script>${scripts}</body></html>`;
 }

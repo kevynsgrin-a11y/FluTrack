@@ -10,7 +10,7 @@
 // ===========================================================================
 
 import { escapeHtml } from '../scripts/util.js';
-import { resultCard } from '../scripts/report-render.js';
+import { resultCard, shareText } from '../scripts/report-render.js';
 import { US_VIEWBOX, STATE_PATHS } from '../scripts/us-svg-paths.js';
 import { states } from '../scripts/states-data.js';
 
@@ -60,9 +60,10 @@ export async function stylesheetHref(env, request) {
   return null;
 }
 
-export function pageShell({ title, body, css }) {
+export function pageShell({ title, description, body, css }) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>${escapeHtml(title)} · FluTrack</title><meta name="robots" content="noindex">
+${description ? `<meta name="description" content="${escapeHtml(description)}">` : ''}
 ${css ? `<link rel="stylesheet" href="${escapeHtml(css)}">` : ''}</head>
 <body><header class="site-header"><div class="container site-header__inner"><a class="brand" href="/"><span class="brand__name">Flu<b>Track</b></span></a></div></header>
 <main id="main" class="section"><div class="container container--narrow">${body}
@@ -72,8 +73,12 @@ ${css ? `<link rel="stylesheet" href="${escapeHtml(css)}">` : ''}</head>
 }
 
 export function resultPage({ payload, heading, css }) {
-  const map = usStaticMap(payload.location.state, payload.level?.level);
-  return pageShell({ title: `This week near ${payload.location.county_name || payload.location.state_name}`, css, body: resultCard(payload, { heading, staticMap: map }) });
+  const level = payload.level;
+  const usableIndex = Number.isFinite(level?.level) && level.week_ending && ['sample', 'live'].includes(level.kind);
+  const map = usStaticMap(payload.location.state, usableIndex ? level.level : null);
+  const place = payload.location.county_name ? `${payload.location.county_name}, ${payload.location.state}` : payload.location.state_name || payload.location.state;
+  const description = `${shareText(payload)}. County wastewater and statewide hospital admissions have separate observation periods.`;
+  return pageShell({ title: `Respiratory readings for ${place}`, description, css, body: resultCard(payload, { heading, staticMap: map }) });
 }
 
 export function messagePage({ title, message, css, extra = '' }) {

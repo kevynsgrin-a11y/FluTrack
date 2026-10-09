@@ -234,8 +234,9 @@ if (existsSync(join(dist, 'data/snapshot.json'))) {
 // Analytics origins, or the tags are silently refused.
 {
   const GA4_ID = 'G-65H1FJWYLR';
-  const tag = `<script type="module" src="/assets/js/analytics.js" data-ga4-id="${GA4_ID}"></script>`;
-  if (!existsSync(join(dist, 'assets', 'js', 'analytics.js'))) errors.push('missing /assets/js/analytics.js (GA4 bootstrap)');
+  const { js = 'js' } = JSON.parse(readFileSync(join(dist, 'assets', 'build.json'), 'utf8'));
+  const tag = `<script type="module" src="/assets/${js}/analytics.js" data-ga4-id="${GA4_ID}"></script>`;
+  if (!existsSync(join(dist, 'assets', js, 'analytics.js'))) errors.push(`missing /assets/${js}/analytics.js (GA4 bootstrap)`);
   for (const file of htmlFiles) {
     const rel = file.replace(dist, '');
     const html = readFileSync(file, 'utf8');
@@ -339,7 +340,9 @@ if (existsSync(join(dist, 'data/snapshot.json'))) {
 // files is reachable from the first load.
 {
   const GLOBE_BUDGET = 45 * 1024;
-  const globeFiles = ['assets/js/globe.js', 'assets/js/geo-vendor.js', 'assets/js/states-data.js', 'assets/geo/land-110m.json', 'assets/geo/us-states.json'];
+  const { js = 'js' } = JSON.parse(readFileSync(join(dist, 'assets', 'build.json'), 'utf8'));
+  if (!/^js\/[a-f0-9]{12}$/.test(js)) errors.push('client modules have no content-addressed release directory');
+  const globeFiles = [`assets/${js}/globe.js`, `assets/${js}/geo-vendor.js`, `assets/${js}/states-data.js`, 'assets/geo/land-110m.json', 'assets/geo/us-states.json'];
   let total = 0;
   for (const rel of globeFiles) {
     const p = join(dist, rel);
@@ -353,7 +356,7 @@ if (existsSync(join(dist, 'data/snapshot.json'))) {
 
   const LAZY = new Set(['globe.js', 'geo-vendor.js', 'report-widget.js', 'report-render.js']);
   const staticImports = (file) => {
-    const p = join(dist, 'assets', 'js', file);
+    const p = join(dist, 'assets', js, file);
     if (!existsSync(p)) return [];
     const src = readFileSync(p, 'utf8');
     return [...src.matchAll(/(?:^|[;\n])\s*import\s+(?:[^'"()]*?\s+from\s+)?['"]\.\/([\w.-]+\.js)['"]/g)].map((m) => m[1]);
@@ -361,7 +364,11 @@ if (existsSync(join(dist, 'data/snapshot.json'))) {
   let pagesChecked = 0;
   for (const file of htmlFiles) {
     const html = readFileSync(file, 'utf8');
-    const entries = [...html.matchAll(/<script[^>]+src="\/assets\/js\/([\w.-]+\.js)"/g)].map((m) => m[1]);
+    const entries = [...html.matchAll(/<script[^>]+src="\/assets\/(js\/[^"?#]+\.js)"/g)].map((m) => {
+      const name = m[1].split('/').at(-1);
+      if (m[1] !== `${js}/${name}`) errors.push(`${file.replace(dist, '')}: ${m[1]} can load cached modules from another release`);
+      return name;
+    });
     const seen = new Set();
     const queue = [...entries];
     while (queue.length) {
