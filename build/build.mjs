@@ -11,6 +11,8 @@
 //     assets/js/*.js                 client ES modules (copied)
 //     assets/*                       icons, og image, etc.
 //     data/snapshot.json             live CDC snapshot (sample fallback)
+//     data/epidemic-trends.json      CDC's COVID-19 Rt categories the pages show
+//                                    (only when fetched, valid and the snapshot is live)
 //     sitemap.xml, robots.txt, manifest.webmanifest, _headers, _redirects, 404
 // ===========================================================================
 
@@ -37,6 +39,7 @@ import * as seo from './lib/seo.mjs';
 import * as partials from './lib/partials.mjs';
 import { generateSnapshot } from './lib/snapshot.mjs';
 import { resolveSnapshot } from './lib/live-snapshot.mjs';
+import { resolveEpidemicTrend, planEpidemicTrend, publicEpidemicTrend } from './lib/epidemic-trend.mjs';
 import { assetFiles, manifest, icoFromPng, stateOgSvg } from './lib/assets.mjs';
 import { extractCritical } from './lib/critical.mjs';
 import { shardCrosswalk } from '../src/server/zip-lookup.js';
@@ -210,6 +213,17 @@ function writeAssets(snapshot) {
       writeFileSync(join(shardDir, `${zip3}.json`), JSON.stringify(map));
     }
   }
+}
+
+// The record behind the epidemic-trend blocks, so the figures on the pages can
+// be audited against a file (build/check.mjs does exactly that). Written only
+// when the pages carry the blocks: no plan, no file.
+function writeEpidemicTrend(plan) {
+  const record = publicEpidemicTrend(plan);
+  if (!record) return;
+  const dataOut = join(dist, 'data');
+  mkdirSync(dataOut, { recursive: true });
+  writeFileSync(join(dataOut, 'epidemic-trends.json'), JSON.stringify(record));
 }
 
 function writeRootFiles(sitemapEntries) {
@@ -401,6 +415,23 @@ async function main() {
   if (live) log(`data: LIVE CDC pre-render — ${reason}`);
   else console.warn(`  ! data: SAMPLE fallback — pages will say "Sample data" (${reason})`);
   const ctx = buildContext(snapshot);
+
+  // CDC's COVID-19 epidemic-trend (Rt) categories. Never fatal: any failure to
+  // fetch or validate them simply omits the block, and a sample-data build
+  // carries none (a page that says "Sample data" must not also carry a real
+  // health signal). See build/lib/epidemic-trend.mjs.
+  const trend = await resolveEpidemicTrend();
+  ctx.epidemicTrend = planEpidemicTrend(trend.data, { models: ctx.models, provenance: ctx.provenance });
+  if (ctx.epidemicTrend) {
+    const c = ctx.epidemicTrend.counts;
+    log(`epidemic trend: CDC ${trend.reason} — ${c.shown} states shown, ${c.withheld} withheld, ${c.notEstimated} not estimated`);
+  } else if (trend.data) {
+    console.warn(`  ! epidemic trend: fetched (${trend.reason}) but omitted — this build's data is not live`);
+  } else if (trend.status === 'skipped') {
+    log(`epidemic trend: skipped (${trend.reason})`);
+  } else {
+    console.warn(`  ! epidemic trend: unavailable, block omitted (${trend.reason})`);
+  }
   // Build variables come from wrangler.toml [vars] (the Pages project's source
   // of truth), so this line is where a deploy log shows which mode shipped.
   log(
@@ -413,6 +444,7 @@ async function main() {
   copyScripts();
   writeServiceWorker();
   writeAssets(snapshot);
+  writeEpidemicTrend(ctx.epidemicTrend);
   log('assets, styles, scripts and service worker written');
 
   const written = [];

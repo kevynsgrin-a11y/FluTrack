@@ -24,6 +24,15 @@ flowchart TD
 The **same** `render.js` functions run at build time and in the browser, so the
 statically generated markup and the live-refreshed markup are identical.
 
+CDC's COVID-19 epidemic trend (Rt) is a second, **build-time-only** input. The
+build fetches `…/RtEstimates/…/covid-19/map.json` directly (it is not on the
+ingest mirror), validates it, and `planEpidemicTrend()` decides per state whether
+the category may be shown, withheld (CDC's own notes say its emergency-department
+data are unavailable, or FluTrack has no usable COVID-19 ED series) or omitted.
+The blocks are static markup outside every `data-region`, so the browser never
+re-renders them, and the combined index and its scoring are untouched. See
+`docs/EPIDEMIC-TREND-REVIEW.md`.
+
 ## The unified Respiratory Threat Level
 
 Implemented in `src/scripts/threat-index.js` (pure, fully unit-tested).
@@ -68,5 +77,6 @@ cut points — and are published on `/methodology/`.
 - Auto-discovered content/legal pages from `build/pages/content/*.mjs`
 - `assets/styles.css`, `assets/js/*.js`, icons, OG card
 - `data/snapshot.json`, `sitemap.xml`, `robots.txt`, `manifest.webmanifest`
+- `data/epidemic-trends.json` (only when the epidemic-trend blocks are rendered)
 - `_headers`, `_redirects`, `404.html`
 ```

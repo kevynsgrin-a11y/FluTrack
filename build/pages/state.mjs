@@ -6,6 +6,7 @@ import { metros } from './metro.mjs';
 import { takeawaysBlock } from '../../src/scripts/takeaways.js';
 import { stateIntro, weekInBrief, stateFaqs, stateDescription, sourceEvidence } from '../../src/scripts/state-narrative.js';
 import { presentationModel } from '../../src/scripts/reading-provenance.js';
+import { epidemicTrendBlock } from '../lib/epidemic-trend-render.mjs';
 
 /** Build a per-state report without changing its data or URL contract. */
 export function statePage(ctx, state) {
@@ -59,6 +60,7 @@ export function statePage(ctx, state) {
             </div>
             <div data-region="pathogen-tiles">${pathogenTiles(model, { weekEnding, provenance })}</div>
           </div>
+          ${epidemicTrendBlock({ state, plan: ctx.epidemicTrend, signals, model, provenance })}
           ${adSlot('state-by-virus')}
           <div>
             <div class="section-head section-rule"><h2 style="font-size: var(--step-2)">What the data shows</h2></div>

@@ -120,7 +120,7 @@ export function provenanceBadge(provenance = {}) {
   return `<span class="badge badge--cached" title="Illustrative figures; not measured health conditions">Sample data</span>`;
 }
 
-function trendShape(direction) {
+export function trendShape(direction) {
   const shapes = {
     up: '<path d="M1 10 6 5l4 3 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/><path d="M13 2h3v3" fill="none" stroke="currentColor" stroke-width="2"/>',
     down: '<path d="M1 3 6 8l4-3 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"/><path d="M13 14h3v-3" fill="none" stroke="currentColor" stroke-width="2"/>',

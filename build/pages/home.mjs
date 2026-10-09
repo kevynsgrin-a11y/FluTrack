@@ -6,6 +6,7 @@ import { icon } from '../../src/scripts/icons.js';
 import { signupBand, trendDisclaimer, adSlot } from '../lib/partials.mjs';
 import { websiteLd, organizationLd, datasetLd, webApplicationLd } from '../lib/seo.mjs';
 import { reportSection } from '../lib/report-section.mjs';
+import { epidemicTrendHomeLine } from '../lib/epidemic-trend-render.mjs';
 
 export default function home(ctx) {
   const { site, states, national, weekEnding, provenance } = ctx;
@@ -77,6 +78,7 @@ export default function home(ctx) {
         <h2>United States activity</h2>
         <p class="text-secondary">Tap or select a state for its full report.</p>
       </div>
+      ${epidemicTrendHomeLine(ctx.epidemicTrend)}
       <div data-region="us-map">${usMap(mapEntries, { selected: '' })}</div>
       <div style="margin-top: var(--space-xl)">
         <a class="btn btn--secondary" href="/states/" data-region="state-link">Full state report</a>
@@ -93,7 +95,7 @@ export default function home(ctx) {
       <div class="editorial-columns">
         <div>
           <h3>We read the CDC</h3>
-          <p>The implemented CDC feeds are emergency-department visits, the Acute Respiratory Illness activity level and wastewater viral activity. Laboratory positivity is unavailable in live readings; illustrative samples can include it.</p>
+          <p>The implemented index feeds are emergency-department visits, the Acute Respiratory Illness activity level and wastewater viral activity. Laboratory positivity is unavailable in live readings; illustrative samples can include it. The CDC's COVID-19 epidemic trend, where available, is shown beside a state's readings and never inside the index.</p>
         </div>
         <div>
           <h3>We combine the signals</h3>

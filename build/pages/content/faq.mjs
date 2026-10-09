@@ -142,6 +142,14 @@ function faqGroups(disclaimers) {
           a: `<p>The CDC's National Wastewater Surveillance System (NWSS) measures viral material in wastewater to produce a normalized activity index. It describes participating sewersheds, not infection counts, test positivity, ED visits or hospital admissions. Coverage differs across places and viruses; a local wastewater increase cannot establish a statewide or national trend. FluTrack's wastewater weight is an editorial choice documented in our <a href="/methodology/">methodology</a>.</p>`,
         },
         {
+          q: 'What does “Likely growing” or “Declining” on a state page mean?',
+          a: `<p>It is the CDC's own epidemic-trend category for COVID-19, not a FluTrack rating. The CDC's Center for Forecasting and Outbreak Analytics estimates the reproduction number (Rt) from emergency-department visits and assigns a category from the probability that infections are growing: Growing (more than 90%), Likely growing (75% to 90%), Not changing (25% to 75%), Likely declining (10% to 25%) and Declining (less than 10%). The CDC says these categories show direction only and do not reflect the burden of disease. FluTrack shows the category separately from its combined respiratory index, with the model report's date and the date its data end, and never adds it to the index. See <a href="/methodology/#epidemic-trend">how it is shown</a>.</p>`,
+        },
+        {
+          q: "Why can the CDC's trend and a wastewater or emergency-department trend point in different directions?",
+          a: `<p>They measure different things in different ways. The CDC's epidemic trend is a modeled direction estimated from emergency-department visits. Wastewater viral activity comes from sampling sites and follows its own reporting schedule. FluTrack's own trend compares the latest observation with the mean of up to three prior observations of one measurement. A level can also be high while a direction is declining, or low while it is growing. When a state page lists measurements that point in opposite directions it says so rather than averaging them, and it notes that the CDC's model and the emergency-department share come from the same data, so their agreement is not independent confirmation. Changes in reporting coverage can also affect comparisons between weeks.</p>`,
+        },
+        {
           q: 'Does missing data mean there is no illness?',
           a: `<p>No. Surveillance gaps describe missing coverage, not the absence of illness. Missing values are not zeros, an unavailable pathogen is not rated low, and insufficient history is not holding steady. A state or metro reading cannot substitute for independently measured city conditions, and a national trend cannot substitute for the selected state.</p>`,
         },

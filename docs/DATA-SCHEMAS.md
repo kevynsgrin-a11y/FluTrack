@@ -23,6 +23,8 @@ The **fieldName** column is the API key you use in SoQL and in row objects. The 
 | `mpgq-jmmr` | NHSN HRD metrics (preliminary) | jurisdiction × week (wide, 322 cols) | 2026-10-03 | 3 (CA, 3 weeks) |
 | `ymmh-divb` | Wastewater Influenza A samples | site × sample date | sample_collect_date 2026-09-29 (CA) | 45 (CA) |
 
+The CDC COVID-19 epidemic-trend (Rt) map is **not** a Socrata dataset; it is documented at the end of this file.
+
 ## vutn-jzwm — 2023 Respiratory Virus Response - NSSP Emergency Department Visits - COVID-19, Flu, RSV, Combined
 
 - **ID:** `vutn-jzwm`
@@ -600,3 +602,31 @@ Key columns:
 - **Row fields:** `release_date` (`"2026-10-02"`), `region` (`"ca"`), `issue` (int, `202638`), `epiweek` (int YYYYWW), `lag` (int), `num_ili`, `num_patients`, `num_providers` (ints), `num_age_0` … `num_age_5` (all `null` for state regions), `wili`, `ili` (floats; for CA `wili == ili`).
 - Unlike SODA, values are real JSON numbers and nulls are explicit.
 - **Only `ca` rows came back.** `ny` returned no rows and no error. Epiweek `202639` was not yet available: the latest issue is `202638`, which is the MMWR week ending 2026-09-26 and so matches the CDC datasets' latest week. CA epiweeks 202636–202638 have `ili` 2.5744, 2.57249 and 2.61951.
+
+## CDC COVID-19 epidemic trends (Rt) — `rt-map/1.0.0`
+
+- **URL:** `https://www.cdc.gov/wcms/vizdata/cfa/RtEstimates/substate/release/latest/public-jsons/v1/covid-19/map.json`. A CDC website data file from the Center for Forecasting and Outbreak Analytics, not a documented API; `release/latest` is an alias that moves with each weekly report, so the file's own dates are the truth. Explainer: `https://www.cdc.gov/cfa-modeling-and-forecasting/rt-estimates/index.html`.
+- **Retained copy (2026-10-09 ~16:03 UTC, 309,246 bytes, SHA-256 `c49555ee002404f5cb7630f840dc14a78d327c38111920eddb67c31117de588d`):** 1,001 rows for the report dated 2026-10-07. Fixture: `test/fixtures/cdc/covid-19-rt-map.json`, a faithful subset (national + 51 state rows + 3 substate rows) with every value untouched.
+- **Top level:** `schema` (`"rt-map/1.0.0"`), `status` (`"available"`), `report_date` and `training_data_end` (`YYYY-MM-DD`; 2026-10-07 and 2026-10-06 — different facts), `disease` (`"covid-19"`), `rows`.
+- **Row fields:** `fips` (string: `"00000"` national, 2 digits state, 6 digits HSA), `location_type` (`national` | `state` | `hsa`), `category` (`growing` | `likely_growing` | `not_changing` | `likely_declining` | `declining`, or null), `median`, `lower_95`, `upper_95` (Rt estimate and 95% interval; real JSON numbers or null), `p_growing` (share of the estimated Rt distribution above 1; number or null), `not_estimated` (true or null), `not_estimated_detail` (`opt_out` | `low_data` | `low_recent_reporting` or null), `percent_visits`, `threshold_classification` (e.g. `"Low"`, `"Data Unavailable"`).
+- **Rows in the 2026-10-07 release:** 1 national, 51 state (all estimated), 949 HSA (556 not estimated). Not-estimated rows carry null category, interval and probability.
+
+**Category definitions** (CDC Rt page, retained 2026-10-09). Rt is estimated from daily emergency-department visits reported through NSSP; the category comes from the share of the estimated Rt distribution above 1:
+
+| Category | Share above 1 | `p_growing` seen in this release (state rows) |
+|---|---|---|
+| `growing` | more than 90% | 0.902 – 0.998 (4 states) |
+| `likely_growing` | 75% – 90% | 0.764 – 0.894 (8) |
+| `not_changing` | 25% – 75% (range spans 1) | 0.278 – 0.748 (25) |
+| `likely_declining` | 10% – 25% | 0.152 – 0.242 (6) |
+| `declining` | less than 10% | 0.004 – 0.082 (8) |
+
+CDC states that "epidemic trends indicate direction only and do not reflect the burden of disease". "Not estimated" applies where ED data are too sparse (no reported visits on more than 20% of dates in the past 8 weeks), show recent sustained anomalies, or the model fails reliability checks.
+
+**Notes for the normalizer**
+
+- **Validate the category against `p_growing`.** `build/lib/epidemic-trend.mjs` drops any row whose category falls outside its band (±0.002 for three-place rounding), so a column mix-up or schema drift cannot put a wrong direction on a page.
+- **FluTrack reads** `category`, `p_growing`, `median`, `lower_95`, `upper_95` for state and national rows. It ignores HSA rows, `percent_visits` and `threshold_classification` (the file states no period for them).
+- **A published estimate is not proof of ED data.** Iowa's row has a category and `percent_visits` 0.18 although CDC's data notes say Iowa's NSSP feed was terminated on 2026-05-06, and CDC's respiratory data page says no ED data are available for South Dakota (also a row with a category). The basis of those estimates is not explained on CDC's pages, so FluTrack withholds them (`DOCUMENTED_ED_GAPS`).
+- **The state ED exports zero-fill after a feed ends.** The separate `nssp_ed_substate_<state>.json` files (not used by FluTrack) show Iowa with real values through the week ending 2026-05-09, then `0.0` for the weeks ending 2026-05-16 through 2026-06-27, then `null` from 2026-07-04 — although CDC says those weeks show Data Unavailable. Anyone who reads those files must treat zeros after a documented feed termination as missing, never as "no COVID-19".
+- **Freshness.** `MAX_REPORT_AGE_DAYS` (21) is measured from `report_date`, not from retrieval.
