@@ -250,3 +250,18 @@ test('/api/official validates its parameters', async () => {
   assert.equal((await get('/api/official?state=CA&county=36061')).status, 400, 'county outside the state');
   assert.equal(onRequestOptions().status, 204);
 });
+
+test('a request that finds another pull in progress backs off without releasing that pull\'s lock', async () => {
+  const { refreshState } = await import('../src/server/area.js');
+  await env.OFFICIAL_CACHE.put('pull-lock:CA', '1', { expirationTtl: 60 });
+  const docs = await refreshState(env, 'CA');
+  assert.equal(docs, null, 'backs off');
+  assert.equal(await env.OFFICIAL_CACHE.get('pull-lock:CA'), '1', 'the other pull still holds its lock');
+});
+
+test('a pull that took the lock releases it when done', async () => {
+  const { refreshState } = await import('../src/server/area.js');
+  const docs = await refreshState(env, 'CA');
+  assert.ok(docs && docs.size > 0);
+  assert.equal(await env.OFFICIAL_CACHE.get('pull-lock:CA'), null);
+});

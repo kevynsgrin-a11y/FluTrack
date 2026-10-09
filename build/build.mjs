@@ -391,6 +391,12 @@ async function main() {
   if (live) log(`data: LIVE CDC pre-render — ${reason}`);
   else console.warn(`  ! data: SAMPLE fallback — pages will say "Sample data" (${reason})`);
   const ctx = buildContext(snapshot);
+  // Build variables come from wrangler.toml [vars] (the Pages project's source
+  // of truth), so this line is where a deploy log shows which mode shipped.
+  log(
+    `report form: ${site.turnstile.siteKey ? 'ON (Turnstile site key set)' : 'opens soon (no TURNSTILE_SITE_KEY)'}` +
+      `${site.features.report ? '' : ', switched OFF by FEATURE_REPORT=false'}; FEATURE_REPORT=${process.env.FEATURE_REPORT ?? '(unset)'}`
+  );
 
   // Assets & code
   bundleCss();
