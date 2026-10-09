@@ -1,0 +1,338 @@
+[
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Alabama",
+  "label": "Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Alaska",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "American Samoa",
+  "label": "Data Unavailable",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Arizona",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Arkansas",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "California",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Colorado",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Connecticut",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Delaware",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "District of Columbia",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Florida",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Georgia",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Guam",
+  "label": "Data Unavailable",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Hawaii",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Idaho",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Illinois",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Indiana",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Iowa",
+  "label": "Data Unavailable",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Kansas",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Kentucky",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Louisiana",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Maine",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Maryland",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Massachusetts",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Michigan",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Minnesota",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Mississippi",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Missouri",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Montana",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Nebraska",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Nevada",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "New Hampshire",
+  "label": "Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "New Jersey",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "New Mexico",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "New York",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "North Carolina",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "North Dakota",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Northern Mariana Islands",
+  "label": "Data Unavailable",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Ohio",
+  "label": "Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Oklahoma",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Oregon",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Pennsylvania",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Puerto Rico",
+  "label": "Data Unavailable",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Rhode Island",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "South Carolina",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "South Dakota",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Tennessee",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Texas",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Utah",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Vermont",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Virgin Islands",
+  "label": "Data Unavailable",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Virginia",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Washington",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "West Virginia",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Wisconsin",
+  "label": "Very Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "geography": "Wyoming",
+  "label": "Low",
+  "buildnumber": "2026-10-02 16:03:50.980149"
+ }
+]

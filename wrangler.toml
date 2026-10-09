@@ -1,2 +1,26 @@
+# Cloudflare Pages project "flufollower" (git-connected; merge to main deploys).
+# This file is the source of truth for the Pages Functions' bindings.
 name = "flufollower"
 pages_build_output_dir = "dist"
+compatibility_date = "2026-07-22"
+
+# Shared with the flutrack-ingest Worker (workers/ingest/wrangler.toml).
+# Schema: migrations/ — apply with `npx wrangler d1 migrations apply flutrack-db --remote`.
+[[d1_databases]]
+binding = "DB"
+database_name = "flutrack-db"
+database_id = "f3349920-cdfd-4513-b5f3-53f25bb25301"
+
+# Official-data documents (official:state:XX, official:county:FIPS), daily
+# hashing salts and rate-limit counters. Shared with flutrack-ingest.
+[[kv_namespaces]]
+binding = "OFFICIAL_CACHE"
+id = "91b560ebf86148e0b8c9cc29b1aa48cc"
+
+[vars]
+# Rollback switch for "Report your symptoms": "false" makes /api/report answer
+# 503 and the widget hide itself. /api/area and /api/official keep working.
+FEATURE_REPORT = "true"
+
+# Secrets (never in this file) — set with `npx wrangler pages secret put <NAME>`:
+#   TURNSTILE_SECRET   Cloudflare Turnstile secret key for the report form

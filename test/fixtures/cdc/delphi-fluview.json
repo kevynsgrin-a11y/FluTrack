@@ -1,0 +1,60 @@
+{
+ "epidata": [
+  {
+   "release_date": "2026-10-02",
+   "region": "ca",
+   "issue": 202638,
+   "epiweek": 202636,
+   "lag": 2,
+   "num_ili": 6077,
+   "num_patients": 236055,
+   "num_providers": 177,
+   "num_age_0": null,
+   "num_age_1": null,
+   "num_age_2": null,
+   "num_age_3": null,
+   "num_age_4": null,
+   "num_age_5": null,
+   "wili": 2.5744,
+   "ili": 2.5744
+  },
+  {
+   "release_date": "2026-10-02",
+   "region": "ca",
+   "issue": 202638,
+   "epiweek": 202637,
+   "lag": 1,
+   "num_ili": 6589,
+   "num_patients": 256133,
+   "num_providers": 177,
+   "num_age_0": null,
+   "num_age_1": null,
+   "num_age_2": null,
+   "num_age_3": null,
+   "num_age_4": null,
+   "num_age_5": null,
+   "wili": 2.57249,
+   "ili": 2.57249
+  },
+  {
+   "release_date": "2026-10-02",
+   "region": "ca",
+   "issue": 202638,
+   "epiweek": 202638,
+   "lag": 0,
+   "num_ili": 6740,
+   "num_patients": 257300,
+   "num_providers": 176,
+   "num_age_0": null,
+   "num_age_1": null,
+   "num_age_2": null,
+   "num_age_3": null,
+   "num_age_4": null,
+   "num_age_5": null,
+   "wili": 2.61951,
+   "ili": 2.61951
+  }
+ ],
+ "result": 1,
+ "message": "success"
+}

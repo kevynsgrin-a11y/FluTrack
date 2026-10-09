@@ -1,0 +1,43 @@
+# flutrack-ingest — owns FluTrack's Cron Triggers (Pages Functions can't run
+# crons). Deploy: cd workers/ingest && npx wrangler deploy
+# Rollback / pause: set `crons = []` below and deploy again.
+name = "flutrack-ingest"
+main = "src/index.js"
+compatibility_date = "2026-07-22"
+workers_dev = true
+
+[triggers]
+crons = ["0 18 * * 3", "0 18 * * 5", "0 8 * * *"]
+
+# A full pull parses ~30k wastewater rows; allow more than the 30 s default.
+[limits]
+cpu_ms = 120000
+
+[observability]
+enabled = true
+
+# The SAME database and namespace the Pages project binds (../../wrangler.toml).
+[[d1_databases]]
+binding = "DB"
+database_name = "flutrack-db"
+database_id = "f3349920-cdfd-4513-b5f3-53f25bb25301"
+migrations_dir = "../../migrations"
+
+[[kv_namespaces]]
+binding = "OFFICIAL_CACHE"
+id = "91b560ebf86148e0b8c9cc29b1aa48cc"
+
+# Self binding: the pull fans out one invocation per state to rebuild KV
+# documents, keeping each invocation under KV's 1,000-operation cap.
+[[services]]
+binding = "SELF"
+service = "flutrack-ingest"
+
+[vars]
+NWSS_SITE = "false"        # ymmh-divb flu A site samples (WastewaterSCAN rows always dropped)
+DELPHI_FLUVIEW = "false"   # state ILI via CMU Delphi (optional secret DELPHI_API_KEY)
+
+# Secrets — `npx wrangler secret put <NAME>`:
+#   INGEST_TOKEN     bearer token for POST /__ingest, /__maintenance, /__seed-zip
+#   SODA_APP_TOKEN   optional data.cdc.gov app token (higher rate limits)
+#   DELPHI_API_KEY   optional, only with DELPHI_FLUVIEW = "true"

@@ -1,0 +1,38 @@
+[
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "pathogen": "COVID-19",
+  "geography": "California",
+  "percent_visits": "0.7"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "pathogen": "Influenza",
+  "geography": "California",
+  "percent_visits": "0.7"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "pathogen": "RSV",
+  "geography": "California",
+  "percent_visits": "0.0"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "pathogen": "COVID-19",
+  "geography": "New York",
+  "percent_visits": "0.5"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "pathogen": "Influenza",
+  "geography": "New York",
+  "percent_visits": "0.2"
+ },
+ {
+  "week_end": "2026-09-26T00:00:00.000",
+  "pathogen": "RSV",
+  "geography": "New York",
+  "percent_visits": "0.0"
+ }
+]
