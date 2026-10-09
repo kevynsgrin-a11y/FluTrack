@@ -6,18 +6,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assessProduction, fetchSnapshot } from '../build/staleness-alarm.mjs';
+import { states } from '../src/scripts/states-data.js';
 import { MAX_LIVE_AGE_DAYS } from '../build/lib/live-snapshot.mjs';
 
 const NOW = new Date('2026-10-08T12:00:00Z');
 const CLI = fileURLToPath(new URL('../build/staleness-alarm.mjs', import.meta.url));
-const JURISDICTIONS = Object.fromEntries(Array.from({ length: 51 }, (_, i) => [`S${i}`, {}]));
+const JURISDICTIONS = Object.fromEntries(states.map(({abbr}) => [abbr, { weekEnding: '2026-09-26', ariLevel: 1 }]));
 
 /** A snapshot shaped the way build/lib/live-snapshot.mjs writes one. */
 const live = (over = {}) => ({
   kind: 'live',
   weekEnding: '2026-09-26',
   sources: ['NSSP Emergency Department Visits'],
-  states: JURISDICTIONS,
+  states: Object.fromEntries(Object.entries(JURISDICTIONS).map(([abbr, signal]) => [abbr, { ...signal, weekEnding: over.weekEnding || '2026-09-26' }])),
   ...over,
 });
 
@@ -91,6 +92,26 @@ test('a partial snapshot, short of the 51 jurisdictions, fails', () => {
   const r = assessProduction(live({ states: short }), { now: NOW });
   assert.equal(r.ok, false);
   assert.match(r.reason, /covers 50 jurisdictions, expected 51/);
+});
+
+test('51 keys and a fresh generated timestamp cannot validate empty observations', () => {
+  const snapshot = live({ generatedAt: NOW.toISOString(), statesWithData: 51, states: Object.fromEntries(states.map(({ abbr }) => [abbr, {}])) });
+  const result = assessProduction(snapshot, { now: NOW });
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /usable observations for only 0 jurisdictions/);
+});
+
+test('old or explicitly unavailable numeric leftovers do not count as usable coverage', () => {
+  const snapshot = live({ states: Object.fromEntries(states.map(({ abbr }) => [abbr, {
+    weekEnding: '2026-09-26', ariLevel: 1,
+    provenance: { metrics: { ari: { status: 'unavailable', contributes: false } } },
+  }])) });
+  assert.equal(assessProduction(snapshot, { now: NOW }).ok, false);
+  for (const signal of Object.values(snapshot.states)) {
+    signal.provenance.metrics.ari = { status: 'available', contributes: true };
+    signal.weekEnding = '2026-09-19';
+  }
+  assert.equal(assessProduction(snapshot, { now: NOW }).ok, false, 'different observation periods are not latest-period coverage');
 });
 
 test('a missing or non-object snapshot fails closed', () => {

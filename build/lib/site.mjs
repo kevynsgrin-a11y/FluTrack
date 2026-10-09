@@ -15,7 +15,7 @@
 
 export const site = {
   name: 'FluTrack',
-  tagline: 'Local flu, RSV & COVID activity in plain English',
+  tagline: 'Dated flu, RSV & COVID surveillance in plain English',
   // Production origin. Override at build time with SITE_ORIGIN env var.
   origin: process.env.SITE_ORIGIN || 'https://flufollower.com',
   locale: 'en_US',
@@ -23,11 +23,11 @@ export const site = {
   // Descriptions used across meta tags / structured data.
   // Kept ≤155 chars so it is not truncated as the home-page meta / OG description.
   description:
-    'A plain-English respiratory threat level for your state — tracking flu, ' +
-    'RSV and COVID-19 trends from public-domain CDC surveillance data.',
+    'A combined respiratory index for your state: dated flu, RSV and COVID-19 ' +
+    'surveillance, trends and coverage from public CDC data.',
   shortDescription:
-    'A simple, local respiratory threat level for flu, RSV and COVID-19, ' +
-    'built on public CDC surveillance data.',
+    'A combined state respiratory index for flu, RSV and COVID-19, ' +
+    'with dated public CDC surveillance and coverage limits.',
   // Publisher / contact — E-E-A-T transparency signals.
   //
   // A health-adjacent (YMYL) site needs an accountable publisher, not just a
@@ -294,15 +294,10 @@ export const processors = [
 ];
 
 /**
- * The four CDC signals the composite is built from, as one canonical phrase.
+ * The implemented live CDC signals, with the model's unavailable input stated.
  *
- * These MUST agree with SIGNAL_WEIGHTS in src/scripts/threat-index.js. Copies of
- * this list previously drifted across the site: several pages enumerated only
- * three, silently dropping the Acute Respiratory Illness level (weight 0.25),
- * so a reader comparing a state page against /methodology/ found the site
- * disagreeing with itself about what it measures. Both variants live here so a
- * future signal change is a one-line edit, and build/check.mjs fails the build
- * if any page enumerates the sources without ARI.
+ * The model retains four weights, but NREVSS has no live adapter. The wording
+ * must distinguish supported sample inputs from actual live contributors.
  *
  * `withSystems` names the surveillance system behind each signal (use where the
  * text is about provenance); `plain` is the same list in running prose.
@@ -310,11 +305,11 @@ export const processors = [
 export const SIGNALS = {
   withSystems:
     'emergency-department visits (NSSP), the Acute Respiratory Illness ' +
-    'activity level (NSSP), wastewater viral activity (NWSS) and laboratory ' +
-    'test positivity (NREVSS)',
+    'activity level (NSSP) and wastewater viral activity (NWSS); laboratory ' +
+    'test positivity (NREVSS) is unavailable live and modeled only in illustrative samples',
   plain:
     'emergency-department visits, the Acute Respiratory Illness activity ' +
-    'level, wastewater viral activity and laboratory test positivity',
+    'level and wastewater viral activity; laboratory test positivity is unavailable live and modeled only in illustrative samples',
 };
 
 // The disclaimer text is referenced in many places; keep it centralized so the

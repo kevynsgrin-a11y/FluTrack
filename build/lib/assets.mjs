@@ -5,6 +5,8 @@
 // ===========================================================================
 
 import { TILE } from '../../src/scripts/us-tilegrid.js';
+import { escapeHtml, formatDate } from '../../src/scripts/util.js';
+import { observationWeek, readingStatus, resolveProvenance, presentationModel } from '../../src/scripts/reading-provenance.js';
 
 const BRAND = '#127c74';
 const BRAND_DEEP = '#083d39';
@@ -39,17 +41,7 @@ export function iconSvg({ size = 512, bg = true } = {}) {
 </svg>`;
 }
 
-const MAP_FILLS = SEV;
-
-/** Deterministic plausible severity per state for static art (summer-ish skew). */
-function ogLevel(abbr) {
-  let h = 0;
-  for (let i = 0; i < abbr.length; i += 1) h = (h * 31 + abbr.charCodeAt(i)) >>> 0;
-  const r = h % 100;
-  return r < 42 ? 0 : r < 72 ? 1 : r < 92 ? 2 : r < 98 ? 3 : 4;
-}
-
-/** 1200×630 Open Graph card — features the signature tile-grid map. */
+/** Dataless brand card. Geographic decoration must not invent severity. */
 export function ogSvg(site) {
   const FONT = "-apple-system, Segoe UI, Roboto, sans-serif";
   const tile = 40;
@@ -61,13 +53,10 @@ export function ogSvg(site) {
       const x = ox + col * pitch;
       const y = oy + row * pitch;
       return `<g><rect x="${x}" y="${y}" width="${tile}" height="${tile}" rx="9" fill="${
-        MAP_FILLS[ogLevel(abbr)]
+        '#5b6773'
       }"/><text x="${x + tile / 2}" y="${y + tile / 2 + 4}" text-anchor="middle" font-family="${FONT}" font-size="13" font-weight="700" fill="#fff">${abbr}</text></g>`;
     })
     .join('');
-  const legend = MAP_FILLS.map(
-    (c, i) => `<rect x="${72 + i * 30}" y="486" width="24" height="12" rx="6" fill="${c}"/>`
-  ).join('');
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
@@ -79,14 +68,13 @@ export function ogSvg(site) {
   </defs>
   <rect width="1200" height="630" fill="url(#bg)"/>
   <rect width="1200" height="630" fill="url(#aura)"/>
-  <g transform="translate(72,58)">${iconSvg({ size: 84 }).replace('<svg', '<svg x="0" y="0"')}</g>
+  <g transform="translate(72,58)">${iconSvg({ size: 84 }).replaceAll('id="bg"', 'id="brand-icon-bg"').replaceAll('url(#bg)', 'url(#brand-icon-bg)').replace('<svg', '<svg x="0" y="0"')}</g>
   <text x="172" y="112" font-family="${FONT}" font-size="38" font-weight="700" fill="#0b7285">FluTrack</text>
   <text x="72" y="250" font-family="${FONT}" font-size="60" font-weight="800" fill="#141a20">Flu, RSV &amp; COVID-19,</text>
   <text x="72" y="322" font-family="${FONT}" font-size="60" font-weight="800" fill="#141a20">for your state —</text>
   <text x="72" y="394" font-family="${FONT}" font-size="60" font-weight="800" fill="#0b7285">in plain English.</text>
-  <text x="72" y="456" font-family="${FONT}" font-size="27" font-weight="500" fill="#4c5763">One local respiratory threat level, built on public CDC data.</text>
-  ${legend}
-  <text x="${72 + 5 * 30 + 12}" y="496" font-family="${FONT}" font-size="20" font-weight="600" fill="#5b6773">Minimal → Very High</text>
+  <text x="72" y="456" font-family="${FONT}" font-size="25" font-weight="500" fill="#4c5763">Dated respiratory surveillance, with its coverage limits.</text>
+  <text x="72" y="496" font-family="${FONT}" font-size="20" font-weight="600" fill="#5b6773">Illustrative map — no activity readings</text>
   ${tiles}
 </svg>`;
 }
@@ -96,10 +84,17 @@ export function ogSvg(site) {
  * authored SVG geometry—no stock art, remote fonts, or new health copy.
  */
 export function stateOgSvg(site, state, model, provenance = {}) {
-  const level = Number.isFinite(model?.level) ? model.level : 0;
+  model = presentationModel(model, provenance);
+  const evidence = resolveProvenance(model?.provenance, provenance);
+  const status = readingStatus(model, evidence);
+  const week = observationWeek(model, evidence);
+  const valid = Number.isFinite(model?.level);
+  const level = valid ? model.level : 0;
   const label = model?.label || 'No data';
   const score = Number.isFinite(model?.composite) ? model.composite : '—';
-  const trend = model?.trend?.label || 'Holding steady';
+  const trend = ['up', 'down', 'flat'].includes(model?.trend?.direction) && Number.isFinite(model?.trend?.changePct)
+    ? `${status === 'sample' ? 'Sample ' : status === 'stale' ? 'Historical ' : ''}${model.trend.label} vs prior-observation mean`
+    : 'Not enough data to determine trend';
   const pattern = [
     '<path d="M0 34 34 0M0 68 68 0" stroke="#fff" stroke-opacity=".22" stroke-width="3"/>',
     '<circle cx="12" cy="12" r="3" fill="#fff" fill-opacity=".35"/>',
@@ -107,16 +102,15 @@ export function stateOgSvg(site, state, model, provenance = {}) {
     '<path d="M0 18 18 0M0 36 36 0M0 54 54 0M0 72 72 0M0 0 72 72" stroke="#fff" stroke-opacity=".44" stroke-width="3"/>',
     '<path d="M0 14 14 0M0 28 28 0M0 42 42 0M0 56 56 0M0 70 70 0M0 0 72 72M-14 0 72 86" stroke="#fff" stroke-opacity=".52" stroke-width="3"/>',
   ][level];
-  const color = SEV[level];
+  const color = valid ? SEV[level] : '#4f5450';
   // A share card is stripped of the page's badge and disclaimer, so it has to
   // carry its own. Until the build input is verified live this is fixture data,
   // and the card says so in the same words the page uses.
-  const sample = provenance.live
-    ? ''
-    : '<text x="82" y="112" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#8a6d1f">Sample data</text>';
-  const safeState = String(state.name).replace(/&/g, '&amp;');
-  const safeLabel = String(label).replace(/&/g, '&amp;');
-  const safeTrend = String(trend).replace(/&/g, '&amp;');
+  const badge = status === 'sample' ? 'Sample data' : status === 'stale' ? 'Historical observations' : status === 'missing' ? 'No usable reading' : status === 'live' ? 'Reported CDC observations' : 'Unverified provenance';
+  const sample = `<text x="82" y="112" font-family="Arial, sans-serif" font-size="23" font-weight="700" fill="#8a6d1f">${escapeHtml(badge)}</text>`;
+  const safeState = escapeHtml(state.name);
+  const safeLabel = escapeHtml(label);
+  const safeTrend = escapeHtml(trend);
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
   <defs><pattern id="density" width="72" height="72" patternUnits="userSpaceOnUse"><rect width="72" height="72" fill="${color}"/>${pattern}</pattern></defs>
   <rect width="1200" height="630" fill="#f5f0e6"/>
@@ -126,7 +120,8 @@ export function stateOgSvg(site, state, model, provenance = {}) {
   <text x="82" y="78" font-family="Arial, sans-serif" font-size="29" font-weight="700" fill="#127c74">FluTrack</text>
   ${sample}
   <text x="82" y="184" font-family="Georgia, serif" font-size="66" font-weight="700" fill="#18272b">${safeState}</text>
-  <text x="82" y="252" font-family="Georgia, serif" font-size="49" font-weight="700" fill="#18272b">Respiratory threat level</text>
+  <text x="82" y="252" font-family="Georgia, serif" font-size="43" font-weight="700" fill="#18272b">Combined respiratory index</text>
+  <text x="82" y="292" font-family="Arial, sans-serif" font-size="23" fill="#4f5450">${week ? `${status === 'sample' ? 'Illustrative period' : 'Observation week ending'} ${escapeHtml(formatDate(week))}` : 'Observation period unavailable'}</text>
   <text x="82" y="458" font-family="Georgia, serif" font-size="132" font-weight="700" fill="${color}">${safeLabel}</text>
   <text x="82" y="532" font-family="Arial, sans-serif" font-size="32" font-weight="600" fill="#4f5450">${safeTrend}</text>
   <text x="1035" y="292" text-anchor="middle" font-family="monospace" font-size="148" font-weight="700" fill="#fff">${score}</text>

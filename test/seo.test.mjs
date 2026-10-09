@@ -138,10 +138,17 @@ test('statePageLd describes the calling page, not always the state page', () => 
   assert.equal(statePageLd(state, '2026-10-02').url, `${site.origin}/state/georgia/`);
 });
 
-test('statePageLd stamps the same week as both published and modified when dated', () => {
-  const dated = statePageLd({ name: 'Alabama', slug: 'alabama' }, '2026-07-11');
-  assert.equal(dated.datePublished, '2026-07-11');
-  assert.equal(dated.dateModified, '2026-07-11');
+test('statePageLd keeps observation periods distinct from page publication dates', () => {
+  const state = { name: 'Alabama', slug: 'alabama' };
+  const dated = statePageLd(state, '2026-09-26', { provenance: { live: true, retrievedAt: '2026-10-08T06:11:25Z' } });
+  assert.equal(dated.temporalCoverage, '2026-09-26');
+  assert.equal('datePublished' in dated, false);
+  assert.equal('dateModified' in dated, false);
+  const sample = statePageLd(state, '2026-10-02', { provenance: { live: false } });
+  assert.equal('temporalCoverage' in sample, false, 'sample periods are not advertised as observed surveillance');
+  const published = statePageLd(state, '2026-09-26', { datePublished: '2026-10-08', dateModified: '2026-10-09' });
+  assert.equal(published.datePublished, '2026-10-08');
+  assert.equal(published.dateModified, '2026-10-09');
 });
 
 test('sitemapXml emits a well-formed urlset and applies the documented defaults', () => {

@@ -11,6 +11,7 @@
 // ===========================================================================
 
 import { computeModel } from '../scripts/model.js';
+import { formatDate } from '../scripts/util.js';
 import { officialKey, OFFICIAL_TTL_SECONDS, SOURCES, ageDays, STALE_AFTER_DAYS } from './sources.js';
 import { upsertOfficial, loadOfficialRows, docsFromRows } from './official-store.js';
 import { runSource, socrataUrl, PULL_WEEKS } from '../../workers/ingest/src/pull.js';
@@ -148,7 +149,7 @@ function ageHours(iso, now) {
 
 // --- FluTrack's own level, from the snapshot the site shipped -------------- //
 
-export async function stateLevel(env, request, abbr) {
+export async function stateLevel(env, request, abbr, now = new Date()) {
   try {
     if (!env.ASSETS) return null;
     const res = await env.ASSETS.fetch(new Request(new URL('/data/snapshot.json', request.url)));
@@ -156,13 +157,18 @@ export async function stateLevel(env, request, abbr) {
     const snap = await res.json();
     const signals = snap.states?.[abbr];
     if (!signals) return null;
-    const model = computeModel(signals);
+    const model = computeModel(signals, { kind: snap.kind || 'unknown', weekEnding: signals.weekEnding || snap.weekEnding, now });
+    const week = model.provenance?.observationPeriod?.weekEnding || signals.weekEnding || snap.weekEnding || null;
+    const age = ageDays(week, now);
     return {
       level: model.level,
       label: model.label,
       trend: model.trend?.direction || null,
-      week_ending: signals.weekEnding || snap.weekEnding || null,
-      kind: snap.kind,
+      week_ending: week,
+      kind: snap.kind || 'unknown',
+      age_days: age,
+      stale: snap.kind === 'live' && (Boolean(model.provenance?.stale) || age == null || age < 0 || age > STALE_AFTER_DAYS),
+      provenance: model.provenance,
     };
   } catch (e) {
     return null;
@@ -228,6 +234,7 @@ function chip(entry, now) {
     short: SOURCES[entry.source]?.short || entry.system,
     label: entry.label,
     dataset: entry.dataset,
+    geography: SOURCES[entry.source]?.geo || null,
     week_ending: entry.week_ending,
     fetched_at: entry.fetched_at,
     age_days: age,
@@ -306,18 +313,26 @@ export function buildAreaPayload({ location, level, stateDoc, countyDoc, communi
 export function meaningLine({ location, level, highlights }) {
   const where = location.state_name || location.state;
   const parts = [];
-  if (level && Number.isFinite(level.level)) {
-    parts.push(`Respiratory illness activity in ${where} is ${level.label.toLowerCase()} by this week's CDC data`);
+  const period = level?.week_ending ? ` for the week ending ${formatDate(level.week_ending)}` : '';
+  if (level?.kind === 'sample') {
+    parts.push(`The respiratory index for ${where} is illustrative sample data${period}; it does not describe current illness activity`);
+  } else if (level?.kind === 'live' && Number.isFinite(level.level) && level.week_ending) {
+    parts.push(level.stale
+      ? `The last available CDC-based respiratory index for ${where} was ${level.label.toLowerCase()}${period}; current activity is unknown`
+      : `The CDC-based respiratory index for ${where} is ${level.label.toLowerCase()}${period}`);
   } else {
-    parts.push(`This week's CDC data for ${where} is shown below`);
+    parts.push(`No usable dated CDC-based respiratory index is available for ${where}; current activity is unknown`);
   }
-  const hosp = highlights.nhsn_flu?.level_label;
-  if (hosp && hosp !== 'Data Unavailable') parts.push(`flu hospital admissions are ${hosp.toLowerCase()}`);
+  const admissions = highlights.nhsn_flu;
+  const hosp = admissions?.level_label;
+  if (hosp && hosp !== 'Data Unavailable' && admissions.week_ending) {
+    parts.push(`Statewide flu hospital admissions were ${hosp.toLowerCase()} for the week ending ${formatDate(admissions.week_ending)}${admissions.stale ? '; newer admission data is unavailable' : ''}`);
+  }
   const ww = highlights.wastewater_flu;
-  if (ww && !ww.stale && ww.level_label) {
-    parts.push(`wastewater shows ${ww.level_label.toLowerCase()} flu A activity in ${location.county_name || 'your county'}`);
+  if (ww && !ww.stale && ww.level_label && ww.week_ending) {
+    parts.push(`Reporting wastewater sites serving ${location.county_name || 'your county'} showed ${ww.level_label.toLowerCase()} flu A viral activity for the week ending ${formatDate(ww.week_ending)}`);
   }
-  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}.` : `${parts[0]}.`;
+  return `${parts.join('. ')}.`;
 }
 
 /** Everything /api/area and /api/report return for a resolved location. */
@@ -326,7 +341,7 @@ export async function assembleArea(context, location, now = new Date()) {
   const [docs, community, level] = await Promise.all([
     getOfficialDocs(env, { state: location.state, county: location.county_fips }, { ctx: context, now }),
     getCommunity(env, location, now),
-    stateLevel(env, request, location.state),
+    stateLevel(env, request, location.state, now),
   ]);
   return buildAreaPayload({ location, level, stateDoc: docs.state, countyDoc: docs.county, community, now });
 }

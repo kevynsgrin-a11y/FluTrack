@@ -24,12 +24,15 @@ export default function season(ctx) {
 
   ${prose(`
     <h2>When flu season starts — and when it peaks</h2>
-    <p>The pattern the Centers for Disease Control and Prevention describe each year is consistent: influenza activity in the United States is low through late summer, most often begins to increase in <strong>October and November</strong>, and peaks <strong>most often between December and February</strong>, with activity sometimes continuing into May. The CDC's respiratory reporting season is built around that shape — weekly surveillance runs from early October (roughly MMWR week 40) through late May (week 20).</p>
+    <p>The pattern the Centers for Disease Control and Prevention describe each year is consistent: influenza activity in the United States is low through late summer, most often begins to increase in <strong>October and November</strong>, and peaks <strong>most often between December and February</strong>, with activity sometimes continuing into May. These seasonal expectations do not limit CDC respiratory surveillance to those months: the feeds also contain summer observations. Each source's publication cadence and reported observation period govern the reading, rather than the seasonal calendar.</p>
     <p>No two seasons are identical. Some rise early and peak over the holidays; others stay quiet until January and peak in February, which is the single most common peak month. The year's timing is only knowable in retrospect — which is why this site shows what the current data says, not what a season is "supposed" to do.</p>
 
     <h2>What FluTrack shows during the season</h2>
-    <p>Every week, FluTrack reads the CDC's public respiratory surveillance — emergency-department visit percentages, laboratory test positivity, and wastewater viral activity — and combines them into a single 0–4 threat level with a rising-or-falling trend, for every state. During the season those numbers move weekly; every figure on every page is labeled with the week it represents, and figures inside the usual one-to-two-week settling window are marked as still firming up.</p>
-    <p>The clearest October signal for most states is usually <strong>wastewater viral activity</strong>: sewershed measurements are published for many parts of the country and often move before clinical reporting does, which makes them an early hint that a local rise may be starting — even while the combined index is still rated low.</p>
+    <p>FluTrack's implemented index feeds are CDC emergency-department visit percentages, the Acute Respiratory Illness activity level and wastewater viral activity. Available inputs form a combined respiratory index for flu, RSV and COVID-19; laboratory positivity is unavailable live and modeled only in labeled samples. The trend compares the latest observation with the mean of up to three prior observations. Observation periods, source publication dates and retrieval times are separate; a new build does not establish new health conditions.</p>
+    <p>A seasonal calendar cannot establish the direction of COVID-19, influenza or RSV in a selected state. Read the dated by-virus observations and their coverage instead. Wastewater describes participating sewersheds, not every resident or a city infection count; missing or insufficient surveillance does not mean no illness.</p>
+
+    <h2>Dated national COVID-19 context &mdash; October 2, 2026</h2>
+    <p>In its <a href="https://www.cdc.gov/respiratory-viruses/data/" rel="noopener">national respiratory summary published October 2, 2026</a>, CDC said: &ldquo;COVID-19 activity remains elevated in some regions but is declining nationally.&rdquo; This is a dated national summary, not a current-week measurement or a trend for the selected state. A national decline can coexist with regional increases; it cannot replace the selected state's observation periods and coverage, or establish independently measured city conditions.</p>
 
     <h2>Where to watch it</h2>
     <ul>
@@ -39,8 +42,8 @@ export default function season(ctx) {
       <li><a href="/methodology/">Methodology and data sources</a> — exactly which CDC systems feed the index and how they are combined.</li>
     </ul>
 
-    <h2>Holiday weeks read lower than reality</h2>
-    <p>The season's steepest stretch overlaps its least reliable reporting weeks. Around Thanksgiving, Christmas, and New Year, testing volume, care-seeking, and public-health publishing all drop — so surveillance for those weeks can read artificially low and then jump once reporting catches up. FluTrack labels those gaps rather than smoothing over them; a "falling" trend across a holiday week deserves skepticism in both directions.</p>
+    <h2>Reporting gaps and revisions</h2>
+    <p>Care-seeking, testing volume and publication schedules can change around holidays. A missing or delayed report limits interpretation; it does not establish that illness declined. Check source dates and coverage before comparing observations, and allow for later revisions. FluTrack does not infer a local or national increase from the calendar or fill reporting gaps with reassuring conclusions.</p>
 
     <div class="callout callout--warn" role="note">
       <p class="callout__title">${icon('clock')} Not medical advice</p>

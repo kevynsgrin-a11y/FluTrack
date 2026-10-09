@@ -4,6 +4,7 @@ import { onRequestPost as report } from '../functions/api/report.js';
 import { onRequestGet as area } from '../functions/api/area.js';
 import { onRequestGet as official, onRequestOptions } from '../functions/api/official.js';
 import { d1, kv, assets, cdcFetch } from './helpers/cloudflare.mjs';
+import { stateLevel } from '../src/server/area.js';
 
 const ORIGIN = 'https://flufollower.com';
 const US = { country: 'US', regionCode: 'CA', postalCode: '92101', asn: 7922 };
@@ -182,6 +183,34 @@ test('/api/area?zip= returns the documented shape, with per-source week_ending a
   assert.equal(p.community.n, null, 'n < 5 → no counts');
   assert.equal(typeof p.meaning, 'string');
   assert.doesNotMatch(p.meaning, /outbreak/i);
+  assert.equal(p.level.kind, 'sample');
+  assert.match(p.meaning, /illustrative sample data/);
+  assert.doesNotMatch(p.meaning, /this week's CDC data/);
+});
+
+test('state fallback preserves its observation period, sample kind and unknown missing score', async () => {
+  const now = new Date('2026-10-09T12:00:00Z');
+  const request = new Request(ORIGIN + '/api/area?zip=94612');
+  const fromSnapshot = (snap) => stateLevel({ ASSETS: { fetch: async () => Response.json(snap) } }, request, 'CA', now);
+  const sample = await fromSnapshot({ kind: 'sample', weekEnding: '2026-10-03', states: { CA: { edCombinedSeries: [0.2, 0.3], weekEnding: '2026-09-26' } } });
+  assert.equal(sample.kind, 'sample');
+  assert.equal(sample.week_ending, '2026-09-26', 'state observation date takes precedence over snapshot date');
+  assert.equal(sample.provenance.kind, 'sample');
+  const missing = await fromSnapshot({ kind: 'live', weekEnding: '2026-10-03', states: { CA: {} } });
+  assert.equal(missing.level, null);
+  assert.equal(missing.label, 'No data');
+});
+
+test('new retrieval cannot make an old state observation current', async () => {
+  const now = new Date('2026-10-09T12:00:00Z');
+  const snapshot = { kind: 'live', generatedAt: now.toISOString(), weekEnding: '2026-10-03', states: { CA: {
+    edCombinedSeries: [0.2, 0.3],
+    provenance: { kind: 'live', observationPeriod: { weekEnding: '2026-09-05' } },
+  } } };
+  const level = await stateLevel({ ASSETS: { fetch: async () => Response.json(snapshot) } }, new Request(ORIGIN), 'CA', now);
+  assert.equal(level.week_ending, '2026-09-05');
+  assert.equal(level.age_days, 34);
+  assert.equal(level.stale, true);
 });
 
 test('/api/area without a ZIP uses request.cf and is cached privately', async () => {

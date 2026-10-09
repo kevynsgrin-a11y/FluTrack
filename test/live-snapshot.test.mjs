@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { resolveSnapshot, liveSnapshot, liveAgeDays, MAX_LIVE_AGE_DAYS } from '../build/lib/live-snapshot.mjs';
 import { generateSnapshot } from '../build/lib/snapshot.mjs';
 import { shouldDeploy } from '../build/rebuild-gate.mjs';
+import { states } from '../src/scripts/states-data.js';
 
 // The build-time policy that decides whether pages are pre-rendered from live
 // CDC data or the labeled sample. Every branch here changes what a crawler and
@@ -18,7 +19,7 @@ function liveResult(weekEnding = '2026-09-26') {
     weekEnding,
     statesWithData: 51,
     sources: ['NSSP Emergency Department Visits'],
-    signalsByAbbr: new Map([['MD', { ariLevel: 0, edCombinedSeries: [0.5, 0.6], wastewaterSeries: [], positivityCombined: null, weekEnding, pathogens: {} }]]),
+    signalsByAbbr: new Map(states.map((st) => [st.abbr, { ariLevel: 0, edCombinedSeries: [0.5, 0.6], wastewaterSeries: [], positivityCombined: null, weekEnding, pathogens: {} }])),
   };
 }
 
@@ -91,6 +92,56 @@ test('liveSnapshot carries what the client needs to keep the live badge', () => 
   assert.deepEqual(snap.sources, ['NSSP Emergency Department Visits']);
   assert.equal(snap.statesWithData, 51);
   assert.ok(JSON.parse(JSON.stringify(snap)).states.MD, 'round-trips through JSON');
+});
+
+test('a fresh timestamp and 51 empty jurisdiction keys cannot pass the live snapshot gate', async () => {
+  const empty = liveResult();
+  empty.signalsByAbbr = new Map(states.map((st) => [st.abbr, { weekEnding: empty.weekEnding, ariLevel: null, edCombinedSeries: [null, NaN], wastewaterSeries: [], pathogens: {} }]));
+  assert.throws(() => liveSnapshot(empty, NOW), /usable data for only 0 of 51/);
+  await assert.rejects(resolveSnapshot({ mode: 'require', loadSample, now: NOW, ...fastRetry, fetchLive: async () => empty }), /usable data for only 0 of 51/);
+});
+
+test('the snapshot recounts usable coverage instead of trusting the reported total', () => {
+  const partial = liveResult();
+  partial.signalsByAbbr.delete('MD');
+  const snap = liveSnapshot(partial, NOW);
+  assert.equal(snap.statesWithData, 50);
+  assert.equal(snap.coverage.usableJurisdictions, 50);
+  assert.equal(snap.coverage.usableAbbrs.includes('MD'), false);
+});
+
+test('snapshot metadata retains source retrieval and unknown publication dates without replacing them with build time', () => {
+  const live = liveResult();
+  live.retrievedAt = '2026-10-08T10:00:00Z';
+  live.sourceAvailability = [{ key: 'edVisits', publicationDates: [], retrievedAt: '2026-10-08T06:11:25.126Z', cacheStale: true }];
+  live.signalsByAbbr.get('MD').provenance = { kind: 'live', metrics: { edVisits: { status: 'available', contributes: true, publicationDate: null, retrievedAt: '2026-10-08T06:11:25.126Z', observationPeriod: { weekEnding: '2026-09-26' } } } };
+  const snap = liveSnapshot(live, NOW);
+  assert.equal(snap.generatedAt, NOW.toISOString());
+  assert.equal(snap.retrievedAt, '2026-10-08T10:00:00Z');
+  assert.deepEqual(snap.sourceAvailability, live.sourceAvailability);
+  assert.equal(snap.states.MD.provenance.metrics.edVisits.publicationDate, null);
+  assert.equal(snap.states.MD.provenance.metrics.edVisits.observationPeriod.weekEnding, '2026-09-26');
+});
+
+test('future observation periods do not pass as current surveillance', async () => {
+  const r = await resolveSnapshot({ mode: 'auto', loadSample, now: NOW, ...fastRetry, fetchLive: async () => liveResult('2026-10-17') });
+  assert.equal(r.live, false);
+  assert.equal(r.snapshot.kind, 'sample');
+});
+
+test('the snapshot gate rejects date-mismatched metrics even when their contribution flag is incorrectly true', () => {
+  const live = liveResult();
+  for (const signal of live.signalsByAbbr.values()) {
+    signal.ariLevel = null;
+    signal.provenance = { metrics: { edVisits: { status: 'available', contributes: true, observationPeriod: { weekEnding: '2026-09-19' } } } };
+  }
+  assert.throws(() => liveSnapshot(live, NOW), /usable data for only 0 of 51/);
+});
+
+test('explicit unknown state bindings cannot satisfy live snapshot coverage despite fresh timestamps and numbers', () => {
+  const live = liveResult();
+  for (const signal of live.signalsByAbbr.values()) signal.provenance = { kind: 'unknown' };
+  assert.throws(() => liveSnapshot(live, NOW), /usable data for only 0 of 51/);
 });
 
 // --- weekly rebuild gate ---------------------------------------------------- //

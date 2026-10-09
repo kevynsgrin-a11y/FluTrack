@@ -22,6 +22,8 @@
 import { readFileSync, appendFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { liveAgeDays, MAX_LIVE_AGE_DAYS } from './lib/live-snapshot.mjs';
+import { hasSignalData, MIN_LIVE_STATES } from '../src/scripts/data-sources.js';
+import { states } from '../src/scripts/states-data.js';
 
 export const DEFAULT_URL = 'https://flufollower.com/data/snapshot.json';
 const EXPECTED_JURISDICTIONS = 51;
@@ -61,7 +63,14 @@ export function assessProduction(snapshot, { now = new Date(), maxAgeDays = MAX_
   if (ageDays > maxAgeDays) {
     return { ok: false, reason: `live week ${weekEnding} is ${ageDays} days old; the ceiling is ${maxAgeDays}`, ...base, ageDays };
   }
-  return { ok: true, reason: `live CDC week ending ${weekEnding}, ${ageDays} day(s) old (ceiling ${maxAgeDays})`, ...base, ageDays };
+  const usable = states.filter((state) => {
+    const signal = snapshot.states?.[state.abbr];
+    return signal?.weekEnding === weekEnding && hasSignalData(signal);
+  }).length;
+  if (usable < MIN_LIVE_STATES) {
+    return { ok: false, reason: `live snapshot has usable observations for only ${usable} jurisdictions at ${weekEnding}, minimum ${MIN_LIVE_STATES}; keys and retrieval timestamps do not establish coverage`, ...base, ageDays, usableJurisdictions: usable };
+  }
+  return { ok: true, reason: `live CDC week ending ${weekEnding}, ${ageDays} day(s) old (ceiling ${maxAgeDays}); ${usable} jurisdictions with usable observations`, ...base, ageDays, usableJurisdictions: usable };
 }
 
 /** Fetch with retries: a transient blip must not look like a stopped pipeline. */

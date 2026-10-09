@@ -22,33 +22,41 @@
 // not be pre-rendered as current.
 // ===========================================================================
 
-import { fetchLiveSignals } from '../../src/scripts/data-sources.js';
+import { fetchLiveSignals, hasSignalData, MIN_LIVE_STATES, MAX_OBSERVATION_AGE_DAYS, observationAgeDays } from '../../src/scripts/data-sources.js';
+import { states } from '../../src/scripts/states-data.js';
 
 export const MODES = Object.freeze(['auto', 'require', 'off']);
 
 /**
  * CDC publishes on Fridays for the week ending the previous Saturday, so a
- * current week is 6–13 days old; a holiday slip adds a week. Beyond 21 days the
- * feed has stopped updating.
+ * current week is 6–13 days old; a holiday slip adds a week. Beyond 21 days this
+ * site conservatively withholds a current reading pending a newer observation.
  */
-export const MAX_LIVE_AGE_DAYS = 21;
-
-const DAY_MS = 86_400_000;
+export const MAX_LIVE_AGE_DAYS = MAX_OBSERVATION_AGE_DAYS;
 
 /** Whole days between a YYYY-MM-DD week-ending date and `now`. */
 export function liveAgeDays(weekEnding, now = new Date()) {
-  const t = Date.parse(`${weekEnding}T00:00:00Z`);
-  return Number.isFinite(t) ? Math.floor((now.getTime() - t) / DAY_MS) : Infinity;
+  return observationAgeDays(weekEnding, now);
 }
 
 /** Shape a fetchLiveSignals() result as a shippable snapshot (kind: 'live'). */
 export function liveSnapshot(live, now = new Date()) {
+  const usableAbbrs = [...(live.signalsByAbbr || [])]
+    .filter(([abbr, sig]) => states.some((state) => state.abbr === abbr) && sig.weekEnding === live.weekEnding && hasSignalData(sig))
+    .map(([abbr]) => abbr);
+  if (usableAbbrs.length < MIN_LIVE_STATES) {
+    throw new Error(`Live snapshot contains usable data for only ${usableAbbrs.length} of 51 jurisdictions (minimum ${MIN_LIVE_STATES})`);
+  }
   return {
     kind: 'live',
     generatedAt: now.toISOString(),
     weekEnding: live.weekEnding,
     sources: live.sources,
-    statesWithData: live.statesWithData,
+    retrievedAt: live.retrievedAt || null,
+    requestRetrievedAt: live.requestRetrievedAt || null,
+    sourceAvailability: live.sourceAvailability || [],
+    statesWithData: usableAbbrs.length,
+    coverage: { ...(live.coverage || {}), jurisdictions: 51, usableJurisdictions: usableAbbrs.length, usableAbbrs, observationPeriod: { weekEnding: live.weekEnding } },
     note:
       'Public-domain CDC surveillance data, fetched when this site was built. ' +
       'Figures are weekly and typically reflect illness from one to two weeks earlier.',
@@ -86,9 +94,9 @@ export async function resolveSnapshot({
   for (let i = 0; i < attempts; i += 1) {
     if (i > 0) await sleep(backoffMs[Math.min(i - 1, backoffMs.length - 1)] ?? 0);
     try {
-      const live = await fetchLive({ timeoutMs });
+      const live = await fetchLive({ timeoutMs, now });
       const age = liveAgeDays(live.weekEnding, now);
-      if (age > MAX_LIVE_AGE_DAYS) {
+      if (age < 0 || age > MAX_LIVE_AGE_DAYS) {
         // Not transient: the upstream copy itself is old. Retrying won't help.
         reason = `newest CDC week (${live.weekEnding}) is ${age} days old (limit ${MAX_LIVE_AGE_DAYS})`;
         break;

@@ -1,14 +1,15 @@
 import { escapeHtml, formatDate } from '../../../src/scripts/util.js';
 import { usMap } from '../../../src/scripts/map-render.js';
 import { provenanceBadge } from '../../../src/scripts/render.js';
+import { presentationModel } from '../../../src/scripts/reading-provenance.js';
 import { signupBand, breadcrumbs } from '../../lib/partials.mjs';
 import { breadcrumbLd } from '../../lib/seo.mjs';
 
 export default function states(ctx) {
   const { site } = ctx;
-  const crumbs = [{ name: 'Home', path: '/' }, { name: 'US flu map', path: '/states/' }];
+  const crumbs = [{ name: 'Home', path: '/' }, { name: 'Respiratory activity map', path: '/states/' }];
   const mapEntries = ctx.states.map((s) => {
-    const m = ctx.models.get(s.abbr).model;
+    const m = presentationModel(ctx.models.get(s.abbr).model, { ...ctx.provenance, weekEnding: ctx.weekEnding });
     return { abbr: s.abbr, name: s.name, slug: s.slug, level: m.level, label: m.label };
   });
   const chips = ctx.states.map((s) => ctx.render.stateChip(s, ctx.models.get(s.abbr).model)).join('\n');
@@ -24,9 +25,9 @@ export default function states(ctx) {
   <section class="section section--tight state-masthead">
     <div class="container">
       ${breadcrumbs(crumbs)}
-      <h1>US flu map: respiratory activity by state</h1>
-      <p class="lede" style="margin-top: var(--space-sm); max-width: 46rem">The US flu map: current flu, RSV and COVID-19 activity for all 50 states and DC. Pick your state for a plain-English threat level and weekly trend, built on public-domain CDC surveillance data.</p>
-      <p style="margin-top: var(--space-sm)">${provenanceBadge(ctx.provenance)}${asOf ? ` <span class="muted">as of ${escapeHtml(asOf)}</span>` : ''}</p>
+      <h1>US respiratory activity map: flu, RSV and COVID-19 by state</h1>
+      <p class="lede" style="margin-top: var(--space-sm); max-width: 46rem">Browse all 50 states and DC for a combined respiratory index and the available by-virus readings. These are dated surveillance observations, with coverage that varies by state and source.</p>
+      <p style="margin-top: var(--space-sm)">${provenanceBadge(ctx.provenance)}${asOf ? ` <span class="muted">observation period ending ${escapeHtml(asOf)}</span>` : ''}</p>
     </div>
   </section>
   <section class="section" style="padding-top: var(--space-xl)"><div class="container"><div data-region="us-map">${usMap(mapEntries, {})}</div></div></section>
@@ -40,14 +41,14 @@ export default function states(ctx) {
       </form>
       <div class="state-index" id="state-grid" style="margin-top: var(--space-lg)">${chips}</div>
       <p class="notice" id="state-empty" hidden style="margin-top: var(--space-lg)"><span aria-hidden="true">⌕</span> No states match that name. Try a different search.</p>
-      <p class="muted" style="margin-top: var(--space-lg); font-size: var(--step--1)">Levels shown reflect the most recent bundled snapshot and refresh with live CDC data on each state's page. ${escapeHtml(ctx.disclaimers.short)}</p>
+      <p class="muted" style="margin-top: var(--space-lg); font-size: var(--step--1)">Levels shown reflect the bundled snapshot. State pages may refresh when newer usable CDC observations are available. Sample data is illustrative; no data does not mean no illness. ${escapeHtml(ctx.disclaimers.short)}</p>
     </div>
   </section>
   ${signupBand({ compact: true })}`;
   return {
     // The layout appends "· FluTrack" — no manual brand suffix here.
-    title: 'US Flu Map — Flu, RSV & COVID Activity by State',
-    description: 'US flu map: current flu, RSV, and COVID-19 activity for all 50 states and DC — plain-English threat levels, weekly trends, and public CDC surveillance data for every state.',
+    title: 'US Respiratory Activity Map — Flu, RSV & COVID by State',
+    description: 'Dated flu, RSV and COVID-19 surveillance by state: a combined respiratory index, by-virus readings and coverage limits. Sample and missing data are labeled.',
     path: '/states/',
     body,
     scripts: ['/assets/js/states-filter.js', '/assets/js/map-keyboard.js'],

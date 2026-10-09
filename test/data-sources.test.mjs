@@ -15,6 +15,8 @@ import {
   BROWSER_REFRESH_AFTER_DAYS,
   MIN_WASTEWATER_SITES,
   STALE_RUN_REPORTS,
+  MAX_OBSERVATION_AGE_DAYS,
+  observationAgeDays,
 } from '../src/scripts/data-sources.js';
 import { states } from '../src/scripts/states-data.js';
 
@@ -309,4 +311,125 @@ test('the browser skips the ~20 MB live fetch while the shipped live week is sti
   assert.equal(shouldRefreshLive({ kind: 'sample', weekEnding: '2026-10-02' }, now), true, 'sample data always tries live');
   assert.equal(shouldRefreshLive({ kind: 'live', weekEnding: '' }, now), true);
   assert.equal(shouldRefreshLive(null, now), true, 'no snapshot (offline first load) tries live');
+});
+
+test('usable coverage requires finite readings, rather than nonempty arrays or jurisdiction keys', () => {
+  assert.equal(hasSignalData({ edCombinedSeries: [null, NaN, Infinity], wastewaterSeries: [undefined], ariLevel: null }), false);
+  assert.equal(hasSignalData({ ariLevel: 0 }), true, 'a reported zero is usable');
+  assert.equal(hasSignalData({ ariLevel: 0, provenance: { metrics: { ari: { status: 'unavailable' } } } }), false);
+  assert.equal(hasSignalData({ ariLevel: 0, provenance: { kind: 'unknown' } }), false, 'explicit unknown is not usable live evidence');
+  assert.equal(hasSignalData({ ariLevel: 0, provenance: { kind: 'sample' } }), false, 'sample does not satisfy live coverage');
+  assert.equal(hasSignalData({ ariLevel: 0, provenance: { kind: 'live', metrics: { ari: { kind: 'unknown', status: 'available' } } } }), false);
+});
+
+test('a missing latest pathogen never promotes its older observations to the current reading', () => {
+  const rows = edRows(['Maryland'], W4);
+  rows.find((row) => row.week_end.startsWith(W4.at(-1)) && row.pathogen === 'Influenza').percent_visits = '';
+  const { signalsByAbbr } = assembleLiveSignals({ ed: parseEdRows(rows), now: new Date('2026-10-08T12:00:00Z') });
+  const md = signalsByAbbr.get('MD');
+  assert.equal(md.weekEnding, '2026-09-26');
+  assert.deepEqual(md.edCombinedSeries, [], 'incomplete latest combined share cannot use the previous week');
+  assert.deepEqual(md.pathogens.influenza.edPercentSeries, [], 'latest missing flu cannot use historic flu');
+  assert.equal(md.pathogens.influenza.provenance.metrics.edVisits.status, 'missing');
+  assert.equal(md.pathogens.influenza.provenance.metrics.edVisits.observations.at(-1).value, null);
+  assert.equal(md.pathogens.influenza.provenance.metrics.edVisits.observations.length, 4, 'dated historical values are retained');
+  assert.equal(md.pathogens.covid.edPercentSeries.length, 4, 'the reported pathogen is still available');
+});
+
+test('older metrics remain dated but cannot silently contribute to a newer period', () => {
+  const ed = parseEdRows(edRows(['Maryland'], ['2026-09-12', '2026-09-19']));
+  const ari = parseAriRows([{ geography: 'Maryland', week_end: '2026-09-12', label: 'Low' }]);
+  const ww = new Map([['MD', [{ week: '2026-09-26', influenza: 1.2, covid: 3.4, rsv: NaN }]]]);
+  const md = assembleLiveSignals({ ed, ari, ww, now: new Date('2026-10-08T12:00:00Z') }).signalsByAbbr.get('MD');
+  assert.equal(md.weekEnding, '2026-09-26');
+  assert.deepEqual(md.wastewaterSeries, [3.4]);
+  assert.deepEqual(md.edCombinedSeries, []);
+  assert.equal(md.ariLevel, null);
+  assert.equal(md.provenance.metrics.edVisits.status, 'available', 'a different reporting period does not establish a failed refresh');
+  assert.equal(md.provenance.metrics.edVisits.contributes, false);
+  assert.equal(md.provenance.metrics.edVisits.observationPeriod.weekEnding, '2026-09-19');
+  assert.equal(md.provenance.metrics.edVisits.reason, 'different-observation-period');
+});
+
+test('publication, upstream update, ingest retrieval, and observation dates stay distinct', () => {
+  const ed = parseEdRows(edRows(['Maryland'], ['2026-09-26']).map((row) => ({ ...row, publication_date: '2026-10-02', date_updated: '2026-10-03T10:00:00Z' })));
+  const ari = parseAriRows([{ geography: 'Maryland', week_end: '2026-09-26', label: 'Low', buildnumber: '2026-10-02 16:03:50.980149' }]);
+  const md = assembleLiveSignals({ ed, ari, now: new Date('2026-10-09T12:00:00Z'), sourceMetadata: {
+    edVisits: { retrievedAt: '2026-10-09T00:11:22.744Z', requestRetrievedAt: '2026-10-09T12:00:00Z', stale: true },
+  } }).signalsByAbbr.get('MD');
+  const metric = md.provenance.metrics.edVisits;
+  assert.equal(metric.observationPeriod.weekEnding, '2026-09-26');
+  assert.equal(metric.publicationDate, '2026-10-02');
+  assert.equal(metric.upstreamUpdatedAt, '2026-10-03T10:00:00Z');
+  assert.equal(metric.retrievedAt, '2026-10-09T00:11:22.744Z');
+  assert.equal(metric.requestRetrievedAt, '2026-10-09T12:00:00Z');
+  assert.equal(metric.cacheStale, true);
+  assert.equal(metric.status, 'available', 'an expired warm-cache TTL is distinct from old surveillance observations');
+  assert.equal(metric.contributes, true);
+  assert.equal(md.provenance.metrics.ari.publicationDate, null, 'a buildnumber is not an official release date');
+  assert.equal(md.provenance.metrics.ari.upstreamUpdatedAt, '2026-10-02 16:03:50.980149');
+});
+
+test('a fresh retrieval cannot make old observations usable, and invalid calendar dates are rejected', () => {
+  const now = new Date('2026-10-09T12:00:00Z');
+  const md = assembleLiveSignals({ ed: parseEdRows(edRows(['Maryland'], ['2026-09-05'])), now,
+    sourceMetadata: { edVisits: { retrievedAt: now.toISOString(), stale: false } } }).signalsByAbbr.get('MD');
+  assert.equal(md.provenance.metrics.edVisits.status, 'stale');
+  assert.ok(md.provenance.metrics.edVisits.ageDays > MAX_OBSERVATION_AGE_DAYS);
+  assert.deepEqual(md.edCombinedSeries, []);
+  assert.equal(hasSignalData(md), false);
+  assert.equal(observationAgeDays('2026-02-30', now), Infinity);
+  assert.equal(parseEdRows(edRows(['Maryland'], ['2026-02-30'])).size, 0);
+});
+
+test('unknown pathogen labels cannot be mistaken for a combined respiratory signal', () => {
+  const md = parseEdRows([{ geography: 'Maryland', week_end: '2026-09-26', pathogen: 'Other illness', percent_visits: '9' }]).get('MD');
+  assert.ok(Number.isNaN(md[0].combined));
+});
+
+test('anonymous wastewater rows cannot establish independent reporting-site coverage', () => {
+  const rows = [1, 2, 3].map((value) => ({ state_territory: 'Maryland', source: 'State_Territory', pathogen_target: 'SARS-CoV-2', site_wval: String(value), week_end: '2026-09-26' }));
+  const md = parseWastewaterRows(rows).get('MD')[0];
+  assert.ok(Number.isNaN(md.covid));
+  assert.equal(md.coverage.covid.reportingSites, 0);
+});
+
+test('only finite contributing sources are credited, while unavailable feeds remain explicit', async () => {
+  const { restore } = stubFetch((url) => {
+    if (url.includes('vutn-jzwm')) return wrap(edRows(states.map((s) => s.name)));
+    if (url.includes('f3zz-zga5')) return wrap(states.map((s) => ({ geography: s.name, week_end: '2026-09-26', label: 'Data Unavailable' })));
+    return new Error('HTTP 503');
+  });
+  try {
+    const live = await fetchLiveSignals({ now: new Date('2026-10-08T12:00:00Z') });
+    assert.deepEqual(live.sources, ['NSSP Emergency Department Visits']);
+    assert.equal(live.sourceAvailability.find((source) => source.key === 'ari').status, 'missing');
+    assert.equal(live.sourceAvailability.find((source) => source.key === 'wastewater').status, 'unavailable');
+    assert.equal(live.signalsByAbbr.get('MD').provenance.metrics.positivity.reason, 'no-live-adapter');
+    assert.equal(live.signalsByAbbr.get('MD').provenance.metrics.edVisits.retrievedAt, '2026-10-08T06:11:25.126Z');
+  } finally { restore(); }
+});
+
+test('coverage cannot combine one newest jurisdiction with historic readings in the other 50', async () => {
+  const rows = [...edRows(states.slice(1).map((s) => s.name), ['2026-09-19']), ...edRows([states[0].name], ['2026-09-26'])];
+  const { restore } = stubFetch((url) => wrap(url.includes('vutn-jzwm') ? rows : []));
+  try {
+    await assert.rejects(fetchLiveSignals({ now: new Date('2026-10-08T12:00:00Z') }), /only 1 of 51 states/);
+  } finally { restore(); }
+});
+
+test('the source ledger distinguishes reported historic periods from current contributing coverage', async () => {
+  const wastewater = [1, 2, 3].map((site) => wwRow('Maryland', `ID:${site}`, 'State_Territory', 'SARS-CoV-2', String(site), '2026-09-19'));
+  const { restore } = stubFetch((url) => wrap(url.includes('vutn-jzwm') ? edRows(states.map((s) => s.name)) : url.includes('atcp-73re') ? wastewater : []));
+  try {
+    const live = await fetchLiveSignals({ now: new Date('2026-10-08T12:00:00Z') });
+    const source = live.sourceAvailability.find((entry) => entry.key === 'wastewater');
+    assert.deepEqual(source.observationPeriods, ['2026-09-19']);
+    assert.deepEqual(source.contributingObservationPeriods, []);
+    assert.deepEqual(source.contributingAbbrs, []);
+    assert.equal(source.contributingJurisdictions, 0);
+    assert.equal(live.signalsByAbbr.get('MD').provenance.metrics.wastewater.contributes, false);
+    assert.deepEqual(live.signalsByAbbr.get('MD').wastewaterSeries, []);
+    assert.deepEqual(live.sources, ['NSSP Emergency Department Visits']);
+  } finally { restore(); }
 });
