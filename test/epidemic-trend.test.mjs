@@ -5,6 +5,7 @@ import {
   CATEGORIES,
   DOCUMENTED_ED_GAPS,
   EPIDEMIC_TREND_URL,
+  EPIDEMIC_TREND_USER_AGENT,
   MAX_REPORT_AGE_DAYS,
   MIN_STATES_WITH_ESTIMATES,
   compareDirections,
@@ -222,6 +223,9 @@ test('a good response is validated and stamped with its retrieval time and URL',
   assert.equal(fetchImpl.calls.length, 1);
   assert.equal(fetchImpl.calls[0].url, EPIDEMIC_TREND_URL);
   assert.equal(fetchImpl.calls[0].init.headers.Accept, 'application/json');
+  assert.equal(fetchImpl.calls[0].init.headers['User-Agent'], EPIDEMIC_TREND_USER_AGENT);
+  assert.match(EPIDEMIC_TREND_USER_AGENT, /^FluTrack-build\/\d+\.\d+ \(\+https:\/\/flufollower\.com\//, 'identifies the build and where to read about it; no browser impersonation');
+  assert.doesNotMatch(EPIDEMIC_TREND_USER_AGENT, /Mozilla|Chrome|Safari/i);
 });
 
 test('a 503, then a network error, then success: retried with backoff', async () => {
@@ -281,9 +285,14 @@ test('content problems are final: invalid JSON, stale, oversized and foreign hos
 });
 
 test('fetchEpidemicTrend never throws, even without a usable fetch', async () => {
-  const r = await fetchEpidemicTrend({ fetchImpl: undefined, attempts: 1, ...noSleep });
-  assert.equal(r.ok, false);
-  assert.equal(r.reason, 'network-error');
+  // Not `undefined`: a default parameter would substitute the REAL global fetch, and this test would then
+  // depend on whether the machine running it can reach cdc.gov (it passed offline and failed in CI).
+  const unusable = [null, () => { throw new TypeError('fetch is not available'); }, async () => { throw new Error('boom'); }];
+  for (const fetchImpl of unusable) {
+    const r = await fetchEpidemicTrend({ fetchImpl, attempts: 1, ...noSleep });
+    assert.equal(r.ok, false);
+    assert.equal(r.reason, 'network-error');
+  }
 });
 
 // --- build policy ---------------------------------------------------------- //

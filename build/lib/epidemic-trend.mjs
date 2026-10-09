@@ -32,6 +32,13 @@ export const EPIDEMIC_TREND_URL =
 export const EPIDEMIC_TREND_PAGE = 'https://www.cdc.gov/cfa-modeling-and-forecasting/rt-estimates/index.html';
 export const EPIDEMIC_TREND_SOURCE_NAME = 'CDC Center for Forecasting and Outbreak Analytics — COVID-19 epidemic trends (Rt)';
 
+/**
+ * Automated fetches of public data should say who is asking. CDC's CDN answers
+ * some anonymous library requests (Node's default `node` agent) with HTTP 403;
+ * this is an honest identification, not a browser disguise.
+ */
+export const EPIDEMIC_TREND_USER_AGENT = 'FluTrack-build/1.0 (+https://flufollower.com/data-sources/)';
+
 /** Upstream minor/patch bumps are additive; a new major version is a new contract. */
 const UPSTREAM_SCHEMA = /^rt-map\/1\.\d+\.\d+$/;
 
@@ -196,7 +203,7 @@ export async function fetchEpidemicTrend({
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
-      const res = await fetchImpl(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
+      const res = await fetchImpl(url, { signal: controller.signal, headers: { Accept: 'application/json', 'User-Agent': EPIDEMIC_TREND_USER_AGENT } });
       if (!res.ok) {
         last = { reason: 'http-error', detail: `HTTP ${res.status}` };
         if (res.status >= 500 || res.status === 429) continue;
