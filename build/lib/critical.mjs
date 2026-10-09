@@ -34,6 +34,8 @@ const CRITICAL_CLASSES = new Set([
   // interior page mastheads that occupy the fold
   'page-header', 'page-header__bg', 'state-masthead', 'breadcrumbs', 'status-strip', 'status-strip__state', 'status-strip__level',
   'section', 'section--tight', 'section-head', 'section-rule',
+  // the report section sits directly under the hero on the home template
+  'report', 'report__grid', 'report__check', 'report__form', 'report__h', 'report__zip-row', 'report__zip', 'report__hp',
   // the desktop fold reaches these on the home template
   'trend-note', 'callout', 'callout--warn', 'callout__title', 'ad-slot', 'ad-slot__label',
   // shared primitives the above all lean on

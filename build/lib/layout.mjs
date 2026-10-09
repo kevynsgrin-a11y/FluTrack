@@ -34,7 +34,7 @@ const FOOTER = {
   Product: [['/states/', 'All states'], ['/alerts/', 'Surge alert signup'], ['/methodology/', 'How the index works'], ['/faq/', 'FAQ']],
   Data: [['/data-sources/', 'Data sources'], ['/methodology/', 'Methodology'], ['https://data.cdc.gov/', 'CDC Open Data ↗']],
   Company: [['/about/', 'About'], ['/contact/', 'Contact']],
-  Legal: [['/medical-disclaimer/', 'Medical disclaimer'], ['/privacy/', 'Privacy policy'], ['/terms/', 'Terms of use'], ['/affiliate-disclosure/', 'Affiliate disclosure'], ['/accessibility/', 'Accessibility']],
+  Legal: [['/medical-disclaimer/', 'Medical disclaimer'], ['/privacy/', 'Privacy policy'], ['/consumer-health-data-privacy/', 'Consumer health data privacy'], ['/terms/', 'Terms of use'], ['/affiliate-disclosure/', 'Affiliate disclosure'], ['/accessibility/', 'Accessibility']],
 };
 
 function brandMark() {

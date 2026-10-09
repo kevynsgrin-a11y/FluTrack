@@ -88,6 +88,19 @@ export const site = {
   ads: {
     publisherId: '',
   },
+  // Cloudflare Turnstile — the bot check on the symptom-report form. The site
+  // key is public and belongs here (or in TURNSTILE_SITE_KEY at build time);
+  // the secret is a Pages secret, TURNSTILE_SECRET. While the key is empty the
+  // report half of the home widget renders as "opens soon" and /api/report
+  // stays closed, while "Check your area" works as normal.
+  turnstile: {
+    siteKey: process.env.TURNSTILE_SITE_KEY || '',
+  },
+  // Rollback switch, mirrored by FEATURE_REPORT in wrangler.toml [vars]:
+  // "false" at build time drops the report form from the home page.
+  features: {
+    report: String(process.env.FEATURE_REPORT ?? 'true').toLowerCase() !== 'false',
+  },
   // The CDC data cadence, surfaced in the UI to set expectations honestly.
   dataCadence: 'Weekly (CDC surveillance systems publish on Fridays)',
   // Content/legal-page revision date (for sitemap <lastmod>). Bump when copy changes.

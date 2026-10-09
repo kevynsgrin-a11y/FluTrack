@@ -116,6 +116,7 @@ export const contentRevised = Object.freeze({
   '/affiliate-disclosure/': '2026-09-21',
   '/changelog/': '2026-10-08',
   '/consent/': '2026-09-26',
+  '/consumer-health-data-privacy/': '2026-10-09',
   '/editorial-policy/': '2026-10-08',
   '/faq/': '2026-09-21',
   '/medical-disclaimer/': '2026-09-21',
